@@ -25,7 +25,7 @@ module.exports = function (config) {
       suppressAll: true // removes the duplicated traces
     },
     coverageReporter: {
-      dir: require('path').join(__dirname, './coverage/cds-access'),
+      dir: require('path').join(__dirname, './coverage/prescribedc'),
       subdir: '.',
       reporters: [
         { type: 'html' },

@@ -60,7 +60,6 @@
     "no-redundant-jsdoc": true,
     "no-switch-case-fall-through": true,
     "no-var-requires": false,
-    "no-string-literal": false,
     "object-literal-key-quotes": [
       true,
       "as-needed"
@@ -109,7 +108,6 @@
       "options": [
         "ban-keywords",
         "check-format",
-        "allow-leading-underscore",
         "allow-pascal-case"
       ]
     },
@@ -134,9 +132,6 @@
     "no-output-on-prefix": true,
     "no-output-rename": true,
     "no-outputs-metadata-property": true,
-    "no-bitwise": false,
-    "no-empty-interface": false,
-    "no-namespace": false,
     "template-banana-in-box": true,
     "template-no-negated-async": true,
     "use-lifecycle-interface": true,
