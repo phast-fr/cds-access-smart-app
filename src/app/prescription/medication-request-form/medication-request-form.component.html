@@ -1,0 +1,32 @@
+<form [formGroup]="medicationRequestGroup">
+  <div fxLayout="row" class="form-field-row form-field-medication-knowledge">
+    <div fxFlex="100%">
+      <button mat-stroked-button color="primary" (click)="onAddMedication()"
+                [disabled]="!isMedicationAddable"> + </button>
+      <mat-form-field fxFlex="100%" appearance="fill">
+        <i matPrefix matTooltip="Library Add" class="material-icons icon">library_add</i>
+        <mat-label> Dénomination commune </mat-label>
+        <input type="text" placeholder="Ex. PARACETAMOL"
+               aria-label="Dénomination commune"
+               matInput
+               [formControl]="medicationKnowledge"
+               [matAutocomplete]="autoMedicationKnowledge"/>
+      </mat-form-field>
+    </div>
+  </div>
+  <app-medication-form></app-medication-form>
+  <app-dosage-instruction-form></app-dosage-instruction-form>
+  <app-dispense-request-form></app-dispense-request-form>
+  <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
+          *ngIf="formState.medicationRequest != null"> Ajouter </button>
+  <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
+                    [displayWith]="displayFnMedicationKnowledge.bind(this)">
+    <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
+    <ng-container *ngIf="!formState.isLoading">
+      <mat-option *ngFor="let medicationKnowledge of medicationKnowledgeSet;
+            index as i trackBy: trackByMedicationKnowledge" [value]="medicationKnowledge">
+        {{labelProviderFactory.getProvider(medicationKnowledge).getText(medicationKnowledge)}}
+      </mat-option>
+    </ng-container>
+  </mat-autocomplete>
+</form>

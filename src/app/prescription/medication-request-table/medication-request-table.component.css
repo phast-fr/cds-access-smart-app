@@ -1,0 +1,11 @@
+mat-header-cell.mat-sort-header-sorted {
+  color: black;
+}
+
+mat-row.medication-request-row:not(.medication-request-expanded-row):hover {
+  background: whitesmoke;
+}
+
+mat-row.medication-request-row:not(.medication-request-expanded-row):active {
+  background: #efefef;
+}

@@ -1,0 +1,30 @@
+.form-field-row .mat-form-field + .mat-form-field {
+  margin-left: 8px;
+}
+
+button.mat-stroked-button {
+  height: 51px;
+}
+
+.form-group-header {
+  margin-top: 5px;
+  border-top: solid black 1px;
+  padding: 10px 0;
+}
+
+.form-group-title {
+  padding: 15px 0 0 15px;
+  font-weight: 400;
+  line-height: 1.125;
+}
+
+.form-group-body-header {
+  margin-top: 5px;
+  padding: 10px 0;
+}
+
+.form-group-body-title {
+  padding: 15px 0 0 15px;
+  font-weight: 400;
+  line-height: 1.125;
+}
