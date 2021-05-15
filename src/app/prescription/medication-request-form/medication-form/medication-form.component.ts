@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormControl, ValidatorFn } from '@angular/forms';
 import { Observable, of, Subject } from 'rxjs';
 import { catchError, filter, switchMap, takeUntil, tap } from 'rxjs/operators';
 
@@ -14,7 +14,6 @@ import { fhir } from '../../../common/fhir/fhir.types';
 import Medication = fhir.Medication;
 import Coding = fhir.Coding;
 import Ratio = fhir.Ratio;
-import id = fhir.id;
 import Parameters = fhir.Parameters;
 import CodeableConcept = fhir.CodeableConcept;
 import MedicationIngredient = fhir.MedicationIngredient;
@@ -94,11 +93,6 @@ export class MedicationFormComponent implements OnInit, OnDestroy {
   }
 
   public getFormControlByGroup(medicationGroup: AbstractControl): FormControl {
-    return medicationGroup.get('form') as FormControl;
-  }
-
-  public getFormControlByMkId(mkId: id): FormControl {
-    const medicationGroup = this.findFormGroup(mkId, this.medication.controls, 'medication');
     return medicationGroup.get('form') as FormControl;
   }
 
@@ -427,20 +421,5 @@ export class MedicationFormComponent implements OnInit, OnDestroy {
         }
       }
     }
-  }
-
-  private findFormGroup(resourceId: id, controls: AbstractControl[], path: string | (string | number)[]): FormGroup | null {
-    const nIndex = controls.findIndex(
-      (_medicationGroup: AbstractControl, _) => {
-        const medicationControl = _medicationGroup.get(path);
-        return medicationControl.value != null && medicationControl.value.id === resourceId;
-      }
-    );
-
-    if (nIndex === -1) {
-      console.log('Error: cannot find route control');
-      return null;
-    }
-    return controls[nIndex] as FormGroup;
   }
 }

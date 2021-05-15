@@ -123,16 +123,16 @@ export class SmartService {
       this.httpClient.post(url, body, {
         headers: new HttpHeaders()
           .set('Content-Type', 'application/x-www-form-urlencoded')
-      }).subscribe(
-        (value => {
+      }).subscribe({
+        next: value => {
           const token = value as SmartToken;
           console.log('token:', token);
           this.saveToken(token);
-        }),
-        (error => {
+        },
+        error: error => {
           console.log(error);
-        })
-      );
+        }
+      });
   }
 
   /**
@@ -146,8 +146,7 @@ export class SmartService {
   private randomString(
     strLength = 8,
     charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  ): string
-  {
+  ): string {
     const result = [];
     const len = charSet.length;
     while (strLength--) {

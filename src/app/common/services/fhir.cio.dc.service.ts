@@ -5,7 +5,6 @@ import FhirClient from 'fhir-kit-client';
 import { environment } from '../../../environments/environment';
 import { fhir } from '../fhir/fhir.types';
 import id = fhir.id;
-import Coding = fhir.Coding;
 import Parameters = fhir.Parameters;
 import ParametersParameter = fhir.ParametersParameter;
 import CodeableConcept = fhir.CodeableConcept;
@@ -101,7 +100,7 @@ export class MedicationKnowledgeDetailsBuilder {
     };
   }
 
-  public doseForm(doseForm: CodeableConcept | undefined): MedicationKnowledgeDetailsBuilder {
+  public doseForm(doseForm: CodeableConcept | undefined): this {
     if (doseForm !== undefined) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       medicationKnowledge.doseForm = doseForm;
@@ -109,7 +108,7 @@ export class MedicationKnowledgeDetailsBuilder {
     return this;
   }
 
-  public ingredient(ingredient: MedicationIngredient[] | undefined): MedicationKnowledgeDetailsBuilder {
+  public ingredient(ingredient: MedicationIngredient[] | undefined): this {
     if (ingredient !== undefined) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       for (const element of ingredient) {
@@ -119,7 +118,7 @@ export class MedicationKnowledgeDetailsBuilder {
     return this;
   }
 
-  public intendedRoute(intendedRoute: CodeableConcept | undefined): MedicationKnowledgeDetailsBuilder {
+  public intendedRoute(intendedRoute: CodeableConcept | undefined): this {
     if (intendedRoute !== undefined) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       medicationKnowledge.intendedRoute.push(intendedRoute);
