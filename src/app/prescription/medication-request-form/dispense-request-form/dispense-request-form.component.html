@@ -1,0 +1,32 @@
+<div class="form-group-row form-field-dispense-request" *ngIf="formState.medicationRequest != null">
+  <div fxLayout="row" class="form-group-header">
+    <div class="form-group-title"> Demande de délivrance </div>
+  </div>
+  <div class="form-group-body">
+    <div fxLayout="row" class="form-field-row form-field-validity-period">
+      <mat-form-field fxFlex="50%" appearance="fill">
+        <mat-label> Début </mat-label>
+        <input type="text"
+               aria-label="Début"
+               matInput
+               [formControl]="dispenseRequestValidityPeriodStart"/>
+      </mat-form-field>
+      <mat-form-field fxFlex="50%" appearance="fill">
+        <mat-label> Fin </mat-label>
+        <input type="text"
+               aria-label="Fin"
+               matInput
+               [formControl]="dispenseRequestValidityPeriodEnd"/>
+      </mat-form-field>
+    </div>
+    <div fxLayout="row" class="form-field-row form-field-expected-supply-duration">
+      <mat-form-field fxFlex="100%" appearance="fill">
+        <mat-label> Pendant ? </mat-label>
+        <input type="text"
+               aria-label="pendant"
+               matInput
+               [formControl]="dispenseRequestExpectedSupplyDurationValue"/>
+      </mat-form-field>
+    </div>
+  </div>
+</div>

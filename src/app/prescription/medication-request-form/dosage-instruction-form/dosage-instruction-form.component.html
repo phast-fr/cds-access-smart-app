@@ -1,0 +1,119 @@
+<div class="form-group-row form-field-dosage-instruction" *ngIf="formState.medicationRequest != null">
+  <div fxLayout="row" class="form-group-header">
+    <button mat-stroked-button color="primary" (click)="onAddDosageInstruction()"> + </button>
+    <div class="form-group-title"> Posologie(s) </div>
+  </div>
+  <div class="form-group-body" *ngFor="let dosageInstructionGroup of dosageInstruction.controls;
+  index as nDosage">
+    <div fxLayout="row" class="form-group-body-header">
+      <button mat-stroked-button color="primary" (click)="onRemoveDosageInstruction(nDosage)"> - </button>
+      <div class="form-group-body-title"> Posologie {{nDosage + 1}} </div>
+    </div>
+    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-route">
+      <mat-form-field fxFlex="100%" appearance="fill">
+        <mat-label>
+          Voie
+        </mat-label>
+        <input type="text"
+               aria-label="Voie"
+               matInput
+               [formControl]="dosageInstructionGroup.get('route')"
+               [matAutocomplete]="autoRoute"/>
+      </mat-form-field>
+
+      <mat-autocomplete #autoRoute="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
+        <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
+        <ng-container *ngIf="!formState.isLoading">
+          <mat-option *ngFor="let routeCode of formState.routeArray;
+        index as i trackBy: trackByCodeableConcept" [value]="routeCode">
+            {{labelProviderFactory.getProvider('fhir.CodeableConcept').getText(routeCode)}}
+          </mat-option>
+        </ng-container>
+      </mat-autocomplete>
+
+    </div>
+    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-timing-repeat-duration">
+      <mat-form-field fxFlex="75%" appearance="fill">
+        <mat-label> Durée d'adminstration </mat-label>
+        <input type="text"
+               aria-label="durée d'adminstration"
+               matInput
+               [formControl]="dosageInstructionGroup.get(['timing', 'repeat', 'duration'])"/>
+      </mat-form-field>
+      <mat-form-field fxFlex="25%" appearance="fill">
+        <mat-label> Unité de durée </mat-label>
+        <input type="text"
+               aria-label="unité de durée"
+               matInput
+               [formControl]="dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit'])"
+               [matAutocomplete]="autoDurationUnit"/>
+      </mat-form-field>
+
+      <mat-autocomplete #autoDurationUnit="matAutocomplete">
+        <mat-option *ngFor="let unit of formState.durationUnitArray" [value]="unit">
+          {{unit}}
+        </mat-option>
+      </mat-autocomplete>
+    </div>
+    <div fxLayout="row" class="form-group-row">
+      <mat-card fxFlex="50%" class="form-field-dosage-instruction-timing-repeat-time-of-day">
+        <mat-card-header>
+          <button mat-stroked-button color="primary" (click)="onAddTimeOfDay(nDosage)"> + </button>
+          <div class="form-group-title"> Horraire(s) </div>
+        </mat-card-header>
+        <mat-card-content
+          *ngFor="let timeOfDay of dosageInstructionGroup.get(['timing', 'repeat', 'timeOfDay']).controls;
+            index as i">
+          <div fxLayout="row" [class]="'form-field-row form-field-timing-repeat-time-of-day-' + i">
+            <button mat-stroked-button color="primary" (click)="onRemoveTimeOfDay(nDosage, i)"> - </button>
+            <mat-form-field fxFlex="100%" appearance="fill">
+              <mat-label> Heure {{i + 1}}</mat-label>
+              <input type="text"
+                     aria-label="heure"
+                     matInput
+                     [formControl]="timeOfDay"/>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-divider [vertical]="true" [inset]="true"></mat-divider>
+      <mat-card fxFlex="50%" class="form-field-dosage-instruction-dose-and-rate">
+        <mat-card-header>
+          <button mat-stroked-button color="primary" (click)="onAddDoseAndRate(nDosage)"> + </button>
+          <div class="form-group-title"> Dose(s) </div>
+        </mat-card-header>
+        <mat-card-content
+          *ngFor="let dosageAndRate of dosageInstructionGroup.get('doseAndRate').controls;
+            index as i">
+          <div fxLayout="row" [class]="'form-field-row form-field-dose-and-rate-' + i">
+            <button mat-stroked-button color="primary" (click)="onRemoveDoseAndRate(nDosage, i)"> - </button>
+            <mat-form-field fxFlex="50%" appearance="fill">
+              <mat-label> Quantité </mat-label>
+              <input type="text"
+                     aria-label="quantité"
+                     matInput
+                     [formControl]="dosageAndRate.get('doseQuantity').get('value')"/>
+            </mat-form-field>
+            <mat-form-field fxFlex="50%" appearance="fill">
+              <mat-label> Unité </mat-label>
+              <input type="text"
+                     aria-label="unité"
+                     matInput
+                     [formControl]="dosageAndRate.get('doseQuantity').get('unit')"
+                     [matAutocomplete]="autoUnit"/>
+            </mat-form-field>
+            <mat-autocomplete #autoUnit="matAutocomplete" [displayWith]="displayFnCoding.bind(this)">
+              <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
+              <ng-container *ngIf="!formState.isLoading">
+                <mat-option *ngFor="let unitCode of formState.doseAndRateUnitArray; index as i trackBy: trackByCoding"
+                            [value]="unitCode">
+                  {{labelProviderFactory.getProvider('fhir.Coding').getText(unitCode)}}
+                </mat-option>
+              </ng-container>
+            </mat-autocomplete>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

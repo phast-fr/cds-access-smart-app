@@ -1,0 +1,15 @@
+.prescription-container {
+  min-height: 100vh;
+  background-color: #fafafafa;
+}
+
+mat-drawer {
+  width: 400px;
+}
+
+.card-notify > .mat-fab {
+  position: absolute;
+  z-index: 100;
+  top: 15px;
+  right: 15px;
+}
