@@ -1,4 +1,5 @@
-import { Card } from '../common/fhir/cds-hooks/models/fhir.cdshooks.model';
+import { Card } from '../common/fhir/fhir.cdshooks.model';
+import { fhir } from '../common/fhir/fhir.types';
 
 export interface Readable {
   isReaded: boolean;
@@ -10,7 +11,12 @@ export class CardReadable implements Readable {
 
   constructor(private card: Card) { }
 
-  public getCard(): Card {
+  getCard(): Card {
     return this.card;
   }
+}
+
+export interface Elements {
+  position: number;
+  resource: fhir.MedicationRequest;
 }

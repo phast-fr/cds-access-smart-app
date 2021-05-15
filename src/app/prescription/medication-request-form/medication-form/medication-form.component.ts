@@ -1,624 +1,446 @@
-/**
- * @license
- * Copyright PHAST SARL All Rights Reserved.
- *
- * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://cds-access.phast.fr/license
- */
-import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
-import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup} from '@angular/forms';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
-import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/operators';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
+import { Observable, of, Subject } from 'rxjs';
+import { catchError, filter, switchMap, takeUntil, tap } from 'rxjs/operators';
 
-import {IRender} from '../../../common/cds-access/models/state.model';
-import {MedicationRequestFormViewModel} from '../medication-request-form-view-model';
+import { MedicationRequestFormService } from '../medication-request-form.service';
 import {
-  MedicationFormIntentRemoveIngredient,
-  MedicationFormIntentRemoveMedication, MedicationFormIntentValueChangesMedicationAmount,
-  MedicationFormIntentValueChangesMedicationForm,
-  MedicationFormIntentValueChangesMedicationIngredientStrength,
-  MedicationFormIntentValueChangesMedicationIngredientStrengthUnit,
-  MedicationFormIntentValueChangesMedicationIngredientStrengthValue
+  MedicationFormIntentDetailsMedication, MedicationFormIntentRemoveMedication
 } from '../medication-request-form.intent';
-import {MedicationRequestFormState} from '../medication-request-form.state';
-import {Utils} from '../../../common/cds-access/utils/utils';
-import {FhirLabelProviderFactory} from '../../../common/fhir/providers/fhir.label.provider.factory';
-import {
-  CodeableConcept,
-  Coding, id,
-  Medication,
-  MedicationIngredient, Quantity,
-  Ratio,
-  Reference
-} from 'phast-fhir-ts';
+import { MedicationRequestFormState } from '../medication-request-form.state';
+import { FhirCioDcService } from '../../../common/services/fhir.cio.dc.service';
+import { FhirLabelProviderFactory } from '../../../common/fhir/fhir.label.provider.factory';
+import { fhir } from '../../../common/fhir/fhir.types';
+import Medication = fhir.Medication;
+import Coding = fhir.Coding;
+import Ratio = fhir.Ratio;
+import id = fhir.id;
+import Parameters = fhir.Parameters;
+import CodeableConcept = fhir.CodeableConcept;
+import MedicationIngredient = fhir.MedicationIngredient;
 
 @Component({
   selector: 'app-medication-form',
   templateUrl: './medication-form.component.html',
-  styleUrls: ['./medication-form.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrls: ['./medication-form.component.css']
 })
-export class MedicationFormComponent implements OnInit, OnDestroy, IRender<MedicationRequestFormState> {
+export class MedicationFormComponent implements OnInit, OnDestroy {
 
-  private readonly _unsubscribeTrigger$: Subject<void>;
+  private unsubscribeTrigger$ = new Subject<void>();
 
-  private readonly _medicationGroup$: BehaviorSubject<FormGroup | boolean>;
+  private _labelProviderFactory = new FhirLabelProviderFactory();
 
-  constructor(private _fb: FormBuilder,
-              private _labelProviderFactory: FhirLabelProviderFactory,
-              private _viewModel: MedicationRequestFormViewModel) {
-    this._unsubscribeTrigger$ = new Subject<void>();
-    this._medicationGroup$ = new BehaviorSubject<FormGroup | boolean>(false);
-  }
+  medication = this.fb.array([]);
 
-  public get medicationGroup$(): Observable<FormGroup | boolean> {
-    return this._medicationGroup$.asObservable();
-  }
+  constructor(
+    private _cioDcSource: FhirCioDcService,
+    private _formStateService: MedicationRequestFormService,
+    private fb: FormBuilder) { }
 
-  public get medicationGroup(): FormGroup | null {
-    if (this._medicationGroup$.value) {
-      return this._medicationGroup$.value as FormGroup;
-    }
-    return null;
-  }
-
-  public get isLoadingList$(): Observable<boolean> {
-    return this._viewModel.isLoadingCIOList$;
-  }
-
-  public get amountList(): Array<Quantity> {
-    if (this._viewModel.amountMap && this._viewModel.medication?.id) {
-      const map = this._viewModel.amountMap.get(this._viewModel.medication.id);
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: Quantity, b: Quantity) => {
-          return a?.value === b?.value
-            && a?.code === b?.code;
-        };
-        return Utils.intersect<CodeableConcept>(input[0], input, comparator);
+  static codingSelected(mySet: Set<Coding>): ValidatorFn {
+    return (c: AbstractControl): { [key: string]: boolean } | null => {
+      const selectedValue = c.value;
+      if (selectedValue == null || '' === selectedValue) {
+        return null;
       }
-    }
-    return new Array<Quantity>();
-  }
-
-  public get formList(): Array<CodeableConcept> {
-    if (this._viewModel.formMap && this._viewModel.medication?.id) {
-      const map = this._viewModel.formMap.get(this._viewModel.medication.id);
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: CodeableConcept, b: CodeableConcept) => {
-          return a.text === b.text;
-        };
-        return Utils.intersect<CodeableConcept>(input[0], input, comparator);
+      const pickedOrNot = Array.from(mySet).filter(
+        (alias) => alias.code === selectedValue.code
+      );
+      if (pickedOrNot.length > 0) {
+        // everything's fine. return no error. therefore it's null.
+        return null;
       }
-    }
-    return new Array<CodeableConcept>();
-  }
-
-  public strengthList(itemCodeableConcept: id): Array<Ratio> {
-    if (this._viewModel.strengthMap) {
-      const map = this._viewModel.strengthMap.get(itemCodeableConcept);
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: Ratio, b: Ratio) => {
-          return a.numerator?.value === b.numerator?.value;
-        };
-        return Utils.intersect<Ratio>(input[0], input, comparator);
+      else {
+        // there's no matching selectedvalue selected. so return match error.
+        return { match: true };
       }
+    };
+  }
+
+  static ratioSelected(mySet: Set<Ratio>): ValidatorFn {
+    return (c: AbstractControl): { [key: string]: boolean } | null => {
+      const selectedValue = c.value;
+      if (selectedValue == null || '' === selectedValue) {
+        return null;
+      }
+      const pickedOrNot = Array.from(mySet).filter(
+        (alias) => alias.numerator.code === selectedValue.numerator.code
+      );
+      if (pickedOrNot.length > 0) {
+        // everything's fine. return no error. therefore it's null.
+        return null;
+      }
+      else {
+        // there's no matching selectedvalue selected. so return match error.
+        return { match: true };
+      }
+    };
+  }
+
+  public debug(object: any): void {
+    console.log(object);
+  }
+
+  public get formState(): MedicationRequestFormState {
+    return this._formStateService.formState;
+  }
+
+  public get labelProviderFactory(): FhirLabelProviderFactory {
+    return this._labelProviderFactory;
+  }
+
+  public getIngredient(medicationGroup: AbstractControl): FormArray {
+    return medicationGroup.get('ingredient') as FormArray;
+  }
+
+  public getFormControlByGroup(medicationGroup: AbstractControl): FormControl {
+    return medicationGroup.get('form') as FormControl;
+  }
+
+  public getFormControlByMkId(mkId: id): FormControl {
+    const medicationGroup = this.findFormGroup(mkId, this.medication.controls, 'medication');
+    return medicationGroup.get('form') as FormControl;
+  }
+
+  public getStrengthControlByIngredient(
+    ingredient: MedicationIngredient[],
+    itemCodeableConcept: CodeableConcept,
+    strength: Ratio): MedicationIngredient[] {
+    for (const element of ingredient) {
+      if (element.itemCodeableConcept == null
+        || element.itemCodeableConcept.text !== itemCodeableConcept.text) {
+        continue;
+      }
+      element.strength = strength;
     }
-    return new Array<Ratio>();
+    return ingredient;
   }
 
-  public toFormControl(control: AbstractControl): FormControl {
-    return control as FormControl;
+  ngOnInit(): void {
+    this.subscribeUI(this._formStateService.formStateObservable);
   }
 
-  public toFormArray(control: AbstractControl): FormArray {
-    return control as FormArray;
+  ngOnDestroy(): void {
+    this.unsubscribeTrigger$.next();
+    this.unsubscribeTrigger$.complete();
   }
 
-  public ngOnInit(): void {
-    this._viewModel.state$()
+  subscribeUI(state$: Observable<MedicationRequestFormState>): void {
+    state$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(state => state !== null)
+        takeUntil(this.unsubscribeTrigger$)
       )
-      .subscribe({
-        next: state => this.render(state),
-        error: err => console.error('error', err)
-      });
+      .subscribe(
+      formState => {
+        this.render(formState);
+      }
+    );
   }
 
-  public ngOnDestroy(): void {
-    this._unsubscribeTrigger$.next();
-    this._unsubscribeTrigger$.complete();
-
-    this._medicationGroup$.complete();
-  }
-
-  public render(state: MedicationRequestFormState): void {
-    switch (state.type) {
-      case 'AddMedication':
-        if (state.medicationRequest?.contained) {
-          this._medicationGroup$.next(
-            this.addMedication(0, state.medicationRequest.contained[0])
-          );
-        }
-        break;
-      case 'RemoveMedication':
-        this._medicationGroup$.next(false);
-        break;
-      case 'ValueChangesMedication':
-      case 'ValueChangesDosageInstruction':
-        if (state.medicationRequest?.contained) {
-          this._medicationGroup$.next(
-            this.updateMedication(0, state.medicationRequest.contained[0])
-          );
-        }
-        break;
-      case 'AddMedicationRequest':
-        this._medicationGroup$.next(false);
-        break;
-    }
-  }
-
-  public trackByCodeableConcept(_: number, codeableConcept: CodeableConcept): string | undefined {
+  trackByCodeableConcept(_, codeableConcept: CodeableConcept): string {
     return codeableConcept.text;
   }
 
-  public displayFnCodeableConcept(codeableConcept: CodeableConcept): string | undefined {
-    return this._labelProviderFactory.getProvider('fhir.CodeableConcept')?.getText(codeableConcept);
+  displayFnCodeableConcept(codeableConcept: CodeableConcept): string | null {
+    if (codeableConcept == null) { return null; }
+    return this._labelProviderFactory.getProvider('fhir.CodeableConcept').getText(codeableConcept);
   }
 
-  public trackByCoding(_: number, coding: Coding): string | undefined {
+  trackByCoding(_, coding: Coding): string {
     return coding.code;
   }
 
-  public displayFnCoding(coding: Coding): string | undefined {
-    return this._labelProviderFactory.getProvider('fhir.Coding')?.getText(coding);
+  displayFnCoding(coding: Coding): string | null {
+    if (coding == null) { return null; }
+    return this._labelProviderFactory.getProvider('fhir.Coding').getText(coding);
   }
 
-  public trackByQuantity(_: number, quantity: Quantity): string | undefined {
-    return quantity?.code;
+  trackByRatio(_, ratio: Ratio): string {
+    return ratio.numerator.code;
   }
 
-  public displayFnQuantity(quantity: Quantity): string | undefined {
-    return this._labelProviderFactory.getProvider('fhir.Quantity')?.getText(quantity);
+  displayFnRatio(ratio: Ratio): string | null {
+    if (ratio == null) { return null; }
+    return this._labelProviderFactory.getProvider('fhir.Ratio').getText(ratio);
   }
 
-  public trackByRatio(_: number, ratio: Ratio): string | undefined {
-    return ratio.numerator?.code;
+  onRemoveMedication(nMedication: number): void {
+    this._formStateService.dispatchIntent(new MedicationFormIntentRemoveMedication(nMedication));
   }
 
-  public displayFnRatio(ratio: Ratio): string | undefined {
-    return this._labelProviderFactory.getProvider('fhir.Ratio')?.getText(ratio);
-  }
+  private render(formState: MedicationRequestFormState): void {
+    switch (formState.type) {
+      case 'AddMedication':
+        this.medication.clear();
+        this.addMedication(
+          formState.medicationRequest.contained[0] as Medication,
+          this.medication,
+          formState.medicationRequest.contained as Array<Medication>
+        );
+        break;
+      case 'RemoveMedication':
+        for (const index of formState.medicationArray) {
+          this.medication.removeAt(index);
+        }
+        break;
+      case 'AddMedicationRequest':
+        this.medication.clear();
+        break;
+    }
 
-  public trackByControl(_: number, ac: AbstractControl): string {
-    return ac.get('track-id')?.value;
-  }
-
-  public doseAndRateUnitList(reference: Reference): Array<Coding> {
-    if (this._viewModel.doseAndRateUnitMap && reference.reference) {
-      const map = this._viewModel.doseAndRateUnitMap.get(reference.reference.substring(1));
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: Coding, b: Coding) => {
-          return a.code === b.code && a.system === b.system;
-        };
-        return Utils.intersect<Coding>(input[0], input, comparator);
+    /*let count = 0;
+    for (const ingredientControl of ingredient.controls) {
+      if (this._formStateService.formState.dosageRatioSet[count].size === 1) {
+        ingredientControl.get('strength').setValue(
+          this._formStateService.formState.dosageRatioSet[count].values().next().value, options);
       }
+      ingredientControl.get('strength').setValidators(
+        [DosageInstructionFormComponent.ratioSelected(this._formStateService.formState.dosageRatioSet[count])]);
+      ingredientControl.get('strength').updateValueAndValidity(options);
+      count++;
     }
-    return new Array<Coding>();
-  }
 
-  public onRemoveMedication(nMedication: number): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveMedication(this._viewModel.medicationRequest, nMedication)
-      );
+    const routeControl = dosageInstructionGroup.get('route');
+    if (this._formStateService.formState.routeCodeSet.size === 1) {
+      routeControl.setValue(this._formStateService.formState.routeCodeSet.values().next().value, options);
     }
-  }
+    routeControl.setValidators(
+      [DosageInstructionFormComponent.codingSelected(this._formStateService.formState.routeCodeSet)]);
+    routeControl.updateValueAndValidity(options);
 
-  public onRemoveIngredient(nIngredient: number): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveIngredient(this._viewModel.medicationRequest, nIngredient)
-      );
-    }
-  }
-
-  private addMedication(nMedication: number, medication: Medication): FormGroup {
-    const medicationGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
-      medication: [medication],
-      ingredient: this._fb.array([]),
-      amount: [medication.amount],
-      form: [medication.form]
-    });
-    this.setUpAmount(medication, medicationGroup);
-    this.setUpForm(medication, medicationGroup);
-    this.setUpList();
-
-    if (medication.ingredient) {
-      const ingredientArray = medicationGroup.get('ingredient') as FormArray;
-      medication.ingredient.forEach(ingredient => {
-        if (ingredient.itemCodeableConcept) {
-          ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
-        }
-        else if (ingredient.itemReference) {
-          ingredientArray.push(this.addIngredientReference(medication, ingredient));
-        }
-      });
-    }
-    return medicationGroup;
-  }
-
-  private setUpAmount(medication: Medication, medicationGroup: FormGroup): void {
-    const amountControl = medicationGroup.get('amount');
-    if (amountControl) {
-      const amountString$ = amountControl.valueChanges
-        .pipe(
-          filter(value => typeof value === 'string')
-        );
-      const amountObj$ = amountControl.valueChanges
-        .pipe(
-          filter(value => value instanceof Object)
-        );
-
-      amountString$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          tap(() => amountControl.reset(undefined, {emitEvent: false}))
-        )
-        .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationAmount(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  null
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
-      amountObj$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$)
-        )
-        .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationAmount(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  value
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
-    }
-  }
-
-  private setUpForm(medication: Medication, medicationGroup: FormGroup): void {
     const formControl = medicationGroup.get('form');
-    if (formControl) {
-      const formString$ = formControl.valueChanges
-        .pipe(
-          filter(value => typeof value === 'string')
-        );
-      const formObj$ = formControl.valueChanges
-        .pipe(
-          filter(value => value instanceof Object)
-        );
-
-      formString$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          tap(() => formControl.reset(undefined, {emitEvent: false}))
-        )
-        .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationForm(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  null
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
-      formObj$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$)
-        )
-        .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationForm(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  value
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
+    if (this._formStateService.formState.formCodeSet.size === 1) {
+      formControl.setValue(this._formStateService.formState.formCodeSet.values().next().value, options);
     }
+    formControl.setValidators(
+      [DosageInstructionFormComponent.codingSelected(this._formStateService.formState.formCodeSet)]);
+    formControl.updateValueAndValidity(options);*/
   }
 
-  private setUpList(): void {
-    const loadedList$ = this.isLoadingList$
+  private addMedication(medicationRoot: Medication, medicationFormArray: FormArray,
+                        medications: Array<Medication>): void {
+    const medicationGroup = this.fb.group({
+      medication: [medicationRoot],
+      ingredient: this.fb.array([]),
+      form: [medicationRoot.form]
+    });
+    medicationFormArray.push(medicationGroup);
+    const ingredientArray = medicationGroup.get('ingredient') as FormArray;
+    for (const ingredient of medicationRoot.ingredient) {
+      if (ingredient.itemCodeableConcept != null) {
+        const ingredientGroup = this.fb.group({
+          itemCodeableConcept: [ingredient.itemCodeableConcept],
+          strength: [ingredient.strength]
+        });
+        ingredientArray.push(ingredientGroup);
+        const strengthControl = ingredientGroup.get('strength');
+        const strengthValueString$ = strengthControl.valueChanges
+          .pipe(
+            filter(value => typeof value === 'string')
+          );
+        strengthValueString$
+          .pipe(
+            takeUntil(this.unsubscribeTrigger$),
+            tap(
+              () => {
+                this.formState.loading = true;
+                this._formStateService.clearList(medicationRoot);
+              }
+            ),
+            switchMap(_ =>
+              this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+                medicationRoot.id,
+                medicationRoot.code,
+                medicationRoot.form,
+                this.getStrengthControlByIngredient(medicationRoot.ingredient, ingredient.itemCodeableConcept, null),
+                null
+              )
+            ),
+            catchError(err => {
+              console.log('Error: ', err);
+              return of({parameter: []} as Parameters);
+            })
+          ).subscribe(parameters => this._formStateService.buildList(medicationRoot.id, parameters));
+        strengthValueString$
+          .pipe(
+            takeUntil(this.unsubscribeTrigger$)
+          ).subscribe(
+          _ =>
+            this._formStateService.dispatchIntent(
+              new MedicationFormIntentDetailsMedication(
+                medicationRoot.id,
+                medicationRoot.form,
+                this.getStrengthControlByIngredient(medicationRoot.ingredient, ingredient.itemCodeableConcept, null),
+                null
+              )
+            )
+        );
+
+        const strengthValueRatio$ = strengthControl.valueChanges
+          .pipe(
+            filter(value => value.hasOwnProperty('numerator'))
+          );
+        strengthValueRatio$
+          .pipe(
+            takeUntil(this.unsubscribeTrigger$),
+            tap(
+              () => {
+                this.formState.loading = true;
+                this._formStateService.clearList(medicationRoot);
+              }
+            ),
+            switchMap(value =>
+              this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+                medicationRoot.id,
+                medicationRoot.code,
+                medicationRoot.form,
+                this.getStrengthControlByIngredient(medicationRoot.ingredient, ingredient.itemCodeableConcept, value),
+                null
+              )
+            ),
+            catchError(err => {
+              console.log('Error: ', err);
+              return of({parameter: []} as Parameters);
+            })
+          ).subscribe(parameters => this._formStateService.buildList(medicationRoot.id, parameters));
+        strengthValueRatio$
+          .pipe(
+            takeUntil(this.unsubscribeTrigger$)
+          ).subscribe(
+          value =>
+            this._formStateService.dispatchIntent(
+              new MedicationFormIntentDetailsMedication(
+                medicationRoot.id,
+                medicationRoot.form,
+                this.getStrengthControlByIngredient(medicationRoot.ingredient, ingredient.itemCodeableConcept, value),
+                null
+              )
+            )
+        );
+      }
+      else if (ingredient.itemReference != null) {
+        const ingredientGroup = this.fb.group({
+          itemReference: [ingredient.itemReference],
+          strength: this.fb.group({
+            numeratorValue: [undefined],
+            numeratorUnit: [{
+              code: undefined,
+              display: undefined,
+              system: undefined
+            }]
+          })
+        });
+        ingredientArray.push(ingredientGroup);
+      }
+    }
+
+    const formControl = this.getFormControlByGroup(medicationGroup);
+    const formValueString$ = formControl.valueChanges
       .pipe(
-        filter(value => !value)
+        filter(value => typeof value === 'string')
       );
-
-    loadedList$
+    formValueString$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe({
-        next: () => this.onLoadedList(),
-        error: err => console.error('error', err)
-      });
-
-  }
-
-  private updateMedication(nMedication: number, medication: Medication): FormGroup | boolean {
-    if (this._medicationGroup$.value) {
-      const medicationGroup = this._medicationGroup$.value as FormGroup;
-      const formControl = medicationGroup.get('form');
-      if (formControl) {
-        if (medication?.form) {
-          formControl.setValue(medication.form, {emitEvent: false});
-        }
-        else {
-          formControl.reset(undefined, {emitEvent: false});
-        }
-      }
-
-      if (medication.ingredient) {
-        const ingredientArray = medicationGroup.get('ingredient') as FormArray;
-        medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
-          if (ingredient.itemCodeableConcept) {
-            if (ingredient.strength) {
-              const ingredientControl = ingredientArray.at(nIngredient);
-              if (ingredientControl) {
-                const strengthControl = ingredientControl.get('strength');
-                if (strengthControl) {
-                  strengthControl.setValue(ingredient.strength, {emitEvent: false});
-                }
-              }
-            }
-            else {
-              const ingredientControl = ingredientArray.at(nIngredient);
-              if (ingredientControl) {
-                const strengthControl = ingredientControl.get('strength');
-                if (strengthControl) {
-                  strengthControl.reset(undefined, {emitEvent: false});
-                }
-              }
-            }
-          }
-        });
-      }
-      return medicationGroup;
-    }
-    return false;
-  }
-
-  private addIngredientCodeableConcept(nMedication: number, medication: Medication,
-                                       ingredient: MedicationIngredient): FormGroup {
-    const ingredientGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
-      itemCodeableConcept: ingredient.itemCodeableConcept,
-      strength: ingredient.strength
-    });
-
-    const strengthControl = ingredientGroup.get('strength');
-    if (strengthControl) {
-      const strengthString$ = strengthControl.valueChanges
-        .pipe(
-          filter(value => typeof value === 'string')
-        );
-      const strengthObj$ = strengthControl.valueChanges
-        .pipe(
-          filter(value => value instanceof Object)
-        );
-      strengthString$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          tap(() => strengthControl.reset(undefined, {emitEvent: false}))
-        )
-        .subscribe({
-          next: () => {
-            const itemCodeableConceptControl = ingredientGroup.get('itemCodeableConcept');
-            if (this._viewModel.medicationRequest && itemCodeableConceptControl) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationIngredientStrength(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  itemCodeableConceptControl.value,
-                  null
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
-      strengthObj$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$)
-        )
-        .subscribe({
-          next: value => {
-            const itemCodeableConceptControl = ingredientGroup.get('itemCodeableConcept');
-            if (this._viewModel.medicationRequest && itemCodeableConceptControl) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationIngredientStrength(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  itemCodeableConceptControl.value,
-                  value
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
-    }
-
-    return ingredientGroup;
-  }
-
-  private addIngredientReference(medication: Medication, ingredient: MedicationIngredient): FormGroup {
-    const ingredientGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
-      itemReference: ingredient.itemReference,
-      strength: this._fb.group({
-        numerator: this._fb.group({
-          value: ingredient.strength?.numerator?.value,
-          unit: {
-            code: ingredient.strength?.numerator?.code,
-            display: ingredient.strength?.numerator?.unit,
-            system: ingredient.strength?.numerator?.system
-          }
+        takeUntil(this.unsubscribeTrigger$),
+        tap(
+          () => {
+            this.formState.loading = true;
+            this._formStateService.clearList(medicationRoot);
+          }),
+        switchMap(_ =>
+          this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+            medicationRoot.id, medicationRoot.code,
+            null,
+            medicationRoot.ingredient,
+            null
+          )
+        ),
+        catchError(err => {
+          console.log('Error: ', err);
+          return of({parameter: []} as Parameters);
         })
-      })
-    });
+      ).subscribe(parameters => this._formStateService.buildList(medicationRoot.id, parameters));
+    formValueString$
+      .pipe(
+        takeUntil(this.unsubscribeTrigger$)
+      ).subscribe(
+      _ =>
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentDetailsMedication(
+            medicationRoot.id,
+            null,
+            medicationRoot.ingredient,
+            null
+          )
+        )
+    );
 
-    const strengthValueControl = ingredientGroup.get(['strength', 'numerator', 'value']);
-    if (strengthValueControl) {
-      strengthValueControl.valueChanges
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          debounceTime(500),
-          distinctUntilChanged()
+    const formValueCodeableConcept$ = formControl.valueChanges
+      .pipe(
+        filter(value => value.hasOwnProperty('text'))
+      );
+    formValueCodeableConcept$
+      .pipe(
+        takeUntil(this.unsubscribeTrigger$),
+        tap(
+          () => {
+            this.formState.loading = true;
+            this._formStateService.clearList(medicationRoot);
+          }),
+        switchMap(value =>
+          this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+            medicationRoot.id,
+            medicationRoot.code,
+            value,
+            medicationRoot.ingredient,
+            null
+          )
+        ),
+        catchError(err => {
+          console.log('Error: ', err);
+          return of({parameter: []} as Parameters);
+        })
+      ).subscribe(parameters => this._formStateService.buildList(medicationRoot.id, parameters));
+    formValueCodeableConcept$
+      .pipe(
+        takeUntil(this.unsubscribeTrigger$)
+      ).subscribe(
+      value =>
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentDetailsMedication(
+            medicationRoot.id,
+            value,
+            medicationRoot.ingredient,
+            null
+          )
         )
-        .subscribe({
-          next: strengthValue => {
-            const itemReferenceControl = ingredientGroup.get('itemReference');
-            if (this._viewModel.medicationRequest && itemReferenceControl) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationIngredientStrengthValue(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  itemReferenceControl.value,
-                  strengthValue
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
-    }
+    );
 
-    const strengthUnitControl = ingredientGroup.get(['strength', 'numerator', 'unit']);
-    if (strengthUnitControl) {
-      const strengthNumeratorUnitString$ = strengthUnitControl.valueChanges
-        .pipe(
-          filter(predicate => typeof predicate === 'string')
-        );
-      const strengthNumeratorUnitObj$ = strengthUnitControl.valueChanges
-        .pipe(
-          filter(value => value instanceof Object)
-        );
-      strengthNumeratorUnitString$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          tap(() => strengthUnitControl.reset(undefined, {emitEvent: false}))
-        )
-        .subscribe({
-          next: () => {
-            const itemReferenceControl = ingredientGroup.get('itemReference');
-            if (this._viewModel.medicationRequest && itemReferenceControl) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  itemReferenceControl.value,
-                  null
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
+    for (const ingredient of medicationRoot.ingredient) {
+      if (ingredient.itemReference != null) {
+        const mId = ingredient.itemReference.reference.substring(1);
+        const mIndex = medications.findIndex((value) => {
+          return value.id === mId;
         });
-      strengthNumeratorUnitObj$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$)
-        )
-        .subscribe({
-          next: strengthUnit => {
-            const itemReferenceControl = ingredientGroup.get('itemReference');
-            if (this._viewModel.medicationRequest && itemReferenceControl) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
-                  this._viewModel.medicationRequest,
-                  medication,
-                  itemReferenceControl.value,
-                  strengthUnit
-                )
-              );
-            }
-          },
-          error: err => console.error('error', err)
-        });
+        if (mIndex > -1) {
+          this.addMedication(medications[mIndex], medicationFormArray, medications);
+        }
+      }
     }
-    return ingredientGroup;
   }
 
-  private onLoadedList(): void {
-    if (this._medicationGroup$.value) {
-      const options = {emitEvent: false};
-      const medicationGroup = this._medicationGroup$.value as FormGroup;
-      const formControl = medicationGroup.get('form');
-      if (formControl) {
-        if (this.formList.length === 0) {
-          formControl.disable(options);
-        }
-        else {
-          formControl.enable(options);
-        }
+  private findFormGroup(resourceId: id, controls: AbstractControl[], path: string | (string | number)[]): FormGroup | null {
+    const nIndex = controls.findIndex(
+      (_medicationGroup: AbstractControl, _) => {
+        const medicationControl = _medicationGroup.get(path);
+        return medicationControl.value != null && medicationControl.value.id === resourceId;
       }
+    );
 
-      const amountControl = medicationGroup.get('amount');
-      if (amountControl) {
-        if (this.amountList.length === 0) {
-          amountControl.disable(options);
-        }
-        else {
-          amountControl.enable(options);
-        }
-      }
-
-      if (this._viewModel.medicationRequest?.contained) {
-        const ingredientFormArray = medicationGroup.get('ingredient') as FormArray;
-        this._viewModel.medicationRequest.contained.forEach((value) => {
-          const medication = value as Medication;
-          if (medication.ingredient) {
-            medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
-              if (ingredient.itemCodeableConcept?.text && this.strengthList(ingredient.itemCodeableConcept.text).length === 0) {
-                ingredientFormArray.at(nIngredient).disable(options);
-              }
-              else if (ingredient.itemCodeableConcept) {
-                ingredientFormArray.at(nIngredient).enable(options);
-              }
-            });
-          }
-        });
-      }
+    if (nIndex === -1) {
+      console.log('Error: cannot find route control');
+      return null;
     }
+    return controls[nIndex] as FormGroup;
   }
 }

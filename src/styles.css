@@ -1,1 +1,64 @@
 /* You can add global styles to this file, and also import other style files */
+
+html, body { height: 100%; }
+body { margin: 0; font-family: 'Source Sans Pro', sans-serif; }
+
+.mat-flat-button.mat-primary,
+.mat-raised-button.mat-primary,
+.mat-fab.mat-primary,
+.mat-mini-fab.mat-primary {
+  background-color: #24903F;
+}
+
+.mat-progress-spinner circle, .mat-spinner circle {
+  stroke: #24903F;
+}
+
+.mat-checkbox-ripple .mat-ripple-element {
+  background-color: #24903F !important;
+}
+
+.mat-checkbox-checked.mat-accent .mat-checkbox-background,
+.mat-checkbox-indeterminate.mat-accent .mat-checkbox-background {
+  background-color: #24903F !important;
+}
+
+.mat-checkbox,
+.mat-paginator, .mat-paginator-page-size .mat-select-trigger
+.mat-button,
+.mat-table,
+.mat-form-field,
+.mat-card {
+  font-family: 'Source Sans Pro', sans-serif;
+}
+
+.mat-card-title {
+  font-family: 'Ubuntu', sans-serif;
+  font-weight: 700;
+}
+
+/* Absolute Center Spinner */
+.loading-indicator {
+  position: fixed;
+  z-index: 999;
+  height: 2em;
+  width: 2em;
+  overflow: show;
+  margin: auto;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+/* Transparent Overlay */
+.loading-indicator:before {
+  content: '';
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.3);
+}

@@ -1,168 +1,94 @@
-/**
- * @license
- * Copyright PHAST SARL All Rights Reserved.
- *
- * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://cds-access.phast.fr/license
- */
-import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
-import {FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
-import {debounceTime, distinctUntilChanged, filter, takeUntil} from 'rxjs/operators';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormControl } from '@angular/forms';
+import { Observable, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
-import {IRender} from '../../../common/cds-access/models/state.model';
-import { MedicationRequestFormViewModel } from '../medication-request-form-view-model';
+import { MedicationRequestFormService } from '../medication-request-form.service';
 import {
   MedicationFormIntentValueChangesDispenseRequest
 } from '../medication-request-form.intent';
 import { MedicationRequestFormState } from '../medication-request-form.state';
-import {MedicationRequestDispenseRequest} from 'phast-fhir-ts';
-import {DateTime} from 'luxon';
-import {environment} from '../../../../environments/environment';
 
 @Component({
   selector: 'app-dispense-request-form',
   templateUrl: './dispense-request-form.component.html',
-  styleUrls: ['./dispense-request-form.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrls: ['./dispense-request-form.component.css']
 })
-export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<MedicationRequestFormState | boolean> {
+export class DispenseRequestFormComponent implements OnInit, OnDestroy {
 
-  private readonly _unsubscribeTrigger$: Subject<void>;
+  private unsubscribeTrigger$ = new Subject<void>();
 
-  private readonly _dispenseRequestGroup$: BehaviorSubject<FormGroup | boolean>;
+  dispenseRequest = this.fb.group({
+    validityPeriod: this.fb.group({
+      start: [undefined],
+      end: [undefined]
+    }),
+    expectedSupplyDuration: this.fb.group({
+      value: [undefined]
+    })
+  });
 
-  constructor(private _fb: FormBuilder,
-              private _viewModel: MedicationRequestFormViewModel) {
-    this._unsubscribeTrigger$ = new Subject<void>();
-    this._dispenseRequestGroup$ = new BehaviorSubject<FormGroup | boolean>(false);
+  constructor(
+    private _formStateService: MedicationRequestFormService,
+    private fb: FormBuilder) { }
+
+  public get formState(): MedicationRequestFormState {
+    return this._formStateService.formState;
   }
 
-  public get dispenseRequestGroup$(): Observable<FormGroup | boolean> {
-    return this._dispenseRequestGroup$.asObservable();
+  public get dispenseRequestValidityPeriodStart(): FormControl {
+    return this.dispenseRequest.get(['validityPeriod', 'start']) as FormControl;
   }
 
-  public get dispenseRequestGroup(): FormGroup | undefined {
-    if (this._dispenseRequestGroup$.value) {
-      return this._dispenseRequestGroup$.value as FormGroup;
-    }
-    return undefined;
+  public get dispenseRequestValidityPeriodEnd(): FormControl {
+    return this.dispenseRequest.get(['validityPeriod', 'end']) as FormControl;
   }
 
-  public get dispenseRequestValidityPeriodStart(): FormControl | undefined {
-    if (this.dispenseRequestGroup) {
-      return this.dispenseRequestGroup.get(['validityPeriod', 'start']) as FormControl;
-    }
-    return undefined;
+  public get dispenseRequestExpectedSupplyDurationValue(): FormControl {
+    return this.dispenseRequest.get(['expectedSupplyDuration', 'value']) as FormControl;
   }
 
-  public get dispenseRequestValidityPeriodEnd(): FormControl | undefined {
-    if (this.dispenseRequestGroup) {
-      return this.dispenseRequestGroup.get(['validityPeriod', 'end']) as FormControl;
-    }
-    return undefined;
+  ngOnInit(): void {
+    this.setUpOnChange();
+    this.subscribeUI(this._formStateService.formStateObservable);
   }
 
-  public get dispenseRequestExpectedSupplyDurationValue(): FormControl | undefined {
-    if (this.dispenseRequestGroup) {
-      return this.dispenseRequestGroup.get(['expectedSupplyDuration', 'value']) as FormControl;
-    }
-    return undefined;
+  ngOnDestroy(): void {
+    this.unsubscribeTrigger$.next();
+    this.unsubscribeTrigger$.complete();
   }
 
-  public ngOnInit(): void {
-    this._viewModel.state$()
+  subscribeUI(state$: Observable<MedicationRequestFormState>): void {
+    state$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(state => state !== null)
+        takeUntil(this.unsubscribeTrigger$)
       )
-      .subscribe({
-          next: state => this.render(state),
-          error: err => console.error('error', err)
-        }
-      );
+      .subscribe(
+      formState => {
+        this.render(formState);
+      }
+    );
   }
 
-  public ngOnDestroy(): void {
-    this._unsubscribeTrigger$.next();
-    this._unsubscribeTrigger$.complete();
-
-    this._dispenseRequestGroup$.complete();
-  }
-
-  public render(state: MedicationRequestFormState): void {
-    switch (state.type) {
-      case 'AddMedication':
-        if (state.medicationRequest?.dispenseRequest) {
-          this._dispenseRequestGroup$.next(
-            this.addMedication(state.medicationRequest.dispenseRequest)
-          );
-        }
-        break;
-      case 'RemoveMedication':
-        if (state.medicationRequest && this.dispenseRequestGroup) {
-          this._dispenseRequestGroup$.next(this.dispenseRequestGroup);
-        }
-        else {
-          this._dispenseRequestGroup$.next(false);
-        }
-        break;
-      case 'AddMedicationRequest':
-        this._dispenseRequestGroup$.next(false);
-        break;
-    }
-  }
-
-  private addMedication(dispenseRequest: MedicationRequestDispenseRequest): FormGroup {
-    const options = {emitEvent: false};
-    const dispenseGroup = this._fb.group({
-      validityPeriod: this._fb.group({
-        start: [(dispenseRequest.validityPeriod?.start) ?
-          DateTime.fromFormat(dispenseRequest.validityPeriod.start, environment.fhir_date_format)
-            .toFormat(environment.display_date_format) : undefined,
-          Validators.pattern( /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/ )],
-        end: [dispenseRequest.validityPeriod?.end]
-      }),
-      expectedSupplyDuration: this._fb.group({
-        value: [dispenseRequest.expectedSupplyDuration?.value]
-      })
-    });
-    dispenseGroup.valueChanges
+  private setUpOnChange(): void {
+    this.dispenseRequest.valueChanges
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
+        takeUntil(this.unsubscribeTrigger$),
         debounceTime(500),
         distinctUntilChanged()
-      ).subscribe({
-      next: changes => {
-        if (this.dispenseRequestValidityPeriodStart) {
-          this.dispenseRequestValidityPeriodStart.setValue(
-            changes.validityPeriod.start, options
-          );
-        }
+      ).subscribe(changes => this._formStateService.dispatchIntent(
+        new MedicationFormIntentValueChangesDispenseRequest(changes)
+    ));
+  }
 
-        if (this.dispenseRequestValidityPeriodEnd) {
-          this.dispenseRequestValidityPeriodEnd.setValue(
-            changes.validityPeriod.end, options
-          );
-        }
-
-        if (this.dispenseRequestExpectedSupplyDurationValue) {
-          this.dispenseRequestExpectedSupplyDurationValue.setValue(
-            changes.expectedSupplyDuration.value, options
-          );
-        }
-
-        if (this._viewModel.medicationRequest) {
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesDispenseRequest(
-              this._viewModel.medicationRequest,
-              changes
-            )
-          );
-        }
-      },
-      error: err => console.error('error', err)
-    });
-    return dispenseGroup;
+  private render(formState: MedicationRequestFormState): void {
+    switch (formState.type) {
+      case 'AddMedicationRequest':
+        const options = {emitEvent: false};
+        this.dispenseRequestValidityPeriodStart.reset(undefined, options);
+        this.dispenseRequestValidityPeriodEnd.reset(undefined, options);
+        this.dispenseRequestExpectedSupplyDurationValue.reset(undefined, options);
+        break;
+    }
   }
 }

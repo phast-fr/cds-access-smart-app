@@ -1,6 +1,6 @@
-<div class="form-group-row form-field-dispense-request" *ngIf="dispenseRequestGroup$ | async">
+<div class="form-group-row form-field-dispense-request" *ngIf="formState.medicationRequest != null">
   <div fxLayout="row" class="form-group-header">
-    <div class="form-group-title"> Durée de prescription </div>
+    <div class="form-group-title"> Demande de délivrance </div>
   </div>
   <div class="form-group-body">
     <div fxLayout="row" class="form-field-row form-field-validity-period">
@@ -8,7 +8,6 @@
         <mat-label> Début </mat-label>
         <input type="text"
                aria-label="Début"
-               placeholder="format : yyyy-mm-dd"
                matInput
                [formControl]="dispenseRequestValidityPeriodStart"/>
       </mat-form-field>
@@ -16,7 +15,6 @@
         <mat-label> Fin </mat-label>
         <input type="text"
                aria-label="Fin"
-               placeholder="format : yyyy-mm-dd"
                matInput
                [formControl]="dispenseRequestValidityPeriodEnd"/>
       </mat-form-field>
@@ -26,7 +24,6 @@
         <mat-label> Pendant ? </mat-label>
         <input type="text"
                aria-label="pendant"
-               placeholder="nombre de jour(s)"
                matInput
                [formControl]="dispenseRequestExpectedSupplyDurationValue"/>
       </mat-form-field>
