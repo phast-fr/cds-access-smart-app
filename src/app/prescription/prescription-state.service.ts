@@ -4,7 +4,7 @@ import { Observable, Subject } from 'rxjs';
 import { SmartService } from '../smart/services/smart.service';
 import { FhirCdsHooksService } from '../common/fhir/fhir.cdshooks.service';
 import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
-import { CdsCards, Hook, OrderSelectContext, OrderSelectHook } from '../common/fhir/fhir.cdshooks.model';
+import { Hook, OrderSelectContext, OrderSelectHook } from '../common/fhir/fhir.cdshooks.model';
 import { CardReadable } from './prescription.model';
 import { fhir } from '../common/fhir/fhir.types';
 import Practitioner = fhir.Practitioner;
@@ -112,15 +112,16 @@ export class PrescriptionStateService {
               }
 
               this._cdsHooksService.postHook(service, hook)
-                .subscribe(
-                  next => {
-                    const cdsCards = next as CdsCards;
+                .subscribe({
+                  next: (cdsCards) => {
                     for (const card of cdsCards.cards) {
                       this.cards.push(new CardReadable(card));
                     }
-                  }, error => {
+                  },
+                  error: (error) => {
                     console.log('Error: ', error);
-                  });
+                  }
+                });
             }
           ).catch(reason => {
             console.log('Reason: ', reason);
