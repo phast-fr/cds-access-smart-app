@@ -21,8 +21,6 @@ export class PrescriptionStateService {
 
   private _medicationRequestSubject$ = new Subject<MedicationRequest>();
 
-  private _medicationRequestList = new Array<MedicationRequest>();
-
   private _cards = new Array<CardReadable>();
 
   constructor(private _smartService: SmartService,
@@ -49,17 +47,12 @@ export class PrescriptionStateService {
     return this._cards;
   }
 
-  public get medicationRequestList(): Array<MedicationRequest> {
-    return this._medicationRequestList;
-  }
-
   public get medicationRequestSubject(): Observable<MedicationRequest> {
     return this._medicationRequestSubject$;
   }
 
   public addMedicationRequest(medicationRequest: MedicationRequest): void {
     console.log('Medication Request: ', medicationRequest);
-    this._medicationRequestList.push(medicationRequest);
     this._medicationRequestSubject$.next(medicationRequest);
 
     // TODO to can filtered by medication request code into CQL
@@ -68,67 +61,70 @@ export class PrescriptionStateService {
       medicationRequest.medicationCodeableConcept = medication.code;
 
       this._cdsHooksService.getServices().subscribe(
-        services => {
-          const service = services.services[0];
-
-          let hook: Hook;
-          if (service.hook === 'order-select') {
-            hook = new OrderSelectHook();
-            (hook as OrderSelectHook).context = new OrderSelectContext();
-            (hook as OrderSelectHook).context.userId = this.user.id;
-            (hook as OrderSelectHook).context.patientId = this.patient.id;
-            (hook as OrderSelectHook).context.selections = [medicationRequest.id];
-            (hook as OrderSelectHook).context.draftOrders = {
-              resourceType: 'Bundle',
-              type: 'collection',
-              entry: [{
-                resource: medicationRequest
-              }],
-            };
-          }
-          else {
-            return;
-          }
-
-          hook.prefetch = {
-            item1: this.patient,
-            item2: medicationRequest
-          };
-          const promises: Array<Promise<object>> = [];
-          for (const item of Object.keys(service.prefetch)) {
-            if ('Patient?_id={{context.patientId}}' !== service.prefetch[item]) {
-              promises.push(this.buildPrefetch(this.patient, service.prefetch[item]));
-            }
-          }
-
-          Promise.all(promises).then(
-            values => {
-              let itemCount = 2;
-              for (const value of values) {
-                const bundle = value as fhir.Bundle;
-                if (bundle.total > 0) {
-                  hook.prefetch['item' + ++itemCount] = value;
-                }
+        {
+          next: services => {
+            const service = services.services[0];
+            let hook: Hook;
+            if (service.hook === 'order-select') {
+              hook = new OrderSelectHook();
+              (hook as OrderSelectHook).context = new OrderSelectContext();
+              if (this.user) {
+                (hook as OrderSelectHook).context.userId = this.user.id;
               }
-
-              this._cdsHooksService.postHook(service, hook)
-                .subscribe({
-                  next: (cdsCards) => {
-                    for (const card of cdsCards.cards) {
-                      this.cards.push(new CardReadable(card));
-                    }
-                  },
-                  error: (error) => {
-                    console.log('Error: ', error);
-                  }
-                });
+              (hook as OrderSelectHook).context.patientId = this.patient.id;
+              (hook as OrderSelectHook).context.selections = [medicationRequest.id];
+              (hook as OrderSelectHook).context.draftOrders = {
+                resourceType: 'Bundle',
+                type: 'collection',
+                entry: [{
+                  resource: medicationRequest
+                }],
+              };
             }
-          ).catch(reason => {
-            console.log('Reason: ', reason);
-          });
-        },
-        error => {
-          console.log('Error: ', error);
+            else {
+              return;
+            }
+
+            hook.prefetch = {
+              item1: this.patient,
+              item2: medicationRequest
+            };
+            const promises: Array<Promise<object>> = [];
+            for (const item of Object.keys(service.prefetch)) {
+              if ('Patient?_id={{context.patientId}}' !== service.prefetch[item]) {
+                promises.push(this.buildPrefetch(this.patient, service.prefetch[item]));
+              }
+            }
+
+            Promise.all(promises).then(
+              values => {
+                let itemCount = 2;
+                for (const value of values) {
+                  const bundle = value as fhir.Bundle;
+                  if (bundle.total > 0) {
+                    hook.prefetch['item' + ++itemCount] = value;
+                  }
+                }
+
+                this._cdsHooksService.postHook(service, hook)
+                  .subscribe({
+                    next: (cdsCards) => {
+                      for (const card of cdsCards.cards) {
+                        this.cards.push(new CardReadable(card));
+                      }
+                    },
+                    error: (error) => {
+                      console.log('Error: ', error);
+                    }
+                  });
+              }
+            ).catch(reason => {
+              console.log('Reason: ', reason);
+            });
+          },
+          error: err => {
+            console.log('Error: ', err);
+          }
         }
       );
     }

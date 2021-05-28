@@ -8,6 +8,7 @@
         <mat-label> Début </mat-label>
         <input type="text"
                aria-label="Début"
+               placeholder="format : yyyy-mm-dd"
                matInput
                [formControl]="dispenseRequestValidityPeriodStart"/>
       </mat-form-field>
@@ -15,6 +16,7 @@
         <mat-label> Fin </mat-label>
         <input type="text"
                aria-label="Fin"
+               placeholder="format : yyyy-mm-dd"
                matInput
                [formControl]="dispenseRequestValidityPeriodEnd"/>
       </mat-form-field>
@@ -24,6 +26,7 @@
         <mat-label> Pendant ? </mat-label>
         <input type="text"
                aria-label="pendant"
+               placeholder="nombre de jour(s)"
                matInput
                [formControl]="dispenseRequestExpectedSupplyDurationValue"/>
       </mat-form-field>

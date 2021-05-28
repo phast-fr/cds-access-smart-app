@@ -1,20 +1,33 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+
+import hash from 'object-hash';
 
 import { PrescriptionStateService } from '../prescription-state.service';
 
 import {
   IIntent,
+  MedicationFormIntentAddDosageInstruction,
   MedicationFormIntentAddDoseAndRate,
   MedicationFormIntentAddMedication,
+  MedicationFormIntentAddMedicationRequest,
   MedicationFormIntentAddTimeOfDay,
-  MedicationFormIntentDetailsMedication,
   MedicationFormIntentRemoveDosageInstruction,
-  MedicationFormIntentRemoveDoseAndRate, MedicationFormIntentRemoveMedication,
+  MedicationFormIntentRemoveDoseAndRate,
+  MedicationFormIntentRemoveMedication,
   MedicationFormIntentRemoveTimeOfDay,
   MedicationFormIntentValueChangesDispenseRequest,
-  MedicationFormIntentValueChangesDosageInstruction
+  MedicationFormIntentValueChangesMedicationForm,
+  MedicationFormIntentValueChangesMedicationIngredientStrength,
+  MedicationFormIntentValueChangesMedicationIngredientStrengthValue,
+  MedicationFormIntentValueChangesMedicationIngredientStrengthUnit,
+  MedicationFormIntentValueChangesDosageInstructionRoute,
+  MedicationFormIntentValueChangesDosageInstructionDurationValue,
+  MedicationFormIntentValueChangesDosageInstructionDurationUnit,
+  MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue,
+  MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit,
+  MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue
 } from './medication-request-form.intent';
 import {
   IAction,
@@ -23,12 +36,21 @@ import {
   MedicationFormActionAddMedication,
   MedicationFormActionAddMedicationRequest,
   MedicationFormActionAddTimeOfDay,
-  MedicationFormActionDetailsMedication,
   MedicationFormActionRemoveDosageInstruction,
-  MedicationFormActionRemoveDoseAndRate, MedicationFormActionRemoveMedication,
+  MedicationFormActionRemoveDoseAndRate,
+  MedicationFormActionRemoveMedication,
   MedicationFormActionRemoveTimeOfDay,
   MedicationFormActionValueChangesDispenseRequest,
-  MedicationFormActionValueChangesDosageInstruction
+  MedicationFormActionValueChangesMedicationForm,
+  MedicationFormActionValueChangesMedicationIngredientStrength,
+  MedicationFormActionValueChangesMedicationIngredientStrengthValue,
+  MedicationFormActionValueChangesMedicationIngredientStrengthUnit,
+  MedicationFormActionValueChangesDosageInstructionRoute,
+  MedicationFormActionValueChangesDosageInstructionDurationValue,
+  MedicationFormActionValueChangesDosageInstructionDurationUnit,
+  MedicationFormActionValueChangesDosageInstructionDoseQuantityValue,
+  MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit,
+  MedicationFormActionValueChangesDosageInstructionTimeOfDayValue
 } from './medication-request-form.action';
 import { MedicationRequestFormState } from './medication-request-form.state';
 import { MedicationRequestFormReducer } from './medication-request-form.reducer';
@@ -42,6 +64,10 @@ import MedicationKnowledge = fhir.MedicationKnowledge;
 import CodeableConcept = fhir.CodeableConcept;
 import Ratio = fhir.Ratio;
 import Coding = fhir.Coding;
+import {FhirTioService} from '../../common/services/fhir.tio.service';
+import ValueSet = fhir.ValueSet;
+import UnitsOfTime = fhir.UnitsOfTime;
+import ParametersParameter = fhir.ParametersParameter;
 
 @Injectable()
 export class MedicationRequestFormService {
@@ -53,13 +79,12 @@ export class MedicationRequestFormService {
   private readonly _reducer: MedicationRequestFormReducer;
 
   constructor(private _cioDcSource: FhirCioDcService,
+              private _tioSource: FhirTioService,
               private _prescriptionState: PrescriptionStateService) {
     this._formState$ = new BehaviorSubject<MedicationRequestFormState>(
-      new MedicationRequestFormState(
-        _prescriptionState.user,
-        _prescriptionState.patient,
-        'AppStarted'));
-    this._reducer = new MedicationRequestFormReducer(_prescriptionState, _cioDcSource);
+      new MedicationRequestFormState('AppStarted')
+    );
+    this._reducer = new MedicationRequestFormReducer();
     this.handlerIntent();
   }
 
@@ -75,79 +100,71 @@ export class MedicationRequestFormService {
     this._intents$.next(intent);
   }
 
-  // TODO change this MK to Medication
-  // to make this, do dev a solution to manage Medication id and relationship this MK source
-  public initList(medicationKnowledge: MedicationKnowledge): void {
-    if (this.formState.formMap[medicationKnowledge.id] == null) {
-      this.formState.formMap[medicationKnowledge.id] = new Set<CodeableConcept>();
+  public nextMedicationId(): id {
+    return 'med-' + this.formState.autoIncrement;
+  }
+
+  public initList(medicationKnowledge: MedicationKnowledge, medicationId: id): void {
+    if (this.formState.formMap.get(medicationId) == null) {
+      this.formState.formMap.set(medicationId, new Array<CodeableConcept>());
     }
     else {
-      this.formState.formMap[medicationKnowledge.id].clear();
+      this.formState.formMap.get(medicationId).length = 0;
     }
 
     this.formState.routeArray.length = 0;
 
     for (const ingredient of medicationKnowledge.ingredient) {
-      if (this.formState.strengthMap[ingredient.itemCodeableConcept.text] == null) {
-        this.formState.strengthMap[ingredient.itemCodeableConcept.text] = new Set<Ratio>();
+      if (this.formState.strengthMap.get(ingredient.itemCodeableConcept.text) == null) {
+        this.formState.strengthMap.set(ingredient.itemCodeableConcept.text, new Array<Ratio>());
       }
       else {
-        this.formState.strengthMap[ingredient.itemCodeableConcept.text].clear();
+        this.formState.strengthMap.get(ingredient.itemCodeableConcept.text).length = 0;
       }
     }
 
-    this.formState.durationUnitArray.length = 0;
+    if (this.formState.durationUnitArray.length === 0) {
+      this._tioSource.valueSet$expand('units-of-time')
+        .then((valueSet: ValueSet) => {
+          for (const valueSetExpansionContains of valueSet.expansion.contains) {
+            this.formState.durationUnitArray.push(valueSetExpansionContains.display as UnitsOfTime);
+          }
+        });
+    }
   }
 
   public clearList(medication: Medication): void {
-    if (this.formState.formMap.hasOwnProperty(medication.id)) {
-      this.formState.formMap[medication.id].clear();
+    if (this.formState.formMap.get(medication.id)) {
+      this.formState.formMap.get(medication.id).length = 0;
     }
 
     this.formState.routeArray.length = 0;
 
     for (const ingredient of medication.ingredient) {
       if (ingredient.itemCodeableConcept != null) {
-        this.formState.strengthMap[ingredient.itemCodeableConcept.text].clear();
+        this.formState.strengthMap.get(ingredient.itemCodeableConcept.text).length = 0;
       }
     }
     this.formState.doseAndRateUnitArray.length = 0;
   }
 
-  public buildList(mkId: id, parameters: Parameters): void {
+  public buildList(medicationId: id, parameters: Parameters): void {
     if (parameters.parameter != null) {
+      console.log(parameters.parameter);
       for (const parameter of parameters.parameter) {
         switch (parameter.name) {
           case 'intendedRoute':
-            if (parameter.valueCodeableConcept !== undefined) {
-              this.formState.routeArray.push(parameter.valueCodeableConcept);
-            }
-            else if (parameter.valueCoding !== undefined) {
-              this.formState.routeArray.push({
-                text: parameter.valueCoding.display,
-                coding: new Array<Coding>(parameter.valueCoding)
-              });
-            }
+            this.addUniqueCodeableConcept(this.formState.routeArray, parameter);
             break;
           case 'doseForm':
-            if (parameter.valueCodeableConcept !== undefined) {
-              this.formState.formMap[mkId].add(parameter.valueCodeableConcept);
-            }
-            else if (parameter.valueCoding !== undefined) {
-              this.formState.formMap[mkId].add({
-                text: parameter.valueCoding.display,
-                coding: new Array<Coding>(parameter.valueCoding)
-              });
-            }
+            this.addUniqueCodeableConcept(this.formState.formMap.get(medicationId), parameter);
             break;
           case 'ingredient':
-            const part = parameter.part;
-            const strength = part[0].valueRatio;
-            const ingredientCode = part[1].valueCodeableConcept;
-            this.formState.strengthMap[ingredientCode.text].add(strength);
+            const ingredientCode = parameter.part[1].valueCodeableConcept;
+            this.addUniqueRatio(this.formState.strengthMap.get(ingredientCode.text), parameter);
             break;
           case 'unite':
-            this.formState.doseAndRateUnitArray.push(parameter.valueCoding);
+            this.addUniqueCoding(this.formState.doseAndRateUnitArray, parameter);
             break;
           default:
             // relatedMedicationKnowledge
@@ -162,7 +179,11 @@ export class MedicationRequestFormService {
     this._intents$.pipe(
       map(intent => this.intentToAction(intent)),
       map(action => action.execute()),
-      map(partialState => this._reducer.reduce(this.formState, partialState))
+      map(partialState => this._reducer.reduce(this.formState, partialState)),
+      catchError(err => {
+        console.log('Error: ', err);
+        return of(this.formState);
+      })
     ).subscribe(newState => this.emitNewState(newState));
   }
 
@@ -171,37 +192,108 @@ export class MedicationRequestFormService {
     switch (intent.type) {
       case 'AddMedication':
         action = new MedicationFormActionAddMedication(
-          (intent as MedicationFormIntentAddMedication).medicationKnowledge
+          this._prescriptionState,
+          (intent as MedicationFormIntentAddMedication).medicationRequest,
+          (intent as MedicationFormIntentAddMedication).medicationKnowledge,
+          (intent as MedicationFormIntentAddMedication).medicationId
         );
         break;
       case 'RemoveMedication':
         action = new MedicationFormActionRemoveMedication(
+          (intent as MedicationFormIntentRemoveMedication).medicationRequest,
           (intent as MedicationFormIntentRemoveMedication).nMedication
         );
         break;
-      case 'DetailsMedication':
-        action = new MedicationFormActionDetailsMedication(
-          (intent as MedicationFormIntentDetailsMedication).id,
-          (intent as MedicationFormIntentDetailsMedication).formCode,
-          (intent as MedicationFormIntentDetailsMedication).ingredient,
-          (intent as MedicationFormIntentDetailsMedication).routeCode,
+      case 'ValueChangesMedicationForm':
+        action = new MedicationFormActionValueChangesMedicationForm(
+          (intent as MedicationFormIntentValueChangesMedicationForm).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationForm).medication,
+          (intent as MedicationFormIntentValueChangesMedicationForm).formValue
+        );
+        break;
+      case 'ValueChangesMedicationIngredientStrength':
+        action = new MedicationFormActionValueChangesMedicationIngredientStrength(
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medication,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).itemCodeableConcept,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).strengthValue
+        );
+        break;
+      case 'ValueChangesMedicationIngredientStrengthValue':
+        action = new MedicationFormActionValueChangesMedicationIngredientStrengthValue(
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).medication,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).itemReference,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).strengthValue
+        );
+        break;
+      case 'ValueChangesMedicationIngredientStrengthUnit':
+        action = new MedicationFormActionValueChangesMedicationIngredientStrengthUnit(
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).medication,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).itemReference,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).strengthUnit
         );
         break;
       case 'AddMedicationRequest':
-        action = new MedicationFormActionAddMedicationRequest();
+        action = new MedicationFormActionAddMedicationRequest(
+          this._prescriptionState,
+          (intent as MedicationFormIntentAddMedicationRequest).medicationRequest
+          );
         break;
       case 'AddDosageInstruction':
-        action = new MedicationFormActionAddDosageInstruction();
+        action = new MedicationFormActionAddDosageInstruction(
+          (intent as MedicationFormIntentAddDosageInstruction).medicationRequest
+        );
         break;
       case 'RemoveDosageInstruction':
         action = new MedicationFormActionRemoveDosageInstruction(
           (intent as MedicationFormIntentRemoveDosageInstruction).nDosage
         );
         break;
-      case 'ValueChangesDosageInstruction':
-        action = new MedicationFormActionValueChangesDosageInstruction(
-          (intent as MedicationFormIntentValueChangesDosageInstruction).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstruction).value
+      case 'ValueChangesDosageInstructionRoute':
+        action = new MedicationFormActionValueChangesDosageInstructionRoute(
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue
+        );
+        break;
+      case 'ValueChangesDosageInstructionDurationValue':
+        action = new MedicationFormActionValueChangesDosageInstructionDurationValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).durationValue
+        );
+        break;
+      case 'ValueChangesDosageInstructionDurationUnit':
+        action = new MedicationFormActionValueChangesDosageInstructionDurationUnit(
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).durationUnit
+        );
+        break;
+      case 'ValueChangesDosageInstructionDoseQuantityValue':
+        action = new MedicationFormActionValueChangesDosageInstructionDoseQuantityValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).nDoseAndRate,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).doseQuantityValue
+        );
+        break;
+      case 'ValueChangesDosageInstructionDoseQuantityUnit':
+        action = new MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit(
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).nDoseAndRate,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).doseQuantityUnit
+        );
+        break;
+      case 'ValueChangesDosageInstructionTimeOfDayValue':
+        action = new MedicationFormActionValueChangesDosageInstructionTimeOfDayValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).nTimeOfDay,
+          (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).timeOfDay
         );
         break;
       case 'AddTimeOfDay':
@@ -240,5 +332,65 @@ export class MedicationRequestFormService {
 
   private emitNewState(newSate: MedicationRequestFormState): void {
     this._formState$.next(newSate);
+  }
+
+  private addUniqueCodeableConcept(uniqueCodeableConceptArray: Array<CodeableConcept>, parameter: ParametersParameter): void {
+    let isExist = false;
+    if (parameter.valueCodeableConcept !== undefined) {
+      const valueCodeableConceptHash = hash(parameter.valueCodeableConcept);
+      uniqueCodeableConceptArray.forEach(value => {
+        const refHash = hash(value);
+        if (valueCodeableConceptHash === refHash) {
+          isExist = true;
+        }
+      });
+      if (!isExist) {
+        uniqueCodeableConceptArray.push(parameter.valueCodeableConcept);
+      }
+    }
+    else if (parameter.valueCoding !== undefined) {
+      const valueCodingHash = hash(parameter.valueCoding);
+      uniqueCodeableConceptArray.forEach(value => {
+        const refHash = hash(value);
+        if (valueCodingHash === refHash) {
+          isExist = true;
+        }
+      });
+      if (!isExist) {
+        uniqueCodeableConceptArray.push({
+          text: parameter.valueCoding.display,
+          coding: new Array<Coding>(parameter.valueCoding)
+        });
+      }
+    }
+  }
+
+  private addUniqueCoding(uniqueCodingArray: Array<Coding>, parameter: ParametersParameter): void {
+    const valueHash = hash(parameter.valueCoding);
+    let isExist = false;
+    uniqueCodingArray.forEach(value => {
+      const refHash = hash(value);
+      if (valueHash === refHash) {
+        isExist = true;
+      }
+    });
+    if (!isExist) {
+      uniqueCodingArray.push(parameter.valueCoding);
+    }
+  }
+
+  private addUniqueRatio(uniqueRatioArray: Array<Ratio>, parameter: ParametersParameter): void {
+    const valueRatio = parameter.part[0].valueRatio;
+    const valueHash = hash(valueRatio);
+    let isExist = false;
+    uniqueRatioArray.forEach(value => {
+      const refHash = hash(value);
+      if (valueHash === refHash) {
+        isExist = true;
+      }
+    });
+    if (!isExist) {
+      uniqueRatioArray.push(valueRatio);
+    }
   }
 }

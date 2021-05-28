@@ -45,14 +45,13 @@ export class MedicationRequestLabelProvider implements ILabelProvider<Medication
 
   getText(medicationRequest: MedicationRequest | null): string | null {
     if (medicationRequest == null) { return null; }
-    let labelComposed = '';
-    const medicationComposed = new Array<string>();
+    let labelComposed: string;
     if (medicationRequest.medicationReference != null) {
-      for (const resource of medicationRequest.contained) {
-        const medication = resource as Medication;
-        medicationComposed.push(new MedicationLabelProvider().getText(medication));
-      }
-      labelComposed = medicationComposed.join('+');
+      const medicationId = medicationRequest.medicationReference.reference.substring(1);
+      const medicationIndex = medicationRequest.contained.findIndex(
+        (value) => value.id === medicationId);
+      const medication = medicationRequest.contained[medicationIndex] as Medication;
+      labelComposed = new MedicationLabelProvider().getText(medication);
     }
     if (medicationRequest.dosageInstruction.length > 0
       && medicationRequest.dosageInstruction[0].route != null) {
@@ -67,28 +66,56 @@ export class MedicationLabelProvider implements ILabelProvider<Medication> {
 
   getText(medication: Medication): string | null {
     if (medication == null) { return null; }
-    let labelComposed = '';
+    let labelComposed: string;
+    let separator: string;
     const medicationComposed = new Array<string>();
     const strengthComposed = new Array<string>();
     for (const ingredient of medication.ingredient) {
       if (ingredient.itemCodeableConcept != null) {
+        separator = '+';
         medicationComposed.push(ingredient.itemCodeableConcept.text);
+
+        if (ingredient.strength != null) {
+          // TODO optimize this
+          strengthComposed.push(new RatioLabelProvider().getText(ingredient.strength));
+        }
       }
-      if (ingredient.strength != null) {
-        // TODO optimize this
-        strengthComposed.push(new RatioLabelProvider().getText(ingredient.strength));
+      else if (ingredient.itemReference != null) {
+        separator = ' & ';
+
+        if (ingredient.strength != null) {
+          // TODO optimize this
+          strengthComposed.push(' ' + new RatioLabelProvider().getText(ingredient.strength));
+        }
+        else {
+          strengthComposed.push('');
+        }
       }
-    }
-    if (medicationComposed.length > 0) {
-      labelComposed = medicationComposed.join('+');
-    }
-    else {
-      labelComposed = medication.code.text;
     }
 
-    if (strengthComposed.length > 0) {
-      labelComposed += ' ' + strengthComposed.join('+');
+    if ('+' === separator) {
+      if (medicationComposed.length > 0) {
+        labelComposed = medicationComposed.join(separator);
+      }
+      else {
+        labelComposed = medication.code.text;
+      }
+
+      if (strengthComposed.length > 0) {
+        labelComposed += ' ' + strengthComposed.join(separator);
+      }
     }
+    else if (' & ' === separator) {
+      const bouxLabel = [];
+      medicationComposed.push(...medication.code.text.split('&'));
+      let i = 0;
+      for (const medicationText of medicationComposed) {
+        bouxLabel.push(medicationText + strengthComposed[i]);
+        i++;
+      }
+      labelComposed = bouxLabel.join(separator);
+    }
+
     if (medication.form != null) {
       labelComposed += ' ' + medication.form.text;
     }
