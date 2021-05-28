@@ -1,18 +1,22 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 
 import FhirClient from 'fhir-kit-client';
 
-import { environment } from '../../../environments/environment';
-import { fhir } from '../fhir/fhir.types';
+import {environment} from '../../../environments/environment';
+import {fhir} from '../fhir/fhir.types';
 import id = fhir.id;
 import Parameters = fhir.Parameters;
 import ParametersParameter = fhir.ParametersParameter;
 import CodeableConcept = fhir.CodeableConcept;
 import MedicationKnowledge = fhir.MedicationKnowledge;
 import MedicationIngredient = fhir.MedicationIngredient;
+import OperationOutcome = fhir.OperationOutcome;
+import Bundle = fhir.Bundle;
 
 @Injectable()
 export class FhirCioDcService {
+
+  static DEFAULT_PAGE_SIZE = 10;
 
   private fhirClient: FhirClient;
 
@@ -26,27 +30,34 @@ export class FhirCioDcService {
     });
   }
 
-  searchMedicationKnowledge(name: string | undefined):
-    Promise<fhir.OperationOutcome | fhir.Bundle & { type: 'searchset' }> {
-    if (typeof name === 'string') {
-      const search = name.trim();
+  searchMedicationKnowledge(filter?: string | undefined, sortActive?: string, sortDirection?: string,
+                            page?: number, pageSize?: number):
+    Promise<OperationOutcome | Bundle & { type: 'searchset' }> {
+    const searchParams = {
+      _count: (pageSize) ? pageSize : FhirCioDcService.DEFAULT_PAGE_SIZE,
+      // 'product-type': 'DC',
+      _elements: 'ingredient,code,id,relatedMedicationKnowledge',
+      LinkPageNumber: 0
+    };
+
+    if (sortDirection && sortDirection.length > 0) {
+      searchParams['_sort:' + sortDirection] = sortActive;
+    }
+
+    if (page) {
+      searchParams.LinkPageNumber = page;
+    }
+
+    if (typeof filter === 'string' && filter.length > 0) {
+      searchParams['code:text'] = filter.trim();
       return this.fhirClient.resourceSearch({
         resourceType: 'MedicationKnowledge',
-        searchParams: {
-          _count: 10,
-          'product-type': 'DC',
-          _elements: 'ingredient,code,id,relatedMedicationKnowledge',
-          'ingredient-code:text': search
-        }
+        searchParams
       });
     }
     return this.fhirClient.resourceSearch({
       resourceType: 'MedicationKnowledge',
-      searchParams: {
-        _count: 10,
-        'product-type': 'DC',
-        _elements: 'ingredient,code,id,relatedMedicationKnowledge'
-      }
+      searchParams
     });
   }
 
@@ -62,6 +73,8 @@ export class FhirCioDcService {
       .ingredient(ingredient)
       .intendedRoute(intendedRoute)
       .build();
+
+    console.log(input);
 
     return this.fhirClient.operation({
       name: '$phast-medication-knowledge-details',
@@ -82,7 +95,7 @@ export class MedicationKnowledgeDetailsBuilder {
       parameter: new Array<ParametersParameter>(
         {
           name: 'with-related-medication-knowledge',
-          valueBoolean: true
+          valueBoolean: false
         },
         {
           name: 'medicationKnowledge',

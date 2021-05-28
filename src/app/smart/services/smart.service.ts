@@ -4,34 +4,41 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import FhirClient from 'fhir-kit-client';
 
 import { environment } from '../../../environments/environment';
-import { SmartToken } from '../models/smart.token.model';
+
+import { Utils } from '../../common/utils';
 import { StateService } from '../../common/services/state.service';
+import { StateModel } from '../../common/models/state.model';
+import { SmartToken } from '../models/smart.token.model';
 import { SmartUserModel } from '../models/smart.user.model';
 
 @Injectable()
 export class SmartService {
 
-  private fhirClient: FhirClient;
+  private _fhirClient: FhirClient;
 
-  constructor(
-    private stateService: StateService,
-    private httpClient: HttpClient) {}
+  constructor(private _stateService: StateService,
+              private _httpClient: HttpClient) {
+  }
 
-  launch(iss: string, launch: string): void {
+  public launch(context: string, iss: string, launch: string, redirectUri?: string): void {
     sessionStorage.clear();
+    sessionStorage.setItem('context', context);
     sessionStorage.setItem('iss', iss);
+    if (redirectUri) {
+      sessionStorage.setItem('redirect_uri', redirectUri);
+    }
 
-    const state = this.randomString(16);
+    const state = Utils.randomString(16);
 
     const fhirClient = this.getFhirClient();
     fhirClient.smartAuthMetadata().then(
       (capabilityStatement) => {
         const params = new HttpParams()
           .set('response_type', 'code')
-          .set('client_id', environment.client_id)
-          .set('redirect_uri', environment.redirect_uri)
+          .set('client_id', environment.client_id[context])
+          .set('redirect_uri', redirectUri)
           .set('launch', launch)
-          .set('scope', environment.scope)
+          .set('scope', environment.scope[context])
           .set('state', state)
           .set('aud', iss);
 
@@ -44,14 +51,16 @@ export class SmartService {
       );
   }
 
-  retrieveToken(code: string, state: string): void {
+  public retrieveToken(code: string, state: string): void {
     const fhirClient = this.getFhirClient();
     fhirClient.smartAuthMetadata().then(
       (capabilityStatement) => {
+        const context = sessionStorage.getItem('context');
+        const redirectUri = sessionStorage.getItem('redirect_uri');
         const body = new HttpParams()
           .set('grant_type', 'authorization_code')
-          .set('redirect_uri', environment.redirect_uri)
-          .set('client_id', environment.client_id)
+          .set('redirect_uri', redirectUri)
+          .set('client_id', environment.client_id[context])
           .set('code', code)
           .set('state', state);
 
@@ -62,8 +71,9 @@ export class SmartService {
       });
   }
 
-  refreshToken(): void {
+  public refreshToken(): void {
     const fhirClient = this.getFhirClient();
+    const context = sessionStorage.getItem('context');
     const refreshToken = sessionStorage.getItem('refresh_token');
     if (refreshToken == null || refreshToken === '') { return; }
     fhirClient.smartAuthMetadata().then(
@@ -71,13 +81,13 @@ export class SmartService {
         const body = new HttpParams()
           .set('grant_type', 'refresh_token')
           .set('refresh_token', refreshToken)
-          .set('scope', environment.scope);
+          .set('scope', environment.scope[context]);
 
         this.doPostToken(capabilityStatement.tokenUrl.href, body.toString());
       });
   }
 
-  saveToken(token: SmartToken): void {
+  public saveToken(token: SmartToken): void {
     const expireDate = new Date().getTime() + (1000 * token.expires_in);
     sessionStorage.setItem('access_token', token.access_token);
     sessionStorage.setItem('expire_date', String(expireDate));
@@ -85,42 +95,55 @@ export class SmartService {
     sessionStorage.setItem('patient', token.patient);
     this.getFhirClient().bearerToken = token.access_token;
 
-    const user = this.stateService.getUser<SmartUserModel>(token.id_token);
+    const user = this._stateService.getUser<SmartUserModel>(token.id_token);
     console.log('smartUser', user);
 
-    this.stateService.emitState({
-      token,
-      user
-    });
+    const state = new StateModel();
+    state.patient = token.patient;
+    state.user = user;
+    this._stateService.emitState(state);
   }
 
-  isTokenExpired(): boolean {
+  public loadToken(): void {
+    if (this.isTokenExpired()) {
+      this.refreshToken();
+    }
+    else {
+      this.getFhirClient().bearerToken = sessionStorage.getItem('access_token');
+      const patient = sessionStorage.getItem('patient');
+      const idToken = sessionStorage.getItem('id_token');
+      const user = this._stateService.getUser<SmartUserModel>(idToken);
+
+      const state = new StateModel();
+      state.patient = patient;
+      state.user = user;
+      this._stateService.emitState(state);
+    }
+  }
+
+  public isTokenExpired(): boolean {
     const expireDate = sessionStorage.getItem('expire_date');
     return new Date().getTime() > +expireDate;
   }
 
-  getHttpClient(): HttpClient {
-    return this.httpClient;
-  }
-
-  getFhirClient(): FhirClient {
+  public getFhirClient(): FhirClient {
     const iss = sessionStorage.getItem('iss');
 
-    if (this.fhirClient == null) {
-      this.fhirClient = new FhirClient({baseUrl: iss});
+    if (this._fhirClient == null) {
+      this._fhirClient = new FhirClient({baseUrl: iss});
     }
     else {
-      this.fhirClient.baseUrl = iss;
+      this._fhirClient.baseUrl = iss;
     }
-    return this.fhirClient;
+    return this._fhirClient;
   }
 
-  isTokenExist(): boolean {
+  public isTokenExist(): boolean {
     return sessionStorage.getItem('access_token') != null;
   }
 
   private doPostToken(url: string, body: string): void {
-      this.httpClient.post(url, body, {
+      this._httpClient.post(url, body, {
         headers: new HttpHeaders()
           .set('Content-Type', 'application/x-www-form-urlencoded')
       }).subscribe({
@@ -129,29 +152,7 @@ export class SmartService {
           console.log('token:', token);
           this.saveToken(token);
         },
-        error: error => {
-          console.log(error);
-        }
+        error: error => console.log('Error: ', error)
       });
-  }
-
-  /**
-   * Generates random strings. By default this returns random 8 characters long
-   * alphanumeric strings.
-   * @param strLength The length of the output string. Defaults to 8.
-   * @param charSet A string containing all the possible characters.
-   *     Defaults to all the upper and lower-case letters plus digits.
-   * @category Utility
-   */
-  private randomString(
-    strLength = 8,
-    charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  ): string {
-    const result = [];
-    const len = charSet.length;
-    while (strLength--) {
-      result.push(charSet.charAt(Math.floor(Math.random() * len)));
-    }
-    return result.join('');
   }
 }

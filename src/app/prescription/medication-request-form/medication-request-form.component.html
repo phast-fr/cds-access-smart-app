@@ -23,7 +23,7 @@
                     [displayWith]="displayFnMedicationKnowledge.bind(this)">
     <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
     <ng-container *ngIf="!formState.isLoading">
-      <mat-option *ngFor="let medicationKnowledge of medicationKnowledgeSet;
+      <mat-option *ngFor="let medicationKnowledge of medicationKnowledgeArray;
             index as i trackBy: trackByMedicationKnowledge" [value]="medicationKnowledge">
         {{labelProviderFactory.getProvider(medicationKnowledge).getText(medicationKnowledge)}}
       </mat-option>

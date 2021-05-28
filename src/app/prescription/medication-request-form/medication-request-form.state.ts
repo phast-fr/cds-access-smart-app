@@ -1,18 +1,16 @@
-import { MedicationRequestBuilder } from '../../common/fhir/fhir.resource.builder';
 import { fhir } from '../../common/fhir/fhir.types';
 import MedicationRequest = fhir.MedicationRequest;
 import Medication = fhir.Medication;
-import Practitioner = fhir.Practitioner;
-import Patient = fhir.Patient;
 import id = fhir.id;
-import MedicationRequestIntent = fhir.MedicationRequestIntent;
-import Reference = fhir.Reference;
-import MedicationIngredient = fhir.MedicationIngredient;
 import CodeableConcept = fhir.CodeableConcept;
 import Dosage = fhir.Dosage;
 import MedicationRequestDispenseRequest = fhir.MedicationRequestDispenseRequest;
 import Coding = fhir.Coding;
 import UnitsOfTime = fhir.UnitsOfTime;
+import MedicationKnowledge = fhir.MedicationKnowledge;
+import Ratio = fhir.Ratio;
+import DoseAndRate = fhir.DoseAndRate;
+import time = fhir.time;
 
 export interface IPartialState {
   readonly type: string;
@@ -24,38 +22,23 @@ export class MedicationFormStateAddMedicationRequest implements IPartialState {
   constructor() { }
 }
 
-export class MedicationFormStateDetailsMedication implements IPartialState{
-  readonly type = 'DetailsMedication';
-
-  constructor(private _medicationId: id,
-              private _formCode: CodeableConcept,
-              private _ingredient: MedicationIngredient[],
-              private _routeCode: CodeableConcept) { }
-
-  public get id(): id {
-    return this._medicationId;
-  }
-
-  public get formCode(): CodeableConcept {
-    return this._formCode;
-  }
-
-  public get ingredient(): MedicationIngredient[] {
-    return this._ingredient;
-  }
-
-  public get routeCode(): CodeableConcept {
-    return this._routeCode;
-  }
-}
-
 export class MedicationFormStateAddMedication implements IPartialState {
   readonly type = 'AddMedication';
 
-  constructor(private _medication: Medication) {
+  constructor(private _medicationRequest: MedicationRequest,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _medication: Medication) {
   }
 
-  public medication(): Medication {
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get medication(): Medication {
     return this._medication;
   }
 }
@@ -63,17 +46,42 @@ export class MedicationFormStateAddMedication implements IPartialState {
 export class MedicationFormStateRemoveMedication implements IPartialState {
   readonly type = 'RemoveMedication';
 
-  constructor(private _nMedication: number) { }
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nMedication: number) { }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
 
   public get nMedication(): number {
     return this._nMedication;
   }
 }
 
+export class MedicationFormStateValueChangesMedication implements IPartialState {
+  readonly type = 'ValueChangesMedication';
+
+  constructor(private _nMedication: number,
+              private _medication: Medication) {
+  }
+
+  public get nMedication(): number {
+    return this._nMedication;
+  }
+
+  public get medication(): Medication {
+    return this._medication;
+  }
+}
+
 export class MedicationFormStateAddDosageInstruction implements IPartialState {
   readonly type = 'AddDosageInstruction';
 
-  constructor() { }
+  constructor(private _dosageInstruction: Dosage) { }
+
+  public get dosageInstruction(): Dosage {
+    return this._dosageInstruction;
+  }
 }
 
 export class MedicationFormStateRemoveDosageInstruction implements IPartialState {
@@ -114,10 +122,15 @@ export class MedicationFormStateValueChangesDosageInstruction implements IPartia
 export class MedicationFormStateAddTimeOfDay implements IPartialState {
   readonly type = 'AddTimeOfDay';
 
-  constructor(private _nDosage: number) { }
+  constructor(private _nDosage: number,
+              private _timeOfDay: time) { }
 
   public get nDosage(): number {
     return this._nDosage;
+  }
+
+  public get timeOfDay(): time {
+    return this._timeOfDay;
   }
 }
 
@@ -140,7 +153,12 @@ export class MedicationFormStateRemoveTimeOfDay implements IPartialState {
 export class MedicationFormStateAddDoseAndRate implements IPartialState {
   readonly type = 'AddDoseAndRate';
 
-  constructor(private _nDosage: number) { }
+  constructor(private _doseAndRate: DoseAndRate,
+              private _nDosage: number) { }
+
+  public get doseAndRate(): DoseAndRate {
+    return this._doseAndRate;
+  }
 
   public get nDosage(): number {
     return this._nDosage;
@@ -169,31 +187,27 @@ export class MedicationRequestFormState {
 
   private _loading: boolean;
 
-  private _medicationArray = new Array<number>();
+  private _nMedicationArray = new Array<number>();
 
   private _nDosage: number;
 
   private _index: number;
 
+  private _autoIncrement = 0;
+
+  private _medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
+
   private _routeArray = new Array<CodeableConcept>();
 
-  private _formMap = {};
+  private _formMap = new Map<id, Array<CodeableConcept>>();
 
-  private _strengthMap = {};
+  private _strengthMap = new Map<string, Array<Ratio>>();
 
   private _doseAndRateUnitArray = new Array<Coding>();
 
-  private _durationUnitArray = new Array<UnitsOfTime>('s', 'min', 'h', 'd', 'wk', 'mo', 'a');
+  private _durationUnitArray = new Array<UnitsOfTime>();
 
-  constructor(private _user: Patient | Practitioner,
-              private _patient: Patient,
-              private _type: string) { }
-
-  public newMedicationRequest(intent: MedicationRequestIntent, subject: Reference): MedicationRequest {
-    this._medicationRequest = new MedicationRequestBuilder(intent, subject)
-      .build();
-    return this._medicationRequest;
-  }
+  constructor(private _type: string) { }
 
   public set loading(loading: boolean) {
     this._loading = loading;
@@ -203,28 +217,27 @@ export class MedicationRequestFormState {
     return this._loading;
   }
 
-  public get user(): Patient | Practitioner {
-    return this._user;
-  }
-
-  public get patient(): Patient {
-    return this._patient;
-  }
-
   public set type(type: string) {
     this._type = type;
   }
 
+  /**
+   * return the workflow state
+   */
   public get type(): string {
     return this._type;
+  }
+
+  public set medicationRequest(medicationRequest: MedicationRequest) {
+    this._medicationRequest = medicationRequest;
   }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
   }
 
-  public get medicationArray(): Array<number> {
-    return this._medicationArray;
+  public get nMedicationArray(): Array<number> {
+    return this._nMedicationArray;
   }
 
   public get nDosage(): number {
@@ -243,7 +256,15 @@ export class MedicationRequestFormState {
     this._index = index;
   }
 
-  public get formMap(): object {
+  public get autoIncrement(): number {
+    return ++this._autoIncrement;
+  }
+
+  public get medicationKnowledgeMap(): Map<id, MedicationKnowledge> {
+    return this._medicationKnowledgeMap;
+  }
+
+  public get formMap(): Map<id, Array<CodeableConcept>> {
     return this._formMap;
   }
 
@@ -251,7 +272,7 @@ export class MedicationRequestFormState {
     return this._routeArray;
   }
 
-  public get strengthMap(): object {
+  public get strengthMap(): Map<string, Array<Ratio>> {
     return this._strengthMap;
   }
 
@@ -261,9 +282,5 @@ export class MedicationRequestFormState {
 
   public get durationUnitArray(): Array<UnitsOfTime> {
     return this._durationUnitArray;
-  }
-
-  public medicationRequestAdded(): void {
-    this._medicationRequest = null;
   }
 }

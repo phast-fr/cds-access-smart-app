@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AbstractControl, FormArray, FormBuilder } from '@angular/forms';
-import { merge, Observable, of, Subject } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { FormArray, FormBuilder } from '@angular/forms';
+import { Observable, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, switchMap, takeUntil, tap } from 'rxjs/operators';
 
 import { MedicationRequestFormService } from '../medication-request-form.service';
 import { MedicationRequestFormState } from '../medication-request-form.state';
@@ -12,15 +12,21 @@ import {
   MedicationFormIntentRemoveDosageInstruction,
   MedicationFormIntentRemoveDoseAndRate,
   MedicationFormIntentRemoveTimeOfDay,
-  MedicationFormIntentValueChangesDosageInstruction
+  MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue,
+  MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit,
+  MedicationFormIntentValueChangesDosageInstructionDurationValue,
+  MedicationFormIntentValueChangesDosageInstructionDurationUnit,
+  MedicationFormIntentValueChangesDosageInstructionRoute,
+  MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue,
 } from '../medication-request-form.intent';
 import { FhirCioDcService } from '../../../common/services/fhir.cio.dc.service';
 import { FhirLabelProviderFactory } from '../../../common/fhir/fhir.label.provider.factory';
 import { fhir } from '../../../common/fhir/fhir.types';
-import Medication = fhir.Medication;
-import Parameters = fhir.Parameters;
 import CodeableConcept = fhir.CodeableConcept;
 import Coding = fhir.Coding;
+import Quantity = fhir.Quantity;
+import {Utils} from '../../../common/utils';
+import Bundle = fhir.Bundle;
 
 @Component({
   selector: 'app-dosage-instruction-form',
@@ -29,9 +35,7 @@ import Coding = fhir.Coding;
 })
 export class DosageInstructionFormComponent implements OnInit, OnDestroy {
 
-  private unsubscribeTrigger$ = new Subject<void>();
-
-  private _unsubscribeTriggerDosageInstruction$ = new Subject<void>();
+  private _unsubscribeTrigger$ = new Subject<void>();
 
   private _labelProviderFactory = new FhirLabelProviderFactory();
 
@@ -55,16 +59,14 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this._unsubscribeTriggerDosageInstruction$.next();
-    this._unsubscribeTriggerDosageInstruction$.complete();
-    this.unsubscribeTrigger$.next();
-    this.unsubscribeTrigger$.complete();
+    this._unsubscribeTrigger$.next();
+    this._unsubscribeTrigger$.complete();
   }
 
   subscribeUI(state$: Observable<MedicationRequestFormState>): void {
     state$
       .pipe(
-        takeUntil(this.unsubscribeTrigger$)
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe(
       formState => {
@@ -74,7 +76,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
   }
 
   onAddDosageInstruction(): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentAddDosageInstruction());
+    this._formStateService.dispatchIntent(new MedicationFormIntentAddDosageInstruction(this.formState.medicationRequest));
   }
 
   onRemoveDosageInstruction(nDosage: number): void {
@@ -119,7 +121,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
     switch (formState.type) {
       case 'AddDosageInstruction':
         this.addDosageInstruction(
-          formState.medicationRequest.contained[formState.medicationRequest.contained.length - 1] as Medication,
           this.dosageInstruction
         );
         break;
@@ -128,7 +129,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
         break;
       case 'AddTimeOfDay':
         const addTimeOfDay = this.dosageInstruction.at(formState.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
-        addTimeOfDay.push(this.fb.control(undefined));
+        this.addTimeOfDay(formState.nDosage, addTimeOfDay);
         break;
       case 'RemoveTimeOfDay':
         const removeTimeOfDay = this.dosageInstruction.at(formState.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
@@ -138,21 +139,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
         const addDoseAndRate = this.dosageInstruction.at(formState.nDosage).get('doseAndRate') as FormArray;
         const doseQuantity = formState.medicationRequest.dosageInstruction[formState.nDosage]
           .doseAndRate[addDoseAndRate.length].doseQuantity;
-        const doseAndRateGroup = this.fb.group({
-          doseRange: [undefined],
-          doseQuantity: this.fb.group({
-            value: [doseQuantity.value],
-            unit: [{
-              code: doseQuantity.code,
-              display: doseQuantity.unit,
-              system: doseQuantity.system
-            }]
-          }),
-          rateRatio: [undefined],
-          rateRange: [undefined],
-          rateQuantity: [undefined]
-        });
-        addDoseAndRate.push(doseAndRateGroup);
+        this.addDoseAndRate(
+          formState.nDosage,
+          doseQuantity,
+          addDoseAndRate
+        );
         break;
       case 'RemoveDoseAndRate':
         const removeDoseAndRate = this.dosageInstruction.at(formState.nDosage).get('doseAndRate') as FormArray;
@@ -164,8 +155,9 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  private addDosageInstruction(medication: Medication, dosageInstruction: FormArray): void {
+  private addDosageInstruction(dosageInstruction: FormArray): void {
     const dosageInstructionGroup = this.fb.group({
+      'track-id': Utils.randomString(16),
       route: [undefined],
       timing: this.fb.group({
         repeat: this.fb.group({
@@ -176,71 +168,180 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
       }),
       doseAndRate: this.fb.array([])
     });
+    const nDosage = dosageInstruction.length;
     dosageInstruction.push(dosageInstructionGroup);
-    this._unsubscribeTriggerDosageInstruction$.next();
-    merge(...dosageInstruction.controls.map(
-      (control: AbstractControl, index: number) =>
-        control.valueChanges
-          .pipe(
-            takeUntil(this._unsubscribeTriggerDosageInstruction$),
-            debounceTime(500),
-            distinctUntilChanged(),
-            map(value => ({ dosageIndex: index, value }))
-          )
-      )
-    ).subscribe(changes => this._formStateService.dispatchIntent(
-      new MedicationFormIntentValueChangesDosageInstruction(changes.dosageIndex, changes.value)
-    ));
 
-    const routeControl = dosageInstructionGroup.get('route');
-    const routeValueString$ = routeControl.valueChanges
+    const routeString$ = dosageInstructionGroup.get('route').valueChanges
       .pipe(
         filter(value => typeof value === 'string')
       );
-    routeValueString$
+    const routeObj$ = dosageInstructionGroup.get('route').valueChanges
       .pipe(
-        takeUntil(this._unsubscribeTriggerDosageInstruction$),
-        tap(
-          () => {
-            this.formState.loading = true;
-            this._formStateService.clearList(medication);
-          }),
-        switchMap(_ =>
-          this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-            medication.id, medication.code,
-            medication.form,
-            medication.ingredient,
-            null)
-        ),
-        catchError(err => {
-          console.log('Error: ', err);
-          return of({parameter: []} as Parameters);
-        })
-      ).subscribe(parameters => this._formStateService.buildList(medication.id, parameters));
-
-    const routeValueCodeableConcept$ = routeControl.valueChanges
-      .pipe(
-        filter(value => value.hasOwnProperty('text'))
+        filter(value => value instanceof Object)
       );
-    routeValueCodeableConcept$
+    routeString$
       .pipe(
-        takeUntil(this._unsubscribeTriggerDosageInstruction$),
-        tap(
-          () => {
-            this.formState.loading = true;
-            this._formStateService.clearList(medication);
-          }),
-        switchMap(value =>
-          this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-            medication.id, medication.code,
-            medication.form,
-            medication.ingredient,
-            value)
-        ),
-        catchError(err => {
-          console.log('Error: ', err);
-          return of({parameter: []} as Parameters);
-        })
-      ).subscribe(parameters => this._formStateService.buildList(medication.id, parameters));
+        takeUntil(this._unsubscribeTrigger$),
+      )
+      .subscribe(_ => {
+        dosageInstructionGroup.get('route').setValue(null, {emitEvent: false});
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionRoute(
+            this.formState.medicationRequest,
+            nDosage,
+            null
+          )
+        );
+      });
+    routeObj$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe(routeValue => this._formStateService.dispatchIntent(
+        new MedicationFormIntentValueChangesDosageInstructionRoute(
+          this.formState.medicationRequest,
+          nDosage,
+          routeValue
+        )
+      ));
+    dosageInstructionGroup.get(['timing', 'repeat', 'duration']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe(durationValue => this._formStateService.dispatchIntent(
+        new MedicationFormIntentValueChangesDosageInstructionDurationValue(
+          this.formState.medicationRequest,
+          nDosage,
+          durationValue
+        )
+      ));
+    const durationUnitValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).valueChanges
+      .pipe(
+        filter(predicate => this.formState.durationUnitArray.findIndex(
+          value => value === predicate
+        ) > -1)
+      );
+    const durationUnitNotValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).valueChanges
+      .pipe(
+        filter(predicate => this.formState.durationUnitArray.findIndex(
+          value => value === predicate
+        ) === -1)
+      );
+
+    durationUnitValid$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe(durationUnit => this._formStateService.dispatchIntent(
+        new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
+          this.formState.medicationRequest,
+          nDosage,
+          durationUnit
+        )
+      ));
+    durationUnitNotValid$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe(_ =>
+        dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).setValue(null, {emitEvent: false})
+    );
+  }
+
+  private addTimeOfDay(nDosage: number, timeOfDay: FormArray): void {
+    const nTimeOfDay = timeOfDay.length;
+    const timeOfDayControl = this.fb.control(undefined);
+    timeOfDay.push(timeOfDayControl);
+    timeOfDayControl.valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe(timeOfDayValue =>
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue(
+            this.formState.medicationRequest,
+            nDosage,
+            nTimeOfDay,
+            timeOfDayValue
+          )
+        )
+      );
+  }
+
+  private addDoseAndRate(nDosage: number, doseQuantity: Quantity, doseAndRate: FormArray): void {
+    const doseAndRateGroup = this.fb.group({
+      doseQuantity: this.fb.group({
+        value: [doseQuantity.value],
+        unit: [{
+          code: doseQuantity.code,
+          display: doseQuantity.unit,
+          system: doseQuantity.system
+        }]
+      }),
+    });
+    const nDoseAndRate = doseAndRate.length;
+    doseAndRate.push(doseAndRateGroup);
+    doseAndRateGroup.get(['doseQuantity', 'value']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe(doseQuantityValue =>
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue(
+            this.formState.medicationRequest,
+            nDosage,
+            nDoseAndRate,
+            doseQuantityValue
+          )
+        )
+      );
+    // TODO open issue how to switch between list supervised and complete list ?
+    const doseQuantityUnitString$ = doseAndRateGroup.get(['doseQuantity', 'unit']).valueChanges
+      .pipe(
+        filter(value => typeof value === 'string')
+      );
+    const doseQuantityUnitObj$ = doseAndRateGroup.get(['doseQuantity', 'unit']).valueChanges
+      .pipe(
+        filter(value => value instanceof Object)
+      );
+    doseQuantityUnitString$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap(_ => {
+          this.formState.loading = true;
+          this.formState.doseAndRateUnitArray.length = 0;
+        }),
+        // TODO add method to find into good form valueset
+        switchMap(value => value)
+      )
+      .subscribe(value => {
+        const bundle = value as Bundle;
+        if (bundle.total > 0) {
+          for (const entry of bundle.entry) {
+            this.formState.doseAndRateUnitArray.push(entry);
+          }
+        }
+        this.formState.loading = false;
+      });
+    doseQuantityUnitObj$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+      )
+      .subscribe(doseQuantityUnit =>
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
+            this.formState.medicationRequest,
+            nDosage,
+            nDoseAndRate,
+            doseQuantityUnit
+          )
+        )
+      );
   }
 }

@@ -59,7 +59,7 @@
       <mat-card fxFlex="50%" class="form-field-dosage-instruction-timing-repeat-time-of-day">
         <mat-card-header>
           <button mat-stroked-button color="primary" (click)="onAddTimeOfDay(nDosage)"> + </button>
-          <div class="form-group-title"> Horraire(s) </div>
+          <div class="form-group-title"> Heure(s) de prise </div>
         </mat-card-header>
         <mat-card-content
           *ngFor="let timeOfDay of dosageInstructionGroup.get(['timing', 'repeat', 'timeOfDay']).controls;

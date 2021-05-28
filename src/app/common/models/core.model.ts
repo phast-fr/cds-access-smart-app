@@ -7,3 +7,8 @@ export interface IAdapterFactory {
 
   getAdapterList(): Array<string>;
 }
+
+export interface TableElement<T> {
+  position: number;
+  resource: T;
+}

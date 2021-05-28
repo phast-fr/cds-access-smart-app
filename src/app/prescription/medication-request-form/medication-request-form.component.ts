@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import {AbstractControl, FormBuilder, FormControl, ValidatorFn} from '@angular/forms';
+import { FormBuilder, FormControl } from '@angular/forms';
 import { Observable, Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, switchMap, takeUntil, tap } from 'rxjs/operators';
 
@@ -14,8 +14,6 @@ import { FhirLabelProviderFactory } from '../../common/fhir/fhir.label.provider.
 import { FhirTypeGuard } from '../../common/fhir/fhir.type.guard';
 import { fhir } from '../../common/fhir/fhir.types';
 import MedicationKnowledge = fhir.MedicationKnowledge;
-import Coding = fhir.Coding;
-import Ratio = fhir.Ratio;
 import Bundle = fhir.Bundle;
 
 @Component({
@@ -34,7 +32,7 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
     medicationKnowledge: [undefined]
   });
 
-  private _medicationKnowledgeSet = new Set<MedicationKnowledge>();
+  private _medicationKnowledgeArray = new Array<MedicationKnowledge>();
 
   isMedicationAddable = false;
 
@@ -42,46 +40,6 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
     private _cioDcSource: FhirCioDcService,
     private _formStateService: MedicationRequestFormService,
     private fb: FormBuilder) { }
-
-  static codingSelected(mySet: Set<Coding>): ValidatorFn {
-    return (c: AbstractControl): { [key: string]: boolean } | null => {
-      const selectedValue = c.value;
-      if (selectedValue == null || '' === selectedValue) {
-        return null;
-      }
-      const pickedOrNot = Array.from(mySet).filter(
-        (alias) => alias.code === selectedValue.code
-      );
-      if (pickedOrNot.length > 0) {
-        // everything's fine. return no error. therefore it's null.
-        return null;
-      }
-      else {
-        // there's no matching selectedvalue selected. so return match error.
-        return { match: true };
-      }
-    };
-  }
-
-  static ratioSelected(mySet: Set<Ratio>): ValidatorFn {
-    return (c: AbstractControl): { [key: string]: boolean } | null => {
-      const selectedValue = c.value;
-      if (selectedValue == null || '' === selectedValue) {
-        return null;
-      }
-      const pickedOrNot = Array.from(mySet).filter(
-        (alias) => alias.numerator.code === selectedValue.numerator.code
-      );
-      if (pickedOrNot.length > 0) {
-        // everything's fine. return no error. therefore it's null.
-        return null;
-      }
-      else {
-        // there's no matching selectedvalue selected. so return match error.
-        return { match: true };
-      }
-    };
-  }
 
   public debug(object: any): void {
     console.log(object);
@@ -91,8 +49,8 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
     return this.medicationRequestGroup.get('medicationKnowledge') as FormControl;
   }
 
-  public get medicationKnowledgeSet(): Set<MedicationKnowledge> {
-    return this._medicationKnowledgeSet;
+  public get medicationKnowledgeArray(): Array<MedicationKnowledge> {
+    return this._medicationKnowledgeArray;
   }
 
   public get formState(): MedicationRequestFormState {
@@ -136,21 +94,26 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
 
   onAddMedication(): void {
     const medicationKnowledge = this.medicationKnowledge.value;
-    this._formStateService.initList(medicationKnowledge);
+    const medicationId = this._formStateService.nextMedicationId();
+    this._formStateService.initList(medicationKnowledge, medicationId);
 
     this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
       medicationKnowledge.id, medicationKnowledge.code, undefined, undefined, undefined
     ).then(
-      parameters => this._formStateService.buildList(medicationKnowledge.id, parameters)
+      parameters => this._formStateService.buildList(medicationId, parameters)
     );
 
-    this._formStateService.dispatchIntent(new MedicationFormIntentAddMedication(medicationKnowledge));
+    this._formStateService.dispatchIntent(
+      new MedicationFormIntentAddMedication(this.formState.medicationRequest, medicationKnowledge, medicationId)
+    );
     this.medicationKnowledge.reset(null, {emitEvent: false});
     this.isMedicationAddable = false;
   }
 
   onAddMedicationRequest(): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentAddMedicationRequest());
+    this._formStateService.dispatchIntent(
+      new MedicationFormIntentAddMedicationRequest(this.formState.medicationRequest)
+    );
   }
 
   private setUpOnChange(): void {
@@ -158,26 +121,24 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
       .pipe(
         filter(value => typeof value === 'string')
       );
-    medicationKnowledgeControlString$.pipe(
-      takeUntil(this._unsubscribeTrigger$),
-      debounceTime(500),
-      distinctUntilChanged(),
-      tap(
+    medicationKnowledgeControlString$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap(
         () => {
-          this._medicationKnowledgeSet.clear();
+          this._medicationKnowledgeArray.length = 0;
           this.formState.loading = true;
-        }
-      ),
-      switchMap(value => this._cioDcSource.searchMedicationKnowledge(value))
-    ).subscribe(
+        }),
+        switchMap(value => this._cioDcSource.searchMedicationKnowledge(value))
+      ).subscribe(
       response => {
-        if (FhirTypeGuard.isBundle(response)) {
-          const bundle = response as Bundle;
-          if (bundle.total > 0) {
-            for (const entry of bundle.entry) {
-              if (FhirTypeGuard.isMedicationKnowledge(entry.resource)) {
-                this._medicationKnowledgeSet.add(entry.resource);
-              }
+        const bundle = response as Bundle;
+        if (bundle.total > 0) {
+          for (const entry of bundle.entry) {
+            if (FhirTypeGuard.isMedicationKnowledge(entry.resource)) {
+              this._medicationKnowledgeArray.push(entry.resource);
             }
           }
         }

@@ -1,13 +1,17 @@
-import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
-import {fhir} from '../../common/fhir/fhir.types';
-import {FhirLabelProviderFactory} from '../../common/fhir/fhir.label.provider.factory';
-import {MatTableDataSource} from '@angular/material/table';
-import {MatPaginator} from '@angular/material/paginator';
-import {MatSort} from '@angular/material/sort';
-import {SelectionModel} from '@angular/cdk/collections';
-import {PrescriptionStateService} from '../prescription-state.service';
+import { AfterViewInit, Component, Input, OnInit, ViewChild } from '@angular/core';
+import { SelectionModel } from '@angular/cdk/collections';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
+
+import * as lodash from 'lodash';
+
+import { PrescriptionStateService } from '../prescription-state.service';
+import { FhirLabelProviderFactory } from '../../common/fhir/fhir.label.provider.factory';
+import { FhirDataSourceService } from '../../common/services/fhir.data-source.service';
+import { fhir } from '../../common/fhir/fhir.types';
 import MedicationRequest = fhir.MedicationRequest;
-import {Elements} from '../prescription.model';
+import {TableElement} from '../../common/models/core.model';
 
 @Component({
   selector: 'app-medication-request-table',
@@ -19,26 +23,25 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   private _labelProviderFactory = new FhirLabelProviderFactory();
 
   @Input()
-  expandedElement: Elements | null;
-  @Input()
-  medicationRequestDataSource = new MatTableDataSource<Elements>([]);
+  medicationRequestDataSource = new MatTableDataSource<TableElement<MedicationRequest>>([]);
   @ViewChild(MatPaginator)
   paginator: MatPaginator;
   @ViewChild(MatSort)
   sort: MatSort;
 
-  selection = new SelectionModel<Elements>(true, []);
+  selection = new SelectionModel<TableElement<MedicationRequest>>(true, []);
 
   displayedColumns: Array<string> = ['select', 'position', 'name'];
 
-  constructor(private prescriptionState: PrescriptionStateService) { }
+  constructor(private _prescriptionState: PrescriptionStateService,
+              private _dataSource: FhirDataSourceService) { }
 
   public get labelProviderFactory(): FhirLabelProviderFactory {
     return this._labelProviderFactory;
   }
 
   ngOnInit(): void {
-    this.prescriptionState.medicationRequestSubject.subscribe(
+    this._prescriptionState.medicationRequestSubject.subscribe(
       next => {
         this.onAddMedicationRequest(next);
       }
@@ -46,7 +49,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.medicationRequestDataSource.sortingDataAccessor = (item: Elements, property: string) => {
+    this.medicationRequestDataSource.sortingDataAccessor = (item: TableElement<MedicationRequest>, property: string) => {
       switch (property) {
         case 'name': return this._labelProviderFactory.getProvider(item.resource).getText(item.resource);
         default: return item[property];
@@ -54,7 +57,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
     };
     this.medicationRequestDataSource.sort = this.sort;
     this.medicationRequestDataSource.paginator = this.paginator;
-    this.medicationRequestDataSource.filterPredicate = (data: Elements, filterValue: string) => {
+    this.medicationRequestDataSource.filterPredicate = (data: TableElement<MedicationRequest>, filterValue: string) => {
       return this._labelProviderFactory.getProvider(data.resource).getText(data.resource)
         .trim()
         .toLocaleLowerCase().indexOf(filterValue.trim().toLocaleLowerCase()) >= 0;
@@ -85,7 +88,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
         this.medicationRequestDataSource.data.splice(indexToRemove, 1);
       }
     });
-    this.medicationRequestDataSource.data.forEach((value: Elements, index: number) => {
+    this.medicationRequestDataSource.data.forEach((value: TableElement<MedicationRequest>, index: number) => {
       value.position = index + 1;
     });
     this.medicationRequestDataSource._updateChangeSubscription();
@@ -95,7 +98,28 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   onSave(): void {
-    console.log('TODO save !');
+    const promises: Array<Promise<object>> = [];
+    const elements = this.medicationRequestDataSource.data.slice();
+    elements.forEach(value => {
+      const resource = lodash.cloneDeep(value.resource);
+      delete resource.medicationCodeableConcept;
+      const authoredOn = new Date(Date.now());
+      resource.authoredOn = authoredOn.toISOString();
+      promises.push(this._dataSource.saveResource(resource));
+    });
+    Promise.all(promises)
+      .then(
+        value => {
+          console.log('saved: ', value);
+        })
+      .catch(reason => console.log('Reason: ', reason))
+      .finally(() => {
+        this.medicationRequestDataSource.data.length = 0;
+        this.medicationRequestDataSource._updateChangeSubscription();
+        this.medicationRequestDataSource.sort = this.sort;
+        this.medicationRequestDataSource.paginator = this.paginator;
+        this.selection.clear();
+      });
   }
 
   applyFilter(event: Event): void {
@@ -122,11 +146,10 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   /** The label for the checkbox on the passed row */
-  checkboxLabel(row?: Elements): string {
+  checkboxLabel(row?: TableElement<MedicationRequest>): string {
     if (!row) {
       return `${this.isAllSelected() ? 'select' : 'deselect'} all`;
     }
     return `${this.selection.isSelected(row) ? 'deselect' : 'select'} row ${row.position + 1}`;
   }
-
 }

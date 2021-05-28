@@ -1,47 +1,25 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 
-import { StateModel } from '../models/state.model';
+import { IStateModel, StateModel } from '../models/state.model';
 
 @Injectable()
 export class StateService {
 
-  constructor() {}
+  constructor() {
+  }
 
   stateSubject$ = new Subject<StateModel>();
 
-  state: StateModel;
+  state: IStateModel;
 
-  /**
-   * Returns the user ID or null.
-   */
-  getUserId(): string | null {
-    const profile = this.state.user.profile;
-    if (profile) {
-      return profile.split('/')[1];
-    }
-    return null;
-  }
-
-  /**
-   * Returns the type of the logged-in user or null. The result can be
-   * "Practitioner", "Patient" or "RelatedPerson".
-   */
-  getUserType(): string | null {
-    const profile = this.state.user.profile;
-    if (profile) {
-      return profile.split('/')[0];
-    }
-    return null;
-  }
-
-  getUser<T>(tokenId: string): T {
+  public getUser<T>(tokenId: string): T {
     return this.jwtDecode(tokenId) as any;
   }
 
-  emitState(state: StateModel): void {
+  public emitState(state: IStateModel): void {
     this.state = state;
-    this.stateSubject$.next(state);
+    this.stateSubject$.next(state as StateModel);
   }
 
   /**

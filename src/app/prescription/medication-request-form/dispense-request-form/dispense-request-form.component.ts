@@ -82,9 +82,20 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy {
   }
 
   private render(formState: MedicationRequestFormState): void {
+    const options = {emitEvent: false};
     switch (formState.type) {
+      case 'AddMedication':
+        this.dispenseRequestValidityPeriodStart.setValue(
+          this.formState.medicationRequest.dispenseRequest.validityPeriod.start, options
+        );
+        this.dispenseRequestValidityPeriodEnd.setValue(
+          this.formState.medicationRequest.dispenseRequest.validityPeriod.end, options
+        );
+        this.dispenseRequestExpectedSupplyDurationValue.setValue(
+          this.formState.medicationRequest.dispenseRequest.expectedSupplyDuration.value, options
+        );
+        break;
       case 'AddMedicationRequest':
-        const options = {emitEvent: false};
         this.dispenseRequestValidityPeriodStart.reset(undefined, options);
         this.dispenseRequestValidityPeriodEnd.reset(undefined, options);
         this.dispenseRequestExpectedSupplyDurationValue.reset(undefined, options);

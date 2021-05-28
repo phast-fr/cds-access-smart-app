@@ -34,6 +34,7 @@ import { MedicationFormComponent } from './medication-request-form/medication-fo
 import { DosageInstructionFormComponent } from './medication-request-form/dosage-instruction-form/dosage-instruction-form.component';
 import { DispenseRequestFormComponent } from './medication-request-form/dispense-request-form/dispense-request-form.component';
 import { MedicationRequestTableComponent } from './medication-request-table/medication-request-table.component';
+import {FhirTioService} from '../common/services/fhir.tio.service';
 
 @NgModule({
   declarations: [
@@ -71,6 +72,7 @@ import { MedicationRequestTableComponent } from './medication-request-table/medi
   providers: [
     FhirDataSourceService,
     FhirCioDcService,
+    FhirTioService,
     FhirCdsHooksService,
     PrescriptionStateService,
     MedicationRequestFormService
