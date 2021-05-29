@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { retry } from 'rxjs/operators';
+import { v4 as uuidv4 } from 'uuid';
 
 import { environment } from '../../../environments/environment';
 import { CdsCards, Hook, Service, Services } from './fhir.cdshooks.model';
@@ -27,7 +28,7 @@ export class FhirCdsHooksService {
 
   public postHook(service: Service, hook: Hook): Observable<CdsCards> {
     hook.hook = service.hook;
-    hook.hookInstance = this.generateUUID();
+    hook.hookInstance = uuidv4();
     // to manage cqf-ruler
     hook.fhirServer = environment.cds_hooks_url + '/fhir';
 
@@ -35,15 +36,5 @@ export class FhirCdsHooksService {
       .pipe(
         retry(3)
       );
-  }
-
-  private generateUUID(): string {
-    let dt = new Date().getTime();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,
-      (c) => {
-      const r = (dt + Math.random() * 16) % 16 | 0;
-      dt = Math.floor(dt / 16);
-      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    });
   }
 }
