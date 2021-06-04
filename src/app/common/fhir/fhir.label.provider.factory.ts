@@ -9,7 +9,7 @@ import {
   QuantityLabelProvider,
   RatioLabelProvider,
   MedicationLabelProvider,
-  CodeableConceptLabelProvider, ReferenceLabelProvider
+  CodeableConceptLabelProvider, ReferenceLabelProvider, CompositionLabelProvider
 } from './fhir.label.provider';
 
 export class FhirLabelProviderFactory {
@@ -57,6 +57,14 @@ export class FhirLabelProviderFactory {
       }
       const provider = new NamedResourceLabelProvider();
       this._labelProviders['fhir.Practitioner'] = provider;
+      return provider;
+    }
+    else if (FhirTypeGuard.isComposition(object)) {
+      if (this._labelProviders.hasOwnProperty('fhir.Composition')) {
+        return this._labelProviders['fhir.Composition'];
+      }
+      const provider = new CompositionLabelProvider();
+      this._labelProviders['fhir.Composition'] = provider;
       return provider;
     }
     else if (object === 'fhir.Ratio') {

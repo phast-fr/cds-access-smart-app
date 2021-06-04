@@ -197,6 +197,8 @@ export class ReferenceBuilder {
 
   private _resourceType: code;
 
+  private _baseUrl: uri;
+
   private readonly _reference: Reference;
 
   constructor(referenceId: id) {
@@ -216,9 +218,17 @@ export class ReferenceBuilder {
     return this;
   }
 
+  public baseUrl(baseUrl: uri): this {
+    this._baseUrl = baseUrl;
+    return this;
+  }
+
   public build(): Reference {
     if (this._resourceType == null) {
       this._reference.reference = '#' + this._id;
+    }
+    else if (this._baseUrl && this._resourceType) {
+      this._reference.reference = this._baseUrl + '/' + this._resourceType + '/' + this._id;
     }
     else {
       this._reference.reference = this._resourceType + '/' + this._id;

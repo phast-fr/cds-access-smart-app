@@ -10,6 +10,7 @@ import Quantity = fhir.Quantity;
 import Ratio = fhir.Ratio;
 import CodeableConcept = fhir.CodeableConcept;
 import Reference = fhir.Reference;
+import Composition = fhir.Composition;
 
 export class NamedResourceLabelProvider implements ILabelProvider<Patient | Practitioner> {
 
@@ -121,6 +122,16 @@ export class MedicationLabelProvider implements ILabelProvider<Medication> {
     }
 
     return labelComposed;
+  }
+}
+
+export class CompositionLabelProvider implements ILabelProvider<Composition> {
+  constructor() {
+  }
+
+  getText(composition: Composition): string | null {
+    if (composition == null) { return null; }
+    return composition.title;
   }
 }
 
