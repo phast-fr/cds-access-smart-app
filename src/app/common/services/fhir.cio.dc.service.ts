@@ -1,9 +1,9 @@
-import {Injectable} from '@angular/core';
+import { Injectable } from '@angular/core';
 
 import FhirClient from 'fhir-kit-client';
 
-import {environment} from '../../../environments/environment';
-import {fhir} from '../fhir/fhir.types';
+import { environment } from '../../../environments/environment';
+import { fhir } from '../fhir/fhir.types';
 import id = fhir.id;
 import Parameters = fhir.Parameters;
 import ParametersParameter = fhir.ParametersParameter;
@@ -12,6 +12,8 @@ import MedicationKnowledge = fhir.MedicationKnowledge;
 import MedicationIngredient = fhir.MedicationIngredient;
 import OperationOutcome = fhir.OperationOutcome;
 import Bundle = fhir.Bundle;
+import Reference = fhir.Reference;
+import Composition = fhir.Composition;
 
 @Injectable()
 export class FhirCioDcService {
@@ -30,35 +32,43 @@ export class FhirCioDcService {
     });
   }
 
-  searchMedicationKnowledge(filter?: string | undefined, sortActive?: string, sortDirection?: string,
-                            page?: number, pageSize?: number):
+  searchMedicationKnowledgeDC(filter?: string | undefined, sortActive?: string, sortDirection?: string,
+                              page?: number, pageSize?: number):
     Promise<OperationOutcome | Bundle & { type: 'searchset' }> {
     const searchParams = {
       _count: (pageSize) ? pageSize : FhirCioDcService.DEFAULT_PAGE_SIZE,
-      // 'product-type': 'DC',
+      'product-type': 'DC',
       _elements: 'ingredient,code,id,relatedMedicationKnowledge',
       LinkPageNumber: 0
     };
 
-    if (sortDirection && sortDirection.length > 0) {
-      searchParams['_sort:' + sortDirection] = sortActive;
-    }
+    return this.search('MedicationKnowledge', searchParams, 'code:text', filter,
+      sortActive, sortDirection, page);
+  }
 
-    if (page) {
-      searchParams.LinkPageNumber = page;
-    }
+  searchMedicationKnowledgeUCD(filter?: string | undefined, sortActive?: string, sortDirection?: string,
+                               page?: number, pageSize?: number):
+    Promise<OperationOutcome | Bundle & { type: 'searchset' }> {
+    const searchParams = {
+      _count: (pageSize) ? pageSize : FhirCioDcService.DEFAULT_PAGE_SIZE,
+      'product-type': 'UCD',
+      _elements: 'ingredient,code,id,relatedMedicationKnowledge',
+      LinkPageNumber: 0
+    };
+    return this.search('MedicationKnowledge', searchParams, 'code:text', filter,
+      sortActive, sortDirection, page);
+  }
 
-    if (typeof filter === 'string' && filter.length > 0) {
-      searchParams['code:text'] = filter.trim();
-      return this.fhirClient.resourceSearch({
-        resourceType: 'MedicationKnowledge',
-        searchParams
-      });
-    }
-    return this.fhirClient.resourceSearch({
-      resourceType: 'MedicationKnowledge',
-      searchParams
-    });
+  searchComposition(filter?: string | undefined, sortActive?: string, sortDirection?: string,
+                    page?: number, pageSize?: number):
+    Promise<OperationOutcome | Bundle & { type: 'searchset' }> {
+    const searchParams = {
+      _count: (pageSize) ? pageSize : FhirCioDcService.DEFAULT_PAGE_SIZE,
+      _elements: 'id,title,category,type',
+      LinkPageNumber: 0
+    };
+    return this.search('Composition', searchParams, 'type:text', filter,
+      sortActive, sortDirection, page);
   }
 
   postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
@@ -82,6 +92,99 @@ export class FhirCioDcService {
       id: mkId,
       method: 'post',
       input
+    });
+  }
+
+  synchronizeCompositionMedicationKnowledge(compositionId: id, medicationKnowledgeReferences: Array<Reference>):
+    Promise<OperationOutcome> {
+
+    const jsonPatch = {
+      resourceType: 'parameters',
+      parameter: [{
+        name: 'operation',
+        part: [{
+          name: 'type',
+          valueCode: 'add'
+        },
+        {
+          name: 'path',
+          valueString: 'Composition.section.where(title = root)'
+        },
+        {
+          name: 'name',
+          valueString: 'entry'
+        },
+        {
+          name: 'value',
+          part: []
+        }]
+      }]
+    };
+    const operationIndex = jsonPatch.parameter.findIndex(
+      parameter => parameter.name === 'operation'
+    );
+    const operationValueIndex = jsonPatch.parameter[operationIndex].part.findIndex(
+      operation => operation.name === 'value'
+    );
+
+    for (const medicationKnowledgeReference of medicationKnowledgeReferences) {
+      jsonPatch.parameter[operationIndex].part[operationValueIndex].part.push({
+        name: 'reference',
+        valueUri: medicationKnowledgeReference.reference
+      });
+    }
+
+    return this.fhirClient.request(this.fhirClient.baseUrl + '/Composition/' + compositionId, {
+      method: 'PATCH',
+      body: jsonPatch,
+      options: {
+        headers: {
+          'content-type': 'application/fhir+json'
+        }
+      }
+    });
+
+    /*return this.fhirClient.patch({
+      resourceType: 'Composition',
+      id: compositionId,
+      JSONPatch: jsonPatch
+    });*/
+  }
+
+  readCompositionMedicationKnowledge(compositionId: id):
+    Promise<OperationOutcome | Composition> {
+    return this.fhirClient.read({resourceType: 'Composition', id: compositionId});
+  }
+
+  putCompositionMedicationKnowledge(composition: Composition): Promise<OperationOutcome> {
+    return this.fhirClient.update({resourceType: 'Composition', id: composition.id, body: composition});
+  }
+
+  private search(resourceType: string, searchParams: object, columnNameToFilter?: string, filter?: string | undefined,
+                 sortActive?: string, sortDirection?: string, page?: number):
+    Promise<OperationOutcome | Bundle & { type: 'searchset' }> {
+
+    if (sortDirection && sortDirection === 'desc') {
+      searchParams['_sort'] = '-' + sortActive;
+    }
+    else if (sortDirection && sortDirection === 'asc') {
+      searchParams['_sort'] = sortActive;
+    }
+
+    if (page) {
+      searchParams['LinkPageNumber'] = page;
+    }
+
+    if (typeof filter === 'string' && filter.length > 0) {
+      searchParams[columnNameToFilter] = filter.trim();
+      return this.fhirClient.resourceSearch({
+        resourceType,
+        searchParams
+      });
+    }
+    return this.fhirClient.resourceSearch({
+      resourceType,
+      searchParams
     });
   }
 }
