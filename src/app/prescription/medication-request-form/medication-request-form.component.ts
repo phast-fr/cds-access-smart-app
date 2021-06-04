@@ -36,10 +36,9 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
 
   isMedicationAddable = false;
 
-  constructor(
-    private _cioDcSource: FhirCioDcService,
-    private _formStateService: MedicationRequestFormService,
-    private fb: FormBuilder) { }
+  constructor(private _cioDcSource: FhirCioDcService,
+              private _formStateService: MedicationRequestFormService,
+              private fb: FormBuilder) { }
 
   public debug(object: any): void {
     console.log(object);
@@ -95,13 +94,6 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
   onAddMedication(): void {
     const medicationKnowledge = this.medicationKnowledge.value;
     const medicationId = this._formStateService.nextMedicationId();
-    this._formStateService.initList(medicationKnowledge, medicationId);
-
-    this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-      medicationKnowledge.id, medicationKnowledge.code, undefined, undefined, undefined
-    ).then(
-      parameters => this._formStateService.buildList(medicationId, parameters)
-    );
 
     this._formStateService.dispatchIntent(
       new MedicationFormIntentAddMedication(this.formState.medicationRequest, medicationKnowledge, medicationId)
@@ -131,7 +123,7 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
           this._medicationKnowledgeArray.length = 0;
           this.formState.loading = true;
         }),
-        switchMap(value => this._cioDcSource.searchMedicationKnowledge(value))
+        switchMap(value => this._cioDcSource.searchMedicationKnowledgeDC(value))
       ).subscribe(
       response => {
         const bundle = response as Bundle;

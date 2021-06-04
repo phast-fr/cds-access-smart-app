@@ -9,6 +9,7 @@ import CodeableConcept = fhir.CodeableConcept;
 import Ratio = fhir.Ratio;
 import Reference = fhir.Reference;
 import UnitsOfTime = fhir.UnitsOfTime;
+import MedicationIngredient = fhir.MedicationIngredient;
 
 export interface IIntent {
   readonly type: string;
@@ -79,7 +80,9 @@ export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _formValue: CodeableConcept) {
+              private _formValue: CodeableConcept,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _intendedRoute: CodeableConcept) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -93,6 +96,14 @@ export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
   public get formValue(): CodeableConcept {
     return this._formValue;
   }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get intendedRoute(): CodeableConcept {
+    return this._intendedRoute;
+  }
 }
 
 export class MedicationFormIntentValueChangesMedicationIngredientStrength implements IIntent {
@@ -101,7 +112,10 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrength implem
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemCodeableConcept: CodeableConcept,
-              private _strengthValue: Ratio) {
+              private _strengthValue: Ratio,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _form: CodeableConcept,
+              private _intendedRoute: CodeableConcept) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -118,6 +132,18 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrength implem
 
   public get strengthValue(): Ratio {
     return this._strengthValue;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get form(): CodeableConcept {
+    return this._form;
+  }
+
+  public get intendedRoute(): CodeableConcept {
+    return this._intendedRoute;
   }
 }
 
@@ -198,7 +224,9 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _routeValue: CodeableConcept) {
+              private _routeValue: CodeableConcept,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _medication: Medication) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -211,6 +239,14 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
 
   public get routeValue(): CodeableConcept {
     return this._routeValue;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get medication(): Medication {
+    return this._medication;
   }
 }
 

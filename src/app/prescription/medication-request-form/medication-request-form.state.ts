@@ -203,7 +203,7 @@ export class MedicationRequestFormState {
 
   private _strengthMap = new Map<string, Array<Ratio>>();
 
-  private _doseAndRateUnitArray = new Array<Coding>();
+  private _doseAndRateUnitMap = new Map<id, Array<Coding>>();
 
   private _durationUnitArray = new Array<UnitsOfTime>();
 
@@ -276,8 +276,8 @@ export class MedicationRequestFormState {
     return this._strengthMap;
   }
 
-  public get doseAndRateUnitArray(): Array<Coding> {
-    return this._doseAndRateUnitArray;
+  public get doseAndRateUnitMap(): Map<id, Array<Coding>> {
+    return this._doseAndRateUnitMap;
   }
 
   public get durationUnitArray(): Array<UnitsOfTime> {

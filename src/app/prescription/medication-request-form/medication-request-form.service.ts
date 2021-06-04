@@ -123,6 +123,13 @@ export class MedicationRequestFormService {
       }
     }
 
+    if (this.formState.doseAndRateUnitMap.get(medicationId) == null) {
+      this.formState.doseAndRateUnitMap.set(medicationId, new Array<CodeableConcept>());
+    }
+    else {
+      this.formState.doseAndRateUnitMap.get(medicationId).length = 0;
+    }
+
     if (this.formState.durationUnitArray.length === 0) {
       this._tioSource.valueSet$expand('units-of-time')
         .then((valueSet: ValueSet) => {
@@ -134,6 +141,7 @@ export class MedicationRequestFormService {
   }
 
   public clearList(medication: Medication): void {
+    this.formState.loading = true;
     if (this.formState.formMap.get(medication.id)) {
       this.formState.formMap.get(medication.id).length = 0;
     }
@@ -141,16 +149,17 @@ export class MedicationRequestFormService {
     this.formState.routeArray.length = 0;
 
     for (const ingredient of medication.ingredient) {
-      if (ingredient.itemCodeableConcept != null) {
+      if (ingredient.itemCodeableConcept) {
         this.formState.strengthMap.get(ingredient.itemCodeableConcept.text).length = 0;
       }
     }
-    this.formState.doseAndRateUnitArray.length = 0;
+    if (this.formState.doseAndRateUnitMap.get(medication.id)) {
+      this.formState.doseAndRateUnitMap.get(medication.id).length = 0;
+    }
   }
 
   public buildList(medicationId: id, parameters: Parameters): void {
-    if (parameters.parameter != null) {
-      console.log(parameters.parameter);
+    if (parameters.parameter) {
       for (const parameter of parameters.parameter) {
         switch (parameter.name) {
           case 'intendedRoute':
@@ -164,7 +173,7 @@ export class MedicationRequestFormService {
             this.addUniqueRatio(this.formState.strengthMap.get(ingredientCode.text), parameter);
             break;
           case 'unite':
-            this.addUniqueCoding(this.formState.doseAndRateUnitArray, parameter);
+            this.addUniqueCoding(this.formState.doseAndRateUnitMap.get(medicationId), parameter);
             break;
           default:
             // relatedMedicationKnowledge
@@ -193,6 +202,8 @@ export class MedicationRequestFormService {
       case 'AddMedication':
         action = new MedicationFormActionAddMedication(
           this._prescriptionState,
+          this._cioDcSource,
+          this,
           (intent as MedicationFormIntentAddMedication).medicationRequest,
           (intent as MedicationFormIntentAddMedication).medicationKnowledge,
           (intent as MedicationFormIntentAddMedication).medicationId
@@ -206,17 +217,26 @@ export class MedicationRequestFormService {
         break;
       case 'ValueChangesMedicationForm':
         action = new MedicationFormActionValueChangesMedicationForm(
+          this,
+          this._cioDcSource,
           (intent as MedicationFormIntentValueChangesMedicationForm).medicationRequest,
           (intent as MedicationFormIntentValueChangesMedicationForm).medication,
-          (intent as MedicationFormIntentValueChangesMedicationForm).formValue
+          (intent as MedicationFormIntentValueChangesMedicationForm).formValue,
+          (intent as MedicationFormIntentValueChangesMedicationForm).medicationKnowledge,
+          (intent as MedicationFormIntentValueChangesMedicationForm).intendedRoute
         );
         break;
       case 'ValueChangesMedicationIngredientStrength':
         action = new MedicationFormActionValueChangesMedicationIngredientStrength(
+          this,
+          this._cioDcSource,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medicationRequest,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medication,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).itemCodeableConcept,
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).strengthValue
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).strengthValue,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medicationKnowledge,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).form,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).intendedRoute
         );
         break;
       case 'ValueChangesMedicationIngredientStrengthValue':
@@ -253,9 +273,13 @@ export class MedicationRequestFormService {
         break;
       case 'ValueChangesDosageInstructionRoute':
         action = new MedicationFormActionValueChangesDosageInstructionRoute(
+          this,
+          this._cioDcSource,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationRequest,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationKnowledge,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medication
         );
         break;
       case 'ValueChangesDosageInstructionDurationValue':

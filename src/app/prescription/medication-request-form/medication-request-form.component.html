@@ -1,8 +1,13 @@
 <form [formGroup]="medicationRequestGroup">
   <div fxLayout="row" class="form-field-row form-field-medication-knowledge">
     <div fxFlex="100%">
-      <button mat-stroked-button color="primary" (click)="onAddMedication()"
-                [disabled]="!isMedicationAddable"> + </button>
+      <button mat-stroked-button color="primary"
+              #tooltip="matTooltip"
+              matTooltip="Ajouter le produit selectionné"
+              matTooltipPosition="below"
+              aria-label="Ajouter le produit selectionné"
+              (click)="onAddMedication()"
+              [disabled]="!isMedicationAddable"> + </button>
       <mat-form-field fxFlex="100%" appearance="fill">
         <i matPrefix matTooltip="Library Add" class="material-icons icon">library_add</i>
         <mat-label> Dénomination commune </mat-label>
@@ -21,7 +26,7 @@
           *ngIf="formState.medicationRequest != null"> Ajouter </button>
   <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
                     [displayWith]="displayFnMedicationKnowledge.bind(this)">
-    <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
+    <mat-option *ngIf="formState.isLoading" class="is-loading"> Recherche... </mat-option>
     <ng-container *ngIf="!formState.isLoading">
       <mat-option *ngFor="let medicationKnowledge of medicationKnowledgeArray;
             index as i trackBy: trackByMedicationKnowledge" [value]="medicationKnowledge">

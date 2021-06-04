@@ -1,8 +1,9 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormArray, FormBuilder } from '@angular/forms';
 import { Observable, Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, filter, takeUntil, tap } from 'rxjs/operators';
 
+import { Utils } from '../../../common/utils';
 import { MedicationRequestFormService } from '../medication-request-form.service';
 import { MedicationRequestFormState } from '../medication-request-form.state';
 import {
@@ -25,8 +26,8 @@ import { fhir } from '../../../common/fhir/fhir.types';
 import CodeableConcept = fhir.CodeableConcept;
 import Coding = fhir.Coding;
 import Quantity = fhir.Quantity;
-import {Utils} from '../../../common/utils';
-import Bundle = fhir.Bundle;
+import Medication = fhir.Medication;
+import MedicationKnowledge = fhir.MedicationKnowledge;
 
 @Component({
   selector: 'app-dosage-instruction-form',
@@ -41,10 +42,9 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
 
   dosageInstruction = this.fb.array([]);
 
-  constructor(
-    private _cioDcSource: FhirCioDcService,
-    private _formStateService: MedicationRequestFormService,
-    private fb: FormBuilder) { }
+  constructor(private _cioDcSource: FhirCioDcService,
+              private _formStateService: MedicationRequestFormService,
+              private fb: FormBuilder) { }
 
   public get formState(): MedicationRequestFormState {
     return this._formStateService.formState;
@@ -52,6 +52,15 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
 
   public get labelProviderFactory(): FhirLabelProviderFactory {
     return this._labelProviderFactory;
+  }
+
+  public get doseAndRateUnitArray(): Array<Coding> {
+    if (this.formState.medicationRequest.contained.length > 1) {
+      return this.formState.doseAndRateUnitMap.get(
+        this.formState.medicationRequest.contained[1].id);
+    }
+    return this.formState.doseAndRateUnitMap.get(
+      this.formState.medicationRequest.contained[0].id);
   }
 
   ngOnInit(): void {
@@ -104,7 +113,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
   }
 
   displayFnCodeableConcept(codeableConcept: CodeableConcept): string | null {
-    if (codeableConcept == null) { return null; }
     return this._labelProviderFactory.getProvider('fhir.CodeableConcept').getText(codeableConcept);
   }
 
@@ -113,7 +121,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
   }
 
   displayFnCoding(coding: Coding): string | null {
-    if (coding == null) { return null; }
     return this._labelProviderFactory.getProvider('fhir.Coding').getText(coding);
   }
 
@@ -182,14 +189,18 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
     routeString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
+        tap(_ => dosageInstructionGroup.get('route').setValue(null, {emitEvent: false}))
       )
       .subscribe(_ => {
-        dosageInstructionGroup.get('route').setValue(null, {emitEvent: false});
+        const medication = this.formState.medicationRequest.contained[0] as Medication;
+        const medicationKnowledge = this.medicationKnowledgeMap(medication);
         this._formStateService.dispatchIntent(
           new MedicationFormIntentValueChangesDosageInstructionRoute(
             this.formState.medicationRequest,
             nDosage,
-            null
+            null,
+            medicationKnowledge,
+            medication
           )
         );
       });
@@ -197,13 +208,19 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
       .pipe(
         takeUntil(this._unsubscribeTrigger$)
       )
-      .subscribe(routeValue => this._formStateService.dispatchIntent(
-        new MedicationFormIntentValueChangesDosageInstructionRoute(
-          this.formState.medicationRequest,
-          nDosage,
-          routeValue
-        )
-      ));
+      .subscribe(value => {
+        const medication = this.formState.medicationRequest.contained[0] as Medication;
+        const medicationKnowledge = this.medicationKnowledgeMap(medication);
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionRoute(
+            this.formState.medicationRequest,
+            nDosage,
+            value,
+            medicationKnowledge,
+            medication
+          )
+        );
+      });
     dosageInstructionGroup.get(['timing', 'repeat', 'duration']).valueChanges
       .pipe(
         takeUntil(this._unsubscribeTrigger$)
@@ -299,7 +316,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
           )
         )
       );
-    // TODO open issue how to switch between list supervised and complete list ?
     const doseQuantityUnitString$ = doseAndRateGroup.get(['doseQuantity', 'unit']).valueChanges
       .pipe(
         filter(value => typeof value === 'string')
@@ -313,21 +329,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
         distinctUntilChanged(),
-        tap(_ => {
-          this.formState.loading = true;
-          this.formState.doseAndRateUnitArray.length = 0;
-        }),
-        // TODO add method to find into good form valueset
-        switchMap(value => value)
       )
-      .subscribe(value => {
-        const bundle = value as Bundle;
-        if (bundle.total > 0) {
-          for (const entry of bundle.entry) {
-            this.formState.doseAndRateUnitArray.push(entry);
-          }
-        }
-        this.formState.loading = false;
+      .subscribe(_ => {
+        this._formStateService.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
+            this.formState.medicationRequest,
+            nDosage,
+            nDoseAndRate,
+            null
+          )
+        );
       });
     doseQuantityUnitObj$
       .pipe(
@@ -343,5 +354,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
           )
         )
       );
+  }
+
+  private medicationKnowledgeMap(medication: Medication): MedicationKnowledge {
+    if (this.formState.medicationKnowledgeMap.has(medication.id)) {
+      return this.formState.medicationKnowledgeMap.get(medication.id);
+    }
+    const medicationId = medication.ingredient[0].itemReference.reference.substring(1);
+    return this.formState.medicationKnowledgeMap.get(medicationId);
   }
 }

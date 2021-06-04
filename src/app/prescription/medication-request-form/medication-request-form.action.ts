@@ -1,4 +1,5 @@
 import * as lodash from 'lodash';
+import { from } from 'rxjs';
 import {
   IPartialState,
   MedicationFormStateAddMedication,
@@ -33,6 +34,8 @@ import CodeableConcept = fhir.CodeableConcept;
 import Ratio = fhir.Ratio;
 import Reference = fhir.Reference;
 import UnitsOfTime = fhir.UnitsOfTime;
+import {FhirCioDcService} from '../../common/services/fhir.cio.dc.service';
+import {MedicationRequestFormService} from './medication-request-form.service';
 
 export interface IAction {
   readonly type: string;
@@ -56,6 +59,8 @@ export class MedicationFormActionAddMedication implements IAction {
   type = 'AddMedication';
 
   constructor(private _prescriptionState: PrescriptionStateService,
+              private _cioDcSource: FhirCioDcService,
+              private _formStateService: MedicationRequestFormService,
               private _medicationRequest: MedicationRequest,
               private _medicationKnowledge: MedicationKnowledge,
               private _medicationId: id) { }
@@ -122,6 +127,13 @@ export class MedicationFormActionAddMedication implements IAction {
         .build());
     }
     this._medicationRequest.contained.push(medication);
+    this._formStateService.initList(this._medicationKnowledge, medication.id);
+    this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+      this._medicationKnowledge.id, this._medicationKnowledge.code, undefined, undefined, undefined
+      ).then(
+        parameters => this._formStateService.buildList(medication.id, parameters)
+      );
+
     return new MedicationFormStateAddMedication(this._medicationRequest, this._medicationKnowledge, medication);
   }
 }
@@ -158,9 +170,13 @@ export class MedicationFormActionRemoveMedication implements IAction {
 export class MedicationFormActionValueChangesMedicationForm implements IAction {
   readonly type = 'ValueChangesMedicationForm';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _formStateService: MedicationRequestFormService,
+              private _cioDcSource: FhirCioDcService,
+              private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _formValue: CodeableConcept) {
+              private _formValue: CodeableConcept,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _intendedRoute: CodeableConcept) {
   }
 
   public execute(): IPartialState {
@@ -170,6 +186,22 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
       }
     );
     this._medication.form = this._formValue;
+
+    const ingredient = (this._medicationRequest.contained.length > 1) ?
+      this._medicationKnowledge.ingredient : this._medication.ingredient;
+
+    const medList = (this._medicationRequest.contained.length > 1) ?
+      this._medicationRequest.contained[1] as Medication : this._medication;
+    this._formStateService.clearList(medList);
+    from(this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+      this._medicationKnowledge.id,
+      this._medicationKnowledge.code,
+      this._formValue,
+      ingredient,
+      this._intendedRoute
+    ))
+      .subscribe(value => this._formStateService.buildList(medList.id, value));
+
     return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
   }
 }
@@ -177,10 +209,15 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
 export class MedicationFormActionValueChangesMedicationIngredientStrength implements IAction {
   readonly type = 'ValueChangesMedicationIngredientStrength';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _formStateService: MedicationRequestFormService,
+              private _cioDcSource: FhirCioDcService,
+              private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemCodeableConcept: CodeableConcept,
-              private _strengthValue: Ratio) {
+              private _strengthValue: Ratio,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _form: CodeableConcept,
+              private _intendedRoute: CodeableConcept) {
   }
 
   public execute(): IPartialState {
@@ -193,6 +230,17 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
       value => value.itemCodeableConcept === this._itemCodeableConcept
     );
     this._medication.ingredient[nIngredient].strength = this._strengthValue;
+
+    this._formStateService.clearList(this._medication);
+    from(this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+      this._medicationKnowledge.id,
+      this._medicationKnowledge.code,
+      this._form,
+      this._medication.ingredient,
+      this._intendedRoute
+    ))
+      .subscribe(value => this._formStateService.buildList(this._medication.id, value));
+
     return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
   }
 }
@@ -246,18 +294,26 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthUnit im
     const nIngredient = this._medication.ingredient.findIndex(
       value => value.itemReference === this._itemReference
     );
-    if (!this._medication.ingredient[nIngredient].strength) {
-      this._medication.ingredient[nIngredient].strength = new RatioBuilder()
-        .setNumeratorUnit(this._strengthUnit.display)
-        .setNumeratorSystem(this._strengthUnit.system)
-        .setNumeratorCode(this._strengthUnit.code)
-        .build();
+    if (this._strengthUnit) {
+      if (!this._medication.ingredient[nIngredient].strength) {
+        this._medication.ingredient[nIngredient].strength = new RatioBuilder()
+          .setNumeratorUnit(this._strengthUnit.display)
+          .setNumeratorSystem(this._strengthUnit.system)
+          .setNumeratorCode(this._strengthUnit.code)
+          .build();
+      }
+      else {
+        this._medication.ingredient[nIngredient].strength.numerator.unit = this._strengthUnit.display;
+        this._medication.ingredient[nIngredient].strength.numerator.code = this._strengthUnit.code;
+        this._medication.ingredient[nIngredient].strength.numerator.system = this._strengthUnit.system;
+      }
     }
     else {
-      this._medication.ingredient[nIngredient].strength.numerator.unit = this._strengthUnit.display;
-      this._medication.ingredient[nIngredient].strength.numerator.code = this._strengthUnit.code;
-      this._medication.ingredient[nIngredient].strength.numerator.system = this._strengthUnit.system;
+      this._medication.ingredient[nIngredient].strength.numerator.unit = null;
+      this._medication.ingredient[nIngredient].strength.numerator.code = null;
+      this._medication.ingredient[nIngredient].strength.numerator.system = null;
     }
+
     return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
   }
 }
@@ -353,13 +409,33 @@ export class MedicationFormActionValueChangesDispenseRequest implements IAction 
 export class MedicationFormActionValueChangesDosageInstructionRoute implements IAction {
   readonly type = 'ValueChangesDosageInstructionRoute';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _formStateService: MedicationRequestFormService,
+              private _cioDcSource: FhirCioDcService,
+              private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _routeValue: CodeableConcept) { }
+              private _routeValue: CodeableConcept,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _medication: Medication) { }
 
   public execute(): IPartialState {
     const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
     dosage.route = this._routeValue;
+
+    const ingredient = (this._medicationRequest.contained.length > 1) ?
+      this._medicationKnowledge.ingredient : this._medication.ingredient;
+
+    const medList = (this._medicationRequest.contained.length > 1) ?
+      this._medicationRequest.contained[1] as Medication : this._medication;
+    this._formStateService.clearList(medList);
+    from(this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+      this._medicationKnowledge.id,
+      this._medicationKnowledge.code,
+      medList.form,
+      ingredient,
+      this._routeValue
+    ))
+      .subscribe(value => this._formStateService.buildList(medList.id, value));
+
     return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
   }
 }

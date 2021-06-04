@@ -12,6 +12,10 @@ button.mat-stroked-button {
   padding: 10px 0;
 }
 
+.form-group-footer {
+  margin-top: 5px;
+}
+
 .form-group-title {
   padding: 15px 0 0 15px;
   font-weight: 400;

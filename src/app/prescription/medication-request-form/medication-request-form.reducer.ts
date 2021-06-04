@@ -14,6 +14,9 @@ import {
   MedicationFormStateRemoveDoseAndRate,
   MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication
 } from './medication-request-form.state';
+import {fhir} from '../../common/fhir/fhir.types';
+import CodeableConcept = fhir.CodeableConcept;
+import Medication = fhir.Medication;
 
 export class MedicationRequestFormReducer {
 
@@ -78,9 +81,8 @@ export class MedicationRequestFormReducer {
 
   private addMedication(newState: MedicationRequestFormState, partialState: MedicationFormStateAddMedication): void {
     newState.medicationRequest = partialState.medicationRequest;
-    const medication = partialState.medication;
     newState.medicationKnowledgeMap.set(
-      medication.id, partialState.medicationKnowledge
+      partialState.medication.id, partialState.medicationKnowledge
     );
   }
 

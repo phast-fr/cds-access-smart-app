@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 
-import { SmartService } from '../smart/services/smart.service';
 import { FhirCdsHooksService } from '../common/fhir/fhir.cdshooks.service';
 import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
 import { Hook, OrderSelectContext, OrderSelectHook } from '../common/fhir/fhir.cdshooks.model';
@@ -11,6 +10,7 @@ import Practitioner = fhir.Practitioner;
 import Patient = fhir.Patient;
 import MedicationRequest = fhir.MedicationRequest;
 import Medication = fhir.Medication;
+import Bundle = fhir.Bundle;
 
 @Injectable()
 export class PrescriptionStateService {
@@ -23,9 +23,9 @@ export class PrescriptionStateService {
 
   private _cards = new Array<CardReadable>();
 
-  constructor(private _smartService: SmartService,
-              private _dataSource: FhirDataSourceService,
-              private _cdsHooksService: FhirCdsHooksService) { }
+  constructor(private _dataSource: FhirDataSourceService,
+              private _cdsHooksService: FhirCdsHooksService) {
+  }
 
   public set user(user: Patient | Practitioner) {
     this._user = user;
@@ -100,7 +100,7 @@ export class PrescriptionStateService {
               values => {
                 let itemCount = 2;
                 for (const value of values) {
-                  const bundle = value as fhir.Bundle;
+                  const bundle = value as Bundle;
                   if (bundle.total > 0) {
                     hook.prefetch['item' + ++itemCount] = value;
                   }
