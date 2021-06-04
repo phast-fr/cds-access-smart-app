@@ -95,7 +95,7 @@ export const environment = {
   cio_dc_credential: 'ZGF2aWQub3VhZ25lQHBoYXN0LmZyOjIncU1oa21+WFojdnpW',
   tio_url: 'https://jade.phast.fr/resources-server/api/FHIR',
   tio_credential: 'ZGF2aWQub3VhZ25lQHBoYXN0LmZyOjIncU1oa21+WFojdnpW',
-  drug_formulary_id: 'phast-formulary-1'
+  drug_formulary_resource_type: 'MedicationKnowledge'
 };
 
 /*

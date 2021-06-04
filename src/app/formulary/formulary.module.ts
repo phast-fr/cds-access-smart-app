@@ -27,10 +27,13 @@ import { FhirTioService } from '../common/services/fhir.tio.service';
 import { FormularyRoutingModule } from './formulary-routing.module';
 
 import { FormularyComponent } from './formulary.component';
+import { FormularyTableComponent } from './formulary-table/formulary-table.component';
+import {FormularyStateService} from './formulary-state.service';
 
 @NgModule({
   declarations: [
-    FormularyComponent
+    FormularyComponent,
+    FormularyTableComponent
   ],
   imports: [
     CommonModule,
@@ -59,7 +62,8 @@ import { FormularyComponent } from './formulary.component';
     FhirDataSourceService,
     FhirCioDcService,
     FhirTioService,
-    FhirCdsHooksService
+    FhirCdsHooksService,
+    FormularyStateService
   ],
   bootstrap: [FormularyComponent]
 })
