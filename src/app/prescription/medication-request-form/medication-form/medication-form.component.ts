@@ -14,7 +14,6 @@ import {
 } from '../medication-request-form.intent';
 import { MedicationRequestFormState } from '../medication-request-form.state';
 import { Utils } from '../../../common/utils';
-import { FhirCioDcService } from '../../../common/services/fhir.cio.dc.service';
 import { FhirLabelProviderFactory } from '../../../common/fhir/fhir.label.provider.factory';
 import { fhir } from '../../../common/fhir/fhir.types';
 import Medication = fhir.Medication;
@@ -39,7 +38,6 @@ export class MedicationFormComponent implements OnInit, OnDestroy {
   medication = this.fb.array([]);
 
   constructor(
-    private _cioDcSource: FhirCioDcService,
     private _formStateService: MedicationRequestFormService,
     private fb: FormBuilder) { }
 

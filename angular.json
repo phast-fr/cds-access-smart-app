@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "prescribedc": {
+    "cds-access": {
       "projectType": "application",
       "schematics": {},
       "root": "",
