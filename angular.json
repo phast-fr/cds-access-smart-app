@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/prescribedc",
+            "outputPath": "dist/cds-access",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": "src/polyfills.ts",
@@ -67,18 +67,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "prescribedc:build"
+            "browserTarget": "cds-access:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "prescribedc:build:production"
+              "browserTarget": "cds-access:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "prescribedc:build"
+            "browserTarget": "cds-access:build"
           }
         },
         "test": {
@@ -116,16 +116,16 @@
           "builder": "@angular-devkit/build-angular:protractor",
           "options": {
             "protractorConfig": "e2e/protractor.conf.js",
-            "devServerTarget": "prescribedc:serve"
+            "devServerTarget": "cds-access:serve"
           },
           "configurations": {
             "production": {
-              "devServerTarget": "prescribedc:serve:production"
+              "devServerTarget": "cds-access:serve:production"
             }
           }
         }
       }
     }
   },
-  "defaultProject": "prescribedc"
+  "defaultProject": "cds-access"
 }
