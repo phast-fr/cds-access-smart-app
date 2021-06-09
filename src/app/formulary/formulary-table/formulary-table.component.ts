@@ -119,7 +119,7 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
     this.selection.selected.forEach(
       value => medicationKnowledgeReferences.push(
         new ReferenceBuilder(value)
-        .baseUrl(environment.cio_dc_url)
+        .baseUrl('http://phast.fr/fhir')
         .resourceType(environment.drug_formulary_resource_type)
         .build()
       )

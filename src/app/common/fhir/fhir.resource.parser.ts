@@ -27,7 +27,9 @@ export class ReferenceParser {
 
   public parse(referenceStr: string): void {
     const nBaseUrl = referenceStr.lastIndexOf('fhir') + 4;
-    this._baseUrl = referenceStr.substring(0, nBaseUrl);
+    if (nBaseUrl > 0) {
+      this._baseUrl = referenceStr.substring(0, nBaseUrl);
+    }
     const nResourceType = referenceStr.lastIndexOf('/');
     this._resourceType = referenceStr.substring(nBaseUrl + 1, nResourceType);
     this._id = referenceStr.substring(nResourceType + 1);
