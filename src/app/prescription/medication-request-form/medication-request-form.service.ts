@@ -27,7 +27,7 @@ import {
   MedicationFormIntentValueChangesDosageInstructionDurationUnit,
   MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue,
   MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit,
-  MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue
+  MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue, MedicationFormIntentCdsHelp
 } from './medication-request-form.intent';
 import {
   IAction,
@@ -50,7 +50,7 @@ import {
   MedicationFormActionValueChangesDosageInstructionDurationUnit,
   MedicationFormActionValueChangesDosageInstructionDoseQuantityValue,
   MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit,
-  MedicationFormActionValueChangesDosageInstructionTimeOfDayValue
+  MedicationFormActionValueChangesDosageInstructionTimeOfDayValue, MedicationFormActionCdsHelp
 } from './medication-request-form.action';
 import { MedicationRequestFormState } from './medication-request-form.state';
 import { MedicationRequestFormReducer } from './medication-request-form.reducer';
@@ -255,12 +255,6 @@ export class MedicationRequestFormService {
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).strengthUnit
         );
         break;
-      case 'AddMedicationRequest':
-        action = new MedicationFormActionAddMedicationRequest(
-          this._prescriptionState,
-          (intent as MedicationFormIntentAddMedicationRequest).medicationRequest
-          );
-        break;
       case 'AddDosageInstruction':
         action = new MedicationFormActionAddDosageInstruction(
           (intent as MedicationFormIntentAddDosageInstruction).medicationRequest
@@ -345,6 +339,18 @@ export class MedicationRequestFormService {
       case 'ValueChangesDispenseRequest':
         action = new MedicationFormActionValueChangesDispenseRequest(
           (intent as MedicationFormIntentValueChangesDispenseRequest).value
+        );
+        break;
+      case 'AddMedicationRequest':
+        action = new MedicationFormActionAddMedicationRequest(
+          this._prescriptionState,
+          (intent as MedicationFormIntentAddMedicationRequest).medicationRequest
+        );
+        break;
+      case 'CdsHelp':
+        action = new MedicationFormActionCdsHelp(
+          this._prescriptionState,
+          (intent as MedicationFormIntentCdsHelp).medicationRequest
         );
         break;
       default:

@@ -6,7 +6,7 @@ import { debounceTime, distinctUntilChanged, filter, switchMap, takeUntil, tap }
 import { MedicationRequestFormService } from './medication-request-form.service';
 import {
   MedicationFormIntentAddMedication,
-  MedicationFormIntentAddMedicationRequest
+  MedicationFormIntentAddMedicationRequest, MedicationFormIntentCdsHelp
 } from './medication-request-form.intent';
 import { MedicationRequestFormState } from './medication-request-form.state';
 import { FhirCioDcService } from '../../common/services/fhir.cio.dc.service';
@@ -105,6 +105,12 @@ export class MedicationRequestFormComponent implements OnInit, OnDestroy {
   onAddMedicationRequest(): void {
     this._formStateService.dispatchIntent(
       new MedicationFormIntentAddMedicationRequest(this.formState.medicationRequest)
+    );
+  }
+
+  onCDSHelp(): void {
+    this._formStateService.dispatchIntent(
+      new MedicationFormIntentCdsHelp(this.formState.medicationRequest)
     );
   }
 

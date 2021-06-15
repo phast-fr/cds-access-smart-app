@@ -12,7 +12,7 @@ import {
   MedicationFormStateRemoveTimeOfDay,
   MedicationFormStateAddDoseAndRate,
   MedicationFormStateRemoveDoseAndRate,
-  MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication
+  MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication, MedicationFormStateCdsHelp
 } from './medication-request-form.state';
 import {
   DosageBuilder,
@@ -52,6 +52,18 @@ export class MedicationFormActionAddMedicationRequest implements IAction {
   public execute(): IPartialState {
     this._prescriptionState.addMedicationRequest(this._medicationRequest);
     return new MedicationFormStateAddMedicationRequest();
+  }
+}
+
+export class MedicationFormActionCdsHelp implements IAction {
+  readonly type = 'CdsHelp';
+
+  constructor(private _prescriptionState: PrescriptionStateService,
+              private _medicationRequest: MedicationRequest) { }
+
+  public execute(): IPartialState {
+    this._prescriptionState.callCdsHooks(this._medicationRequest);
+    return new MedicationFormStateCdsHelp();
   }
 }
 

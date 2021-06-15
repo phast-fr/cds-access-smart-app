@@ -1,3 +1,4 @@
+import * as lodash from 'lodash';
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 
@@ -54,11 +55,14 @@ export class PrescriptionStateService {
   public addMedicationRequest(medicationRequest: MedicationRequest): void {
     console.log('Medication Request: ', medicationRequest);
     this._medicationRequestSubject$.next(medicationRequest);
+  }
 
+  public callCdsHooks(medicationRequest: MedicationRequest): void {
+    const lMedicationRequest = lodash.cloneDeep(medicationRequest);
     // TODO to can filtered by medication request code into CQL
-    const medication = medicationRequest.contained[0] as Medication;
+    const medication = lMedicationRequest.contained[0] as Medication;
     if (medication.code != null) {
-      medicationRequest.medicationCodeableConcept = medication.code;
+      lMedicationRequest.medicationCodeableConcept = medication.code;
 
       this._cdsHooksService.getServices().subscribe(
         {
@@ -72,12 +76,12 @@ export class PrescriptionStateService {
                 (hook as OrderSelectHook).context.userId = this.user.id;
               }
               (hook as OrderSelectHook).context.patientId = this.patient.id;
-              (hook as OrderSelectHook).context.selections = [medicationRequest.id];
+              (hook as OrderSelectHook).context.selections = [lMedicationRequest.id];
               (hook as OrderSelectHook).context.draftOrders = {
                 resourceType: 'Bundle',
                 type: 'collection',
                 entry: [{
-                  resource: medicationRequest
+                  resource: lMedicationRequest
                 }],
               };
             }
@@ -87,7 +91,7 @@ export class PrescriptionStateService {
 
             hook.prefetch = {
               item1: this.patient,
-              item2: medicationRequest
+              item2: lMedicationRequest
             };
             const promises: Array<Promise<object>> = [];
             for (const item of Object.keys(service.prefetch)) {

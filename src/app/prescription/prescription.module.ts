@@ -23,6 +23,7 @@ import { FlexLayoutModule } from '@angular/flex-layout';
 import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
 import { FhirCdsHooksService } from '../common/fhir/fhir.cdshooks.service';
 import { FhirCioDcService } from '../common/services/fhir.cio.dc.service';
+import { FhirTioService } from '../common/services/fhir.tio.service';
 import { PrescriptionStateService } from './prescription-state.service';
 import { PrescriptionRoutingModule } from './prescription-routing.module';
 import { MedicationRequestFormService } from './medication-request-form/medication-request-form.service';
@@ -34,7 +35,6 @@ import { MedicationFormComponent } from './medication-request-form/medication-fo
 import { DosageInstructionFormComponent } from './medication-request-form/dosage-instruction-form/dosage-instruction-form.component';
 import { DispenseRequestFormComponent } from './medication-request-form/dispense-request-form/dispense-request-form.component';
 import { MedicationRequestTableComponent } from './medication-request-table/medication-request-table.component';
-import {FhirTioService} from '../common/services/fhir.tio.service';
 
 @NgModule({
   declarations: [
@@ -46,29 +46,29 @@ import {FhirTioService} from '../common/services/fhir.tio.service';
     MedicationRequestTableComponent,
     CardListComponent
   ],
-  imports: [
-    CommonModule,
-    FlexLayoutModule,
-    MatProgressSpinnerModule,
-    MatIconModule,
-    MatInputModule,
-    MatAutocompleteModule,
-    MatTooltipModule,
-    MatFormFieldModule,
-    MatCardModule,
-    MatListModule,
-    MatButtonModule,
-    MatTableModule,
-    MatCheckboxModule,
-    MatSortModule,
-    MatMenuModule,
-    ReactiveFormsModule,
-    MatPaginatorModule,
-    MatSelectModule,
-    MatBadgeModule,
-    MatSidenavModule,
-    PrescriptionRoutingModule,
-  ],
+    imports: [
+        CommonModule,
+        FlexLayoutModule,
+        MatProgressSpinnerModule,
+        MatIconModule,
+        MatInputModule,
+        MatAutocompleteModule,
+        MatTooltipModule,
+        MatFormFieldModule,
+        MatCardModule,
+        MatListModule,
+        MatButtonModule,
+        MatTableModule,
+        MatCheckboxModule,
+        MatSortModule,
+        MatMenuModule,
+        ReactiveFormsModule,
+        MatPaginatorModule,
+        MatSelectModule,
+        MatBadgeModule,
+        MatSidenavModule,
+        PrescriptionRoutingModule
+    ],
   providers: [
     FhirDataSourceService,
     FhirCioDcService,

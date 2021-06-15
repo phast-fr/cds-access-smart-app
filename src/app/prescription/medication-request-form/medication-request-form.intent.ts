@@ -25,6 +25,16 @@ export class MedicationFormIntentAddMedicationRequest implements IIntent {
   }
 }
 
+export class MedicationFormIntentCdsHelp implements IIntent {
+  readonly type = 'CdsHelp';
+
+  constructor(private _medicationRequest: MedicationRequest) { }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+}
+
 export class MedicationFormIntentAddMedication implements IIntent {
   readonly type = 'AddMedication';
 

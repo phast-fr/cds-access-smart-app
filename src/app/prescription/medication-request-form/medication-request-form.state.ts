@@ -22,6 +22,12 @@ export class MedicationFormStateAddMedicationRequest implements IPartialState {
   constructor() { }
 }
 
+export class MedicationFormStateCdsHelp implements IPartialState {
+  readonly type = 'CdsHelp';
+
+  constructor() { }
+}
+
 export class MedicationFormStateAddMedication implements IPartialState {
   readonly type = 'AddMedication';
 

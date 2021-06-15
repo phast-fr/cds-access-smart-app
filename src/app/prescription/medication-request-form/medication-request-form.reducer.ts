@@ -14,9 +14,6 @@ import {
   MedicationFormStateRemoveDoseAndRate,
   MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication
 } from './medication-request-form.state';
-import {fhir} from '../../common/fhir/fhir.types';
-import CodeableConcept = fhir.CodeableConcept;
-import Medication = fhir.Medication;
 
 export class MedicationRequestFormReducer {
 
@@ -63,7 +60,6 @@ export class MedicationRequestFormReducer {
         this.valueChangesDispenseRequest(newState, partialState as MedicationFormStateValueChangesDispenseRequest);
         break;
       default:
-        console.log('Partial state not supported: ', partialState);
         break;
     }
     return newState;

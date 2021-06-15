@@ -22,8 +22,13 @@
   <app-medication-form></app-medication-form>
   <app-dosage-instruction-form></app-dosage-instruction-form>
   <app-dispense-request-form></app-dispense-request-form>
-  <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
-          *ngIf="formState.medicationRequest != null"> Ajouter </button>
+  <div class="form-field-row form-control">
+    <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
+            *ngIf="formState.medicationRequest != null"> Ajouter </button>
+    <mat-divider></mat-divider>
+    <button mat-raised-button color="secondary" (click)="onCDSHelp()"
+            *ngIf="formState.medicationRequest != null"> Aide (CDS) </button>
+  </div>
   <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
                     [displayWith]="displayFnMedicationKnowledge.bind(this)">
     <mat-option *ngIf="formState.isLoading" class="is-loading"> Recherche... </mat-option>
