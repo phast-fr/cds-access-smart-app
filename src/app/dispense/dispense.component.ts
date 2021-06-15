@@ -141,30 +141,38 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
       return null;
     }
     let labelComposed = '';
-      if (this._selectedMedicationRequest.dosageInstruction.length > 0){
+    if (this._selectedMedicationRequest.dosageInstruction.length > 0){
         labelComposed += ' (';
-        for (const xx of this._selectedMedicationRequest.dosageInstruction){
-        for (const xxx of xx.doseAndRate){
-          labelComposed += ' ' + xxx.doseQuantity.value;
-          if (xxx.doseQuantity.unit != null){
-            labelComposed += xxx.doseQuantity.unit  ;
-          }
-          else {
-            labelComposed += ' unité' + (xxx.doseQuantity.value > 1 ? 's' : '');
-          }
-          if (xx.timing != null){
-            let first = true;
-            for ( const t of xx.timing.repeat.timeOfDay){
-              labelComposed += (first ? ' ' : '-') + t;
-              first = false;
+        for (const dosage of this._selectedMedicationRequest.dosageInstruction){
+          if (dosage.doseAndRate != null && dosage.doseAndRate.length > 0) {
+            for (const doseAndRate of dosage.doseAndRate) {
+              if (doseAndRate.doseQuantity != null ) {
+                labelComposed += ' ' + doseAndRate.doseQuantity.value;
+                if (doseAndRate.doseQuantity.unit != null) {
+                  labelComposed += doseAndRate.doseQuantity.unit;
+                } else {
+                  labelComposed += ' unité' + (doseAndRate.doseQuantity.value > 1 ? 's' : '');
+                }
+              }
+            }
+            if (dosage.timing != null) {
+                let first = true;
+                if (dosage.timing.repeat != null) {
+                  if (dosage.timing.repeat.timeOfDay != null && dosage.timing.repeat.timeOfDay.length > 0) {
+                    for (const t of dosage.timing.repeat.timeOfDay) {
+                      labelComposed += (first ? ' ' : '-') + t;
+                      first = false;
+                    }
+                  }
+                }
+              }
             }
           }
-        }
       }
-        labelComposed += ')';
-    }
+    labelComposed += ')';
     return labelComposed;
-  }
+    }
+
   displayMedicationRequest(medicationRequest: MedicationRequest): string | null {
     if (medicationRequest == null) { return null; }
     return this._labelProviderFactory.getProvider(medicationRequest).getText(medicationRequest);
