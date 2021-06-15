@@ -20,15 +20,18 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { FlexLayoutModule } from '@angular/flex-layout';
 
+import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
+import { FhirCdsHooksService } from '../common/fhir/fhir.cdshooks.service';
+import { FhirCioDcService } from '../common/services/fhir.cio.dc.service';
+import { FhirTioService } from '../common/services/fhir.tio.service';
 import { DispenseRoutingModule } from './dispense-routing.module';
 
 import {DialogOverviewExampleDialogComponent, DispenseComponent} from './dispense.component';
 import { DispenseTableComponent } from './dispense-table/dispense-table.component';
 import {DispenseStateService} from './dispense-state.service';
+import {FormularyTableComponent} from '../formulary/formulary-table/formulary-table.component';
 import {DialogSelectedSpecialiteComponent} from './dispense-dialog/dialog-selected-specialite.component';
 import {MatDialogModule} from '@angular/material/dialog';
-import {FhirModule} from '../common/fhir/fhir.module';
-import {CdsAccessModule} from '../common/cds-access/cds-access.module';
 
 @NgModule({
   declarations: [
@@ -61,10 +64,12 @@ import {CdsAccessModule} from '../common/cds-access/cds-access.module';
     DispenseRoutingModule,
     MatDialogModule,
     FormsModule,
-    CdsAccessModule,
-    FhirModule
   ],
   providers: [
+    FhirDataSourceService,
+    FhirCioDcService,
+    FhirTioService,
+    FhirCdsHooksService,
     DispenseStateService
   ],
   bootstrap: [DispenseComponent]

@@ -8,14 +8,20 @@ import { CollectionViewer, DataSource, SelectionModel } from '@angular/cdk/colle
 
 import { environment } from '../../../environments/environment';
 
-import { TableElement } from '../../common/cds-access/models/core.model';
+import { TableElement } from '../../common/models/core.model';
 // import { FormularyStateService } from '../formulary-state.service';
-import { FhirDataSourceService } from '../../common/fhir/services/fhir.data-source.service';
-import { PhastCioDcService } from '../../common/cds-access/services/phast.cio.dc.service';
-import { ReferenceBuilder } from '../../common/fhir/builders/fhir.resource.builder';
-import { ReferenceParser } from '../../common/fhir/parsers/fhir.resource.parser';
-import { FhirLabelProviderFactory } from '../../common/fhir/providers/fhir.label.provider.factory';
-import {Bundle, Composition, id, MedicationKnowledge, MedicationRequest} from 'phast-fhir-ts';
+import { FhirDataSourceService } from '../../common/services/fhir.data-source.service';
+import { FhirCioDcService } from '../../common/services/fhir.cio.dc.service';
+import { ReferenceBuilder } from '../../common/fhir/fhir.resource.builder';
+import { ReferenceParser } from '../../common/fhir/fhir.resource.parser';
+import { FhirLabelProviderFactory } from '../../common/fhir/fhir.label.provider.factory';
+import { fhir } from '../../common/fhir/fhir.types';
+import Bundle = fhir.Bundle;
+import id = fhir.id;
+import Composition = fhir.Composition;
+import MedicationKnowledge = fhir.MedicationKnowledge;
+import Reference = fhir.Reference;
+import MedicationRequest = fhir.MedicationRequest;
 
 @Component({
   selector: 'app-dispense-table',
@@ -23,6 +29,8 @@ import {Bundle, Composition, id, MedicationKnowledge, MedicationRequest} from 'p
   styleUrls: ['./dispense-table.component.css']
 })
 export class DispenseTableComponent implements OnInit, OnDestroy  {
+
+  private _labelProviderFactory = new FhirLabelProviderFactory();
 
   tableDataSource: MedicationRequestDataSource;
 
@@ -43,8 +51,7 @@ export class DispenseTableComponent implements OnInit, OnDestroy  {
 
   constructor(// private _formularyState: FormularyStateService,
               private _dataSource: FhirDataSourceService,
-              private _cioDcSource: PhastCioDcService,
-              private _labelProviderFactory: FhirLabelProviderFactory) {
+              private _cioDcSource: FhirCioDcService) {
     this.tableDataSource = new MedicationRequestDataSource(this._cioDcSource);
   }
 
@@ -153,7 +160,7 @@ export class MedicationRequestDataSource implements DataSource<TableElement<Medi
 
   private _length: number;
 
-  constructor(private _cioDcSource: PhastCioDcService) {
+  constructor(private _cioDcSource: FhirCioDcService) {
   }
 
   public loading$ = this._loading$.asObservable();
@@ -167,7 +174,7 @@ export class MedicationRequestDataSource implements DataSource<TableElement<Medi
   }
 
   public get pageSize(): number {
-    return PhastCioDcService.DEFAULT_PAGE_SIZE;
+    return FhirCioDcService.DEFAULT_PAGE_SIZE;
   }
 
   connect(collectionViewer: CollectionViewer): Observable<TableElement<MedicationRequest>[]> {
@@ -202,7 +209,6 @@ export class MedicationRequestDataSource implements DataSource<TableElement<Medi
             entry: []
           } as Bundle);
         }),
-        map(value => value as Bundle),
         finalize(() => this._loading$.next(false))
       )
       .subscribe((bundle: Bundle) => {

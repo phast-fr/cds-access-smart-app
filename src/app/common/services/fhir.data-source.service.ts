@@ -74,7 +74,7 @@ export class FhirDataSourceService {
       });
   }
 
-  searchMedicationRequests(patient: Patient, name: string | undefined):
+  searchMedicationRequests(patient: Patient, name?: string):
     Promise<OperationOutcome | Bundle & { type: 'searchset' }> {
     if (typeof name === 'string') {
       let search = name.trim();

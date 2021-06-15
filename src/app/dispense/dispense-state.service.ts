@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
 
-import { Composition, Patient, Practitioner } from 'phast-fhir-ts';
+import { fhir } from '../common/fhir/fhir.types';
+import Practitioner = fhir.Practitioner;
+import Patient = fhir.Patient;
+import {Observable, Subject} from 'rxjs';
+import Composition = fhir.Composition;
 
 @Injectable()
 export class DispenseStateService {

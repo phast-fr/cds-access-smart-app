@@ -7,6 +7,8 @@ const routes: Routes = [
   { path: 'prescription/launch', component: LaunchComponent },
   { path: 'formulary', loadChildren: () => import('./formulary/formulary.module').then(m => m.FormularyModule) },
   { path: 'formulary/launch', component: LaunchComponent },
+  { path: 'dispense', loadChildren: () => import('./dispense/dispense.module').then(m => m.DispenseModule) },
+  { path: 'dispense/launch', component: LaunchComponent },
   { path: '', redirectTo: 'prescription', pathMatch: 'full' },
   { path: '**', redirectTo: 'prescription' }
 ];

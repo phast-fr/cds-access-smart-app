@@ -77,7 +77,7 @@ export class FhirCioDcService {
     console.log(input);
 
     return this.fhirClient.operation({
-      name: '$phast-medication-knowledge-details',
+      name: '$phast-medication-knowledge-details?with-related-medication-knowledge=true',
       resourceType: 'MedicationKnowledge',
       id: mkId,
       method: 'post',
