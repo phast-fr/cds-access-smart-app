@@ -1,0 +1,12 @@
+<h1 mat-dialog-title>Sélection de la Spécialité</h1>
+<div mat-dialog-content>
+  <p>{{data.name}}</p>
+  <mat-form-field>
+    <mat-label>Quantité</mat-label>
+    <input matInput [(ngModel)]="data.quantity">
+  </mat-form-field>
+</div>
+<div mat-dialog-actions>
+  <button mat-button [mat-dialog-close]="">Annuler</button>
+  <button mat-button cdkFocusInitial [mat-dialog-close]="data.quantity">Ok</button>
+</div>

@@ -1,0 +1,105 @@
+<h2>Dispensation des prescriptions de <b style="color: mediumorchid">{{labelProviderFactory.getProvider(getPatient).getText(getPatient)}}</b>
+<label style="font-size: x-small; float: right;margin-right: 20px">{{labelProviderFactory.getProvider(getUser).getText(getUser)}}</label>
+</h2>
+<div fxLayout="row" class="form-field-row form-field-medication-knowledge">
+  <div fxFlex="100%">
+    <mat-form-field fxFlex="100%" appearance="fill">
+      <i matPrefix matTooltip="Sélectionner une prescription" class="material-icons icon" (click)="onGetDispense();">search</i>
+      <mat-label>Sélectionner une prescription</mat-label>
+      <input type="text" placeholder="Ex. paracetamol"
+             aria-label="Sélectionner une prescription"
+             matInput
+             [formControl]="medicationRequestControl"
+             [matAutocomplete]="autoMedicationKnowledge"/>
+    </mat-form-field>
+  </div>
+  <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
+                    [displayWith]="displayMedicationRequest.bind(this)">
+    <mat-option *ngIf="isLoading" class="is-loading"> Recherche... </mat-option>
+    <ng-container *ngIf="!isLoading">
+      <mat-option *ngFor="let element of medicationRequestArray;
+            index as i" [value]="element">
+        {{labelProviderFactory.getProvider(element).getText(element)}}
+      </mat-option>
+    </ng-container>
+  </mat-autocomplete>
+</div>
+
+<div class="container" *ngIf="selectedMedicationRequest">
+  <mat-card>
+    <mat-label style="float: none;width: 100%; font-weight: bolder;margin-bottom: 10px;color: blue">Medication</mat-label>
+    <mat-label *ngIf="selectedMedicationRequest" style="color: mediumorchid">{{selectedMedicationRequest}}</mat-label>
+    <div class="container">
+      <mat-table matSort fxFlex="100%" [dataSource]="medicationDataSource">
+
+        <!-- Position Column -->
+        <ng-container matColumnDef="position">
+          <mat-header-cell mat-sort-header fxFlex="15%" *matHeaderCellDef > No. </mat-header-cell>
+          <mat-cell fxFlex="15%" *matCellDef="let element"> {{element.position}} </mat-cell>
+        </ng-container>
+
+        <!-- Name Column -->
+        <ng-container matColumnDef="name">
+          <mat-header-cell mat-sort-header *matHeaderCellDef > Libellé </mat-header-cell>
+          <mat-cell *matCellDef="let element">{{labelProviderFactory.getProvider(
+            element.resource).getSnomed(element.resource)}}</mat-cell>
+        </ng-container>
+
+        <!--mat-header-row *matHeaderRowDef="displayedColumns" ></mat-header-row-->
+        <mat-row *matRowDef="let row; columns: displayedColumns;"
+                 class="medication-request-row" (click)="getSpecialites(row.resource)">
+        </mat-row>
+      </mat-table>
+    </div>
+  </mat-card>
+</div>
+<div class="container" [hidden]="!selectedMedication">
+  <mat-card>
+    <div class="spinner-container" *ngIf="ucdDataSource.loading$ | async">
+      <mat-spinner></mat-spinner>
+    </div>
+    <mat-label style="display: block; float: none;width: 100%;font-weight: bolder;padding-bottom: 10px;color: blue">
+      Spécialité &nbsp;&nbsp;
+      <mat-checkbox class="example-margin" [(ngModel)]="withLivret" (change)="onWithLivret($event)"  style="color: black;font-size: small">restreindre aux UCD présentes au livret thérapeutique</mat-checkbox>
+    </mat-label>
+    <div class="container">
+      <mat-form-field fxFlex="100%" appearance="fill">
+        <mat-label>Rechercher une spécialité par son nom </mat-label>
+        <input matInput placeholder="Ex. DOLIPRANE" #inputFilter>
+      </mat-form-field>
+    </div>
+
+    <div fxLayout="row">
+      <mat-table matSort fxFlex="100%" [dataSource]="ucdDataSource">
+
+        <!-- Position Column -->
+        <ng-container matColumnDef="position">
+          <mat-header-cell mat-sort-header fxFlex="15%" *matHeaderCellDef> No. </mat-header-cell>
+          <mat-cell fxFlex="15%" *matCellDef="let element"> {{element.position}} </mat-cell>
+        </ng-container>
+
+        <!-- Code Column -->
+        <ng-container matColumnDef="name">
+          <mat-header-cell mat-sort-header *matHeaderCellDef> Libellé </mat-header-cell>
+          <mat-cell fxFlex="70%" *matCellDef="let element" >
+            {{labelProviderFactory.getProvider('fhir.ParametersParameter').getText(element.resource)}}
+          </mat-cell>
+        </ng-container>
+
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"
+                 class="medication-knowledge-row" (click)="openDialog(row.resource)">
+        </mat-row>
+
+        <!-- Row shown when there is no matching data. -->
+        <!--
+        <tr mat-row *matNoDataRow>
+          <td mat-cell [attr.colspan]="displayedColumns.length">No data matching the filter "{{inputFilter.value}}"</td>
+        </tr>
+        -->
+      </mat-table>
+    </div>
+    <mat-paginator [length]="ucdDataSource.length" [pageSize]="ucdDataSource.pageSize"
+                   [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
+  </mat-card>
+</div>

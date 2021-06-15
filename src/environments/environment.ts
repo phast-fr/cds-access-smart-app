@@ -83,11 +83,13 @@ export const environment = {
   production: false,
   client_id: {
     prescription: '9ffb662a-79f1-4ab0-aa10-4dec5ecf87f9',
-    formulary: 'f33dcd65-57d8-4192-8e18-7ec1ebd45622'
+    formulary: 'f33dcd65-57d8-4192-8e18-7ec1ebd45622',
+    dispense : '098a3864-3692-49dd-920d-2fca3b87b1e2'
   },
   scope: {
     prescription: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
-    formulary: 'online_access profile openid fhirUser launch user/*.*'
+    formulary: 'online_access profile openid fhirUser launch user/*.*',
+    dispense : 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'
   },
   display_language: 'fr-FR',
   cds_hooks_url: 'https://localhost:8443/cqf-ruler-r4',

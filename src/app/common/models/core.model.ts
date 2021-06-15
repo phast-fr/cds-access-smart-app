@@ -1,5 +1,6 @@
 export interface ILabelProvider<T> {
   getText(T?): string | null;
+  getSnomed(T?): string | null;
 }
 
 export interface IAdapterFactory {

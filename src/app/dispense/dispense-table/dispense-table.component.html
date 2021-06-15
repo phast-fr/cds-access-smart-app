@@ -1,0 +1,62 @@
+<div class="container">
+  <div class="spinner-container" *ngIf="tableDataSource.loading$ | async">
+    <mat-spinner></mat-spinner>
+  </div>
+  <div fxLayout="row" class="form-field-row">
+    <mat-form-field fxFlex="100%" appearance="fill">
+      <mat-label> Filtre </mat-label>
+      <input matInput placeholder="Ex. DOLIPRANE" #inputFilter>
+    </mat-form-field>
+  </div>
+  <div fxLayout="row">
+    <mat-table matSort fxFlex="100%" [dataSource]="tableDataSource">
+
+      <!-- Checkbox Column -->
+      <ng-container matColumnDef="select">
+        <mat-header-cell fxFlex="15%" *matHeaderCellDef>
+          <mat-checkbox (change)="$event ? masterToggle() : null"
+                        [checked]="selection.hasValue() && isAllSelected()"
+                        [indeterminate]="selection.hasValue() && !isAllSelected()"
+                        [aria-label]="checkboxLabel()">
+          </mat-checkbox>
+        </mat-header-cell>
+        <mat-cell fxFlex="15%" *matCellDef="let row">
+          <mat-checkbox (click)="$event.stopPropagation()"
+                        (change)="$event ? selection.toggle(row?.resource.id) : null"
+                        [checked]="selection.isSelected(row?.resource.id)"
+                        [aria-label]="checkboxLabel(row)">
+          </mat-checkbox>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Position Column -->
+      <ng-container matColumnDef="position">
+        <mat-header-cell mat-sort-header fxFlex="15%" *matHeaderCellDef> No. </mat-header-cell>
+        <mat-cell fxFlex="15%" *matCellDef="let element"> {{element.position}} </mat-cell>
+      </ng-container>
+
+      <!-- Code Column -->
+      <ng-container matColumnDef="code:text">
+        <mat-header-cell mat-sort-header *matHeaderCellDef> Libellé </mat-header-cell>
+        <mat-cell fxFlex="70%" *matCellDef="let element">
+          {{labelProviderFactory.getProvider(element.resource).getText(element.resource)}}
+        </mat-cell>
+      </ng-container>
+
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns;"
+               (click)="selection.toggle(row?.resource.id)"
+               class="medication-knowledge-row">
+      </mat-row>
+
+      <!-- Row shown when there is no matching data. -->
+      <!--
+      <tr mat-row *matNoDataRow>
+        <td mat-cell [attr.colspan]="displayedColumns.length">No data matching the filter "{{inputFilter.value}}"</td>
+      </tr>
+      -->
+    </mat-table>
+  </div>
+  <mat-paginator [length]="tableDataSource.length" [pageSize]="tableDataSource.pageSize"
+                 [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
+</div>

@@ -11,6 +11,8 @@ import Ratio = fhir.Ratio;
 import CodeableConcept = fhir.CodeableConcept;
 import Reference = fhir.Reference;
 import Composition = fhir.Composition;
+import ParametersParameter = fhir.ParametersParameter;
+// import {monitorEventLoopDelay} from 'perf_hooks';
 
 export class NamedResourceLabelProvider implements ILabelProvider<Patient | Practitioner> {
 
@@ -24,6 +26,9 @@ export class NamedResourceLabelProvider implements ILabelProvider<Patient | Prac
       }
       return name.given.join(' ') + ' ' + name.family;
     }
+  getSnomed(namedResource: Patient | Practitioner | null): string | null{
+    return null;
+  }
 }
 
 export class MedicationKnowledgeLabelProvider implements ILabelProvider<MedicationKnowledge> {
@@ -36,6 +41,9 @@ export class MedicationKnowledgeLabelProvider implements ILabelProvider<Medicati
       const codeableConcept = medicationKnowledge.code;
       return codeableConcept.text;
     }
+    return null;
+  }
+  getSnomed(medicationKnowledge: MedicationKnowledge | null): string | null{
     return null;
   }
 }
@@ -59,6 +67,9 @@ export class MedicationRequestLabelProvider implements ILabelProvider<Medication
       labelComposed += ' ' + medicationRequest.dosageInstruction[0].route.text;
     }
     return labelComposed;
+  }
+  getSnomed(medicationRequest: MedicationRequest | null): string | null{
+    return null;
   }
 }
 
@@ -123,6 +134,18 @@ export class MedicationLabelProvider implements ILabelProvider<Medication> {
 
     return labelComposed;
   }
+  getSnomed(medication: Medication): string | null{
+    if (medication == null) { return null; }
+    let labelComposed: string;
+    labelComposed = this.getText(medication);
+    if (medication.code != null){
+      const x = medication.code.coding.find(e => e.system === 'http://snomed.info/sct');
+      if (x != null){
+        labelComposed += ' (' + x.code + ' - ' + x.display + ')';
+      }
+    }
+    return labelComposed;
+  }
 }
 
 export class CompositionLabelProvider implements ILabelProvider<Composition> {
@@ -133,6 +156,10 @@ export class CompositionLabelProvider implements ILabelProvider<Composition> {
     if (composition == null) { return null; }
     return composition.title;
   }
+  getSnomed(composition: Composition): string | null{
+    return null;
+  }
+
 }
 
 export class CodeableConceptLabelProvider implements ILabelProvider<CodeableConcept> {
@@ -142,6 +169,10 @@ export class CodeableConceptLabelProvider implements ILabelProvider<CodeableConc
     if (codeableConcept == null) { return null; }
     return codeableConcept.text;
   }
+  getSnomed(codeableConcept: CodeableConcept): string | null{
+    return null;
+  }
+
 }
 
 export class CodingLabelProvider implements ILabelProvider<Coding> {
@@ -152,6 +183,10 @@ export class CodingLabelProvider implements ILabelProvider<Coding> {
     if (coding == null) { return null; }
     return coding.display;
   }
+  getSnomed(coding: Coding | null): string | null{
+    return null;
+  }
+
 }
 
 export class QuantityLabelProvider implements ILabelProvider<Quantity> {
@@ -161,6 +196,9 @@ export class QuantityLabelProvider implements ILabelProvider<Quantity> {
     if (quantity == null) { return null; }
     if (quantity.value == null) { return null; }
     return quantity.value.toString();
+  }
+  getSnomed(quantity: Quantity | null): string | null{
+    return null;
   }
 }
 
@@ -180,6 +218,9 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
     }
     return labelComposite.join(' ');
   }
+  getSnomed(ratio: Ratio | null): string | null{
+    return null;
+  }
 }
 
 export class ReferenceLabelProvider implements ILabelProvider<Reference> {
@@ -191,5 +232,30 @@ export class ReferenceLabelProvider implements ILabelProvider<Reference> {
       return reference.display;
     }
     return reference.reference;
+  }
+  getSnomed(reference: Reference | null): string | null{
+    return null;
+  }
+}
+export class ParametersParameterLabelProvider implements ILabelProvider<ParametersParameter> {
+
+  constructor() {}
+
+  getText(namedResource: ParametersParameter): string | null {
+    if (namedResource == null) { return null; }
+    const pp = namedResource.part.find((e => e.name === 'reference'));
+    // console.log(pp);
+    if (pp)
+    {
+      return pp.valueReference.display;
+    }
+    else
+    {
+      return null;
+    }
+
+  }
+  getSnomed(namedResource: ParametersParameter): string | null{
+    return null;
   }
 }

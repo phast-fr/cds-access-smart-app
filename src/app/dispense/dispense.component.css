@@ -1,0 +1,21 @@
+.spinner-container {
+  height: 360px;
+  width: 390px;
+  position: fixed;
+}
+
+.spinner-container mat-spinner {
+  margin: 130px auto 0 auto;
+}
+
+mat-header-cell.mat-sort-header-sorted {
+  color: black;
+}
+
+mat-row.drug-formulary-row:not(.drug-formulary-expanded-row):hover {
+  background: whitesmoke;
+}
+
+mat-row.drug-formulary-row:not(.drug-formulary-expanded-row):active {
+  background: #efefef;
+}
