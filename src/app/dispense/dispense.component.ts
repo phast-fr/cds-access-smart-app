@@ -30,6 +30,7 @@ import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {CollectionViewer, DataSource} from '@angular/cdk/collections';
 import {MatCheckboxChange} from '@angular/material/checkbox';
+import {SmartToken} from '../smart/models/smart.token.model';
 
 
 @Component({
@@ -69,6 +70,7 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
 
   private  _patient: Patient;
 
+  private  _needPatientBanner: boolean;
   private  _withLivret: boolean;
 
   medicationDataSource = new MatTableDataSource<TableElement<Medication>>([]);
@@ -83,6 +85,14 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
               private _dataSource: FhirDataSourceService,
               private _cioDcSource: FhirCioDcService) {
     this.ucdDataSource = new ParametersParameterDataSource(this._cioDcSource);
+
+    this.stateService.stateSubject$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe(
+        (state) => this._needPatientBanner = state.needPatientBanner
+      );
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -92,12 +102,14 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
       .subscribe(
         (user) => this.user = user
       );
+
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         switchMap(stateModel => this._dataSource.readPatient(stateModel.patient))
       )
       .subscribe((patient: Patient) => this._patient = patient);
+
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -122,6 +134,10 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
   public get getPatient(): Patient{
     return this._patient;
   }
+
+  public get NeedPatientBanner(): boolean{
+    return  this._needPatientBanner;
+  }
   public get withLivret(): boolean{
     return this._withLivret;
   }
@@ -140,8 +156,8 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     if (!this._selectedMedicationRequest) {
       return null;
     }
-    let labelComposed = '';
-    if (this._selectedMedicationRequest.dosageInstruction.length > 0){
+    let labelComposed = ' ';
+    if (this._selectedMedicationRequest.dosageInstruction != null && this._selectedMedicationRequest.dosageInstruction.length > 0){
         labelComposed += ' (';
         for (const dosage of this._selectedMedicationRequest.dosageInstruction){
           if (dosage.doseAndRate != null && dosage.doseAndRate.length > 0) {
@@ -168,8 +184,8 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
               }
             }
           }
+      labelComposed += ')';
       }
-    labelComposed += ')';
     return labelComposed;
     }
 
@@ -411,11 +427,13 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
            pageIndex?: number, pageSize?: number): void {
     this._loading$.next(true);
 
+    // tslint:disable-next-line:max-line-length
+    const route = selectedMedicationRequest.dosageInstruction != null && selectedMedicationRequest.dosageInstruction.length > 0 ? selectedMedicationRequest.dosageInstruction[0].route : null;
     from(
       this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
         medication.code,
         undefined, medication.ingredient,
-        selectedMedicationRequest.dosageInstruction[0].route )
+        route )
     )
       .pipe(
         takeUntil(this._unsubscribeTrigger$),

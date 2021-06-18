@@ -62,7 +62,7 @@ export class MedicationRequestLabelProvider implements ILabelProvider<Medication
       const medication = medicationRequest.contained[medicationIndex] as Medication;
       labelComposed = new MedicationLabelProvider().getText(medication);
     }
-    if (medicationRequest.dosageInstruction.length > 0
+    if (medicationRequest.dosageInstruction != null && medicationRequest.dosageInstruction.length > 0
       && medicationRequest.dosageInstruction[0].route != null) {
       labelComposed += ' ' + medicationRequest.dosageInstruction[0].route.text;
     }

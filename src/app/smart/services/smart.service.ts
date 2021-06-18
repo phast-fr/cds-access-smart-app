@@ -93,6 +93,7 @@ export class SmartService {
     sessionStorage.setItem('expire_date', String(expireDate));
     sessionStorage.setItem('id_token', token.id_token);
     sessionStorage.setItem('patient', token.patient);
+    sessionStorage.setItem('need_patient_banner', String(token.need_patient_banner));
     this.getFhirClient().bearerToken = token.access_token;
 
     const user = this._stateService.getUser<SmartUserModel>(token.id_token);
@@ -101,6 +102,7 @@ export class SmartService {
     const state = new StateModel();
     state.patient = token.patient;
     state.user = user;
+    state.needPatientBanner = token.need_patient_banner;
     this._stateService.emitState(state);
   }
 
@@ -112,11 +114,13 @@ export class SmartService {
       this.getFhirClient().bearerToken = sessionStorage.getItem('access_token');
       const patient = sessionStorage.getItem('patient');
       const idToken = sessionStorage.getItem('id_token');
+      const needPatientBanner = sessionStorage.getItem('need_patient_banner');
       const user = this._stateService.getUser<SmartUserModel>(idToken);
 
       const state = new StateModel();
       state.patient = patient;
       state.user = user;
+      state.needPatientBanner = Boolean(needPatientBanner);
       this._stateService.emitState(state);
     }
   }

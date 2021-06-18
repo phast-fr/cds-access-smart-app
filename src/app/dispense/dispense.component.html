@@ -1,6 +1,8 @@
-<h2>Dispensation des prescriptions de <b style="color: mediumorchid">{{labelProviderFactory.getProvider(getPatient).getText(getPatient)}}</b>
+<div *ngIf="labelProviderFactory.getProvider(getPatient).getText(getPatient); else stillLoading" >
+<h2 *ngIf="NeedPatientBanner">Dispensation des prescriptions de <b style="color: mediumorchid">{{labelProviderFactory.getProvider(getPatient).getText(getPatient)}}</b>
 <label style="font-size: x-small; float: right;margin-right: 20px">{{labelProviderFactory.getProvider(getUser).getText(getUser)}}</label>
 </h2>
+
 <div fxLayout="row" class="form-field-row form-field-medication-knowledge">
   <div fxFlex="100%">
     <mat-form-field fxFlex="100%" appearance="fill">
@@ -53,7 +55,9 @@
     </div>
   </mat-card>
 </div>
-<div class="container" [hidden]="!selectedMedication">
+
+
+<div class="container" [style.visibility]="selectedMedication? 'visible' :'hidden'">
   <mat-card>
     <div class="spinner-container" *ngIf="ucdDataSource.loading$ | async">
       <mat-spinner></mat-spinner>
@@ -103,3 +107,8 @@
                    [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
   </mat-card>
 </div>
+</div>
+<ng-template #stillLoading><mat-spinner></mat-spinner></ng-template>
+
+
+

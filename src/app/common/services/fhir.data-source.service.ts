@@ -82,7 +82,6 @@ export class FhirDataSourceService {
       return this.smartService.getFhirClient().resourceSearch({
         resourceType: 'MedicationRequest',
         searchParams: {
-          _count: '10',
           subject: patient.id,
           'code:text': search
         }
@@ -91,7 +90,6 @@ export class FhirDataSourceService {
     return this.smartService.getFhirClient().resourceSearch({
       resourceType: 'MedicationRequest',
       searchParams: {
-        _count: '10',
         subject: patient.id
       }
     });
