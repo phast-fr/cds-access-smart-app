@@ -30,7 +30,6 @@ import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {CollectionViewer, DataSource} from '@angular/cdk/collections';
 import {MatCheckboxChange} from '@angular/material/checkbox';
-import {SmartToken} from '../smart/models/smart.token.model';
 
 
 @Component({
@@ -70,7 +69,6 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
 
   private  _patient: Patient;
 
-  private  _needPatientBanner: boolean;
   private  _withLivret: boolean;
 
   medicationDataSource = new MatTableDataSource<TableElement<Medication>>([]);
@@ -85,14 +83,6 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
               private _dataSource: FhirDataSourceService,
               private _cioDcSource: FhirCioDcService) {
     this.ucdDataSource = new ParametersParameterDataSource(this._cioDcSource);
-
-    this.stateService.stateSubject$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe(
-        (state) => this._needPatientBanner = state.needPatientBanner
-      );
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -102,14 +92,12 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
       .subscribe(
         (user) => this.user = user
       );
-
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         switchMap(stateModel => this._dataSource.readPatient(stateModel.patient))
       )
       .subscribe((patient: Patient) => this._patient = patient);
-
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -134,10 +122,6 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
   public get getPatient(): Patient{
     return this._patient;
   }
-
-  public get NeedPatientBanner(): boolean{
-    return  this._needPatientBanner;
-  }
   public get withLivret(): boolean{
     return this._withLivret;
   }
@@ -157,7 +141,8 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
       return null;
     }
     let labelComposed = ' ';
-    if (this._selectedMedicationRequest.dosageInstruction != null && this._selectedMedicationRequest.dosageInstruction.length > 0){
+    if (this._selectedMedicationRequest.dosageInstruction
+      && this._selectedMedicationRequest.dosageInstruction.length > 0){
         labelComposed += ' (';
         for (const dosage of this._selectedMedicationRequest.dosageInstruction){
           if (dosage.doseAndRate != null && dosage.doseAndRate.length > 0) {
@@ -184,8 +169,9 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
               }
             }
           }
-      labelComposed += ')';
+        labelComposed += ')';
       }
+
     return labelComposed;
     }
 
@@ -309,12 +295,12 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
         });
   }
 
-  onWithLivret(ob: MatCheckboxChange){
+  onWithLivret(ob: MatCheckboxChange): void {
     this.getSpecialites(this._selectedMedication);
   }
 
 
-  getSpecialites(medication: Medication): void{
+  getSpecialites(medication: Medication): void {
     this._selectedMedication = medication;
     fromEvent(
         this.inputFilter.nativeElement, 'keyup'
@@ -354,7 +340,7 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     );
   }
 
-  openDialog(parameter: ParametersParameter) {
+  openDialog(parameter: ParametersParameter): void {
     const dialogRef = this.dialog.open(DialogOverviewExampleDialogComponent, {
       width: '400px',
       data: {name: parameter.part.find(e => e.name === 'reference').valueReference.display, quantity: 0}
@@ -427,8 +413,9 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
            pageIndex?: number, pageSize?: number): void {
     this._loading$.next(true);
 
-    // tslint:disable-next-line:max-line-length
-    const route = selectedMedicationRequest.dosageInstruction != null && selectedMedicationRequest.dosageInstruction.length > 0 ? selectedMedicationRequest.dosageInstruction[0].route : null;
+    const route = (selectedMedicationRequest.dosageInstruction && selectedMedicationRequest.dosageInstruction.length > 0) ?
+      selectedMedicationRequest.dosageInstruction[0].route : null;
+
     from(
       this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
         medication.code,
@@ -451,7 +438,8 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
         const pageSizeEffective = (pageSize) ? pageSize : this.pageSize;
         const tableElements = new Array<TableElement<ParametersParameter>>();
 
-        const ee = (res as Parameters).parameter.filter(e => e.name === 'relatedMedicationKnowledge' && e.part.filter(f => f.name === 'reference'));
+        const ee = (res as Parameters).parameter.filter(e => e.name === 'relatedMedicationKnowledge'
+          && e.part.filter(f => f.name === 'reference'));
         let index = 0;
         const ucdArray = new Array<ParametersParameter>();
         for (const eee of ee) {
@@ -465,12 +453,14 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
             } else {
               ucdArray.push(eee);
             }
-            ucdArray.sort((a, b) => a.part.find(e => e.name === 'reference').valueReference.display > b.part.find(e => e.name === 'reference').valueReference.display ? 1 : -1);
+            ucdArray.sort((a, b) =>
+              a.part.find(e => e.name === 'reference').valueReference.display >
+              b.part.find(e => e.name === 'reference').valueReference.display ? 1 : -1);
           }
         }
 
         const livretArray = new Array<Reference>();
-        for(const rr of livret.section[0].entry){
+        for (const rr of livret.section[0].entry){
           livretArray.push(rr);
         }
 
@@ -504,7 +494,3 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
       });
   }
 }
-
-
-
-
