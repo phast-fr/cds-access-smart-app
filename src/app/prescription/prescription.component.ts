@@ -72,6 +72,9 @@ export class PrescriptionComponent implements OnInit, OnDestroy  {
       )
       .subscribe(value => this._smartService.retrieveToken(value.code, value.state));
     routeWithToken$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
       .subscribe(_ => this._smartService.loadToken());
   }
 
