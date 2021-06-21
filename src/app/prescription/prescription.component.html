@@ -5,7 +5,10 @@
   <mat-drawer-content>
     <div class="view-medication-prescription" *ngIf="patient != null">
       <div class="card-notify">
-        <button *ngIf="cards.length == 0" mat-fab disabled>
+        <button *ngIf="cards.length == 0 && !drawer.opened" mat-fab disabled>
+          <mat-icon>email</mat-icon>
+        </button>
+        <button *ngIf="cards.length == 0 && drawer.opened" mat-fab color="primary" (click)="drawer.toggle()">
           <mat-icon>email</mat-icon>
         </button>
         <button *ngIf="cards.length > 0" mat-fab color="primary" (click)="drawer.toggle();onReadCards();">
@@ -37,5 +40,5 @@
   </mat-drawer-content>
   <mat-drawer #drawer mode="side" position="end">
     <app-card-list></app-card-list>
-  </mat-drawer>>
+  </mat-drawer>
 </mat-drawer-container>

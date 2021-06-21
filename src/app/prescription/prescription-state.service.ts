@@ -54,6 +54,7 @@ export class PrescriptionStateService {
 
   public addMedicationRequest(medicationRequest: MedicationRequest): void {
     console.log('Medication Request: ', medicationRequest);
+    this._cards.length = 0;
     this._medicationRequestSubject$.next(medicationRequest);
   }
 
