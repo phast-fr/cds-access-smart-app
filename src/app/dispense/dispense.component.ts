@@ -440,10 +440,12 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
     const route = (selectedMedicationRequest.dosageInstruction && selectedMedicationRequest.dosageInstruction.length > 0) ?
       selectedMedicationRequest.dosageInstruction[0].route : null;
 
+    const forme = medication.form;
+
     from(
       this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
         medication.code,
-        undefined, medication.ingredient,
+        forme, medication.ingredient,
         route )
     )
       .pipe(
