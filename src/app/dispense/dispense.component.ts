@@ -30,6 +30,7 @@ import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {CollectionViewer, DataSource} from '@angular/cdk/collections';
 import {MatCheckboxChange} from '@angular/material/checkbox';
+import {SmartToken} from '../smart/models/smart.token.model';
 
 
 @Component({
@@ -69,6 +70,7 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
 
   private  _patient: Patient;
 
+  private  _needPatientBanner: boolean;
   private  _withLivret: boolean;
 
   medicationDataSource = new MatTableDataSource<TableElement<Medication>>([]);
@@ -83,6 +85,14 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
               private _dataSource: FhirDataSourceService,
               private _cioDcSource: FhirCioDcService) {
     this.ucdDataSource = new ParametersParameterDataSource(this._cioDcSource);
+
+    this.stateService.stateSubject$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe(
+        (state) => this._needPatientBanner = state.needPatientBanner
+      );
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -92,12 +102,14 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
       .subscribe(
         (user) => this.user = user
       );
+
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         switchMap(stateModel => this._dataSource.readPatient(stateModel.patient))
       )
       .subscribe((patient: Patient) => this._patient = patient);
+
     this.stateService.stateSubject$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -122,6 +134,10 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
   public get getPatient(): Patient{
     return this._patient;
   }
+
+  public get NeedPatientBanner(): boolean{
+    return  this._needPatientBanner;
+  }
   public get withLivret(): boolean{
     return this._withLivret;
   }
@@ -141,8 +157,7 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
       return null;
     }
     let labelComposed = ' ';
-    if (this._selectedMedicationRequest.dosageInstruction
-      && this._selectedMedicationRequest.dosageInstruction.length > 0){
+    if (this._selectedMedicationRequest.dosageInstruction != null && this._selectedMedicationRequest.dosageInstruction.length > 0){
         labelComposed += ' (';
         for (const dosage of this._selectedMedicationRequest.dosageInstruction){
           if (dosage.doseAndRate != null && dosage.doseAndRate.length > 0) {
@@ -171,7 +186,6 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
           }
         labelComposed += ')';
       }
-
     return labelComposed;
     }
 
@@ -340,10 +354,20 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     );
   }
 
-  openDialog(parameter: ParametersParameter): void {
+  openDialog(parameter: ParametersParameter) {
+    let quantite = 0;
+    if (this._selectedMedicationRequest.dosageInstruction != null && this._selectedMedicationRequest.dosageInstruction.length > 0){
+      const di = this._selectedMedicationRequest.dosageInstruction[0];
+      if (di != null && di.doseAndRate != null && di.doseAndRate.length > 0){
+        const dq = di.doseAndRate[0];
+        if (dq != null && dq.doseQuantity != null && dq.doseQuantity.value != null){
+          quantite = dq.doseQuantity.value;
+        }
+      }
+    }
     const dialogRef = this.dialog.open(DialogOverviewExampleDialogComponent, {
       width: '400px',
-      data: {name: parameter.part.find(e => e.name === 'reference').valueReference.display, quantity: 0}
+      data: {name: parameter.part.find(e => e.name === 'reference').valueReference.display, quantity: quantite}
     });
     dialogRef.afterClosed().subscribe(result => {
       console.log('The dialog was closed with : ' + result + 'unit(s) selected' );
