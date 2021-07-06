@@ -365,38 +365,39 @@ export class MedicationRequestFormService {
   }
 
   private addUniqueCodeableConcept(uniqueCodeableConceptArray: Array<CodeableConcept>, parameter: ParametersParameter): void {
-    let isExist = false;
+    let valueCodeableConceptHash = null;
     if (parameter.valueCodeableConcept !== undefined) {
-      const valueCodeableConceptHash = hash(parameter.valueCodeableConcept);
-      uniqueCodeableConceptArray.forEach(value => {
-        const refHash = hash(value);
-        if (valueCodeableConceptHash === refHash) {
-          isExist = true;
-        }
-      });
-      if (!isExist) {
-        uniqueCodeableConceptArray.push(parameter.valueCodeableConcept);
-      }
+      valueCodeableConceptHash = hash(parameter?.valueCodeableConcept);
     }
     else if (parameter.valueCoding !== undefined) {
-      const valueCodingHash = hash(parameter.valueCoding);
-      uniqueCodeableConceptArray.forEach(value => {
-        const refHash = hash(value);
-        if (valueCodingHash === refHash) {
-          isExist = true;
-        }
+      valueCodeableConceptHash = hash({
+        text: parameter?.valueCoding?.display,
+        coding: new Array<Coding>(parameter?.valueCoding)
       });
-      if (!isExist) {
+    }
+
+    let isExist = false;
+    uniqueCodeableConceptArray.forEach(value => {
+      const refHash = hash(value);
+      if (valueCodeableConceptHash === refHash) {
+        isExist = true;
+      }
+    });
+    if (!isExist) {
+      if (parameter.valueCodeableConcept !== undefined) {
+        uniqueCodeableConceptArray.push(parameter.valueCodeableConcept);
+      }
+      else if (parameter.valueCoding !== undefined) {
         uniqueCodeableConceptArray.push({
-          text: parameter.valueCoding.display,
-          coding: new Array<Coding>(parameter.valueCoding)
+          text: parameter?.valueCoding?.display,
+          coding: new Array<Coding>(parameter?.valueCoding)
         });
       }
     }
   }
 
   private addUniqueCoding(uniqueCodingArray: Array<Coding>, parameter: ParametersParameter): void {
-    const valueHash = hash(parameter.valueCoding);
+    const valueHash = hash(parameter?.valueCoding);
     let isExist = false;
     uniqueCodingArray.forEach(value => {
       const refHash = hash(value);
@@ -405,7 +406,7 @@ export class MedicationRequestFormService {
       }
     });
     if (!isExist) {
-      uniqueCodingArray.push(parameter.valueCoding);
+      uniqueCodingArray.push(parameter?.valueCoding);
     }
   }
 
