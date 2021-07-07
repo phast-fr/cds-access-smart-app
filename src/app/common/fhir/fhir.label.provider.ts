@@ -216,6 +216,16 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
       if (ratio.numerator.unit != null) {
         labelComposite.push(ratio.numerator.unit);
       }
+      if (ratio.denominator?.value != null
+        && ratio.denominator?.value !== 1) {
+        labelComposite.push('/');
+        labelComposite.push(ratio.denominator?.value?.toString());
+      }
+      if (ratio.denominator?.unit != null
+        && ratio.denominator?.unit !== '1') {
+        labelComposite.push('/');
+        labelComposite.push(ratio.denominator?.unit);
+      }
     }
     return labelComposite.join(' ');
   }
