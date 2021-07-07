@@ -7,11 +7,11 @@ import { MatSort } from '@angular/material/sort';
 import * as lodash from 'lodash';
 
 import { PrescriptionStateService } from '../prescription-state.service';
+import { TableElement } from '../../common/models/core.model';
 import { FhirLabelProviderFactory } from '../../common/fhir/fhir.label.provider.factory';
 import { FhirDataSourceService } from '../../common/services/fhir.data-source.service';
 import { fhir } from '../../common/fhir/fhir.types';
 import MedicationRequest = fhir.MedicationRequest;
-import {TableElement} from '../../common/models/core.model';
 
 @Component({
   selector: 'app-medication-request-table',
@@ -31,7 +31,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
 
   selection = new SelectionModel<TableElement<MedicationRequest>>(true, []);
 
-  displayedColumns: Array<string> = ['select', 'position', 'name'];
+  displayedColumns = ['select', 'position', 'name'];
 
   constructor(private _prescriptionState: PrescriptionStateService,
               private _dataSource: FhirDataSourceService) { }
@@ -98,7 +98,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   onSave(): void {
-    const promises: Array<Promise<object>> = [];
+    const promises = new Array<Promise<object>>();
     const elements = this.medicationRequestDataSource.data.slice();
     elements.forEach(value => {
       const resource = lodash.cloneDeep(value.resource);
