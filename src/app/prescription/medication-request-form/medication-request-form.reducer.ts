@@ -130,8 +130,6 @@ export class MedicationRequestFormReducer {
   }
 
   private addTimeOfDay(newState: MedicationRequestFormState, partialState: MedicationFormStateAddTimeOfDay): void {
-    newState.medicationRequest.dosageInstruction[partialState.nDosage]
-      .timing.repeat.timeOfDay.push(partialState.timeOfDay);
     newState.nDosage = partialState.nDosage;
   }
 
@@ -145,9 +143,6 @@ export class MedicationRequestFormReducer {
 
   private addDoseAndRate(newState: MedicationRequestFormState,
                          partialState: MedicationFormStateAddDoseAndRate): void {
-    newState.medicationRequest.dosageInstruction[partialState.nDosage].doseAndRate.push(
-      partialState.doseAndRate
-    );
     newState.nDosage = partialState.nDosage;
   }
 

@@ -9,8 +9,6 @@ import Coding = fhir.Coding;
 import UnitsOfTime = fhir.UnitsOfTime;
 import MedicationKnowledge = fhir.MedicationKnowledge;
 import Ratio = fhir.Ratio;
-import DoseAndRate = fhir.DoseAndRate;
-import time = fhir.time;
 
 export interface IPartialState {
   readonly type: string;
@@ -128,15 +126,10 @@ export class MedicationFormStateValueChangesDosageInstruction implements IPartia
 export class MedicationFormStateAddTimeOfDay implements IPartialState {
   readonly type = 'AddTimeOfDay';
 
-  constructor(private _nDosage: number,
-              private _timeOfDay: time) { }
+  constructor(private _nDosage: number) { }
 
   public get nDosage(): number {
     return this._nDosage;
-  }
-
-  public get timeOfDay(): time {
-    return this._timeOfDay;
   }
 }
 
@@ -159,12 +152,7 @@ export class MedicationFormStateRemoveTimeOfDay implements IPartialState {
 export class MedicationFormStateAddDoseAndRate implements IPartialState {
   readonly type = 'AddDoseAndRate';
 
-  constructor(private _doseAndRate: DoseAndRate,
-              private _nDosage: number) { }
-
-  public get doseAndRate(): DoseAndRate {
-    return this._doseAndRate;
-  }
+  constructor(private _nDosage: number) { }
 
   public get nDosage(): number {
     return this._nDosage;

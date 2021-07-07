@@ -9,7 +9,7 @@ import CodeableConcept = fhir.CodeableConcept;
 import Ratio = fhir.Ratio;
 import Reference = fhir.Reference;
 import UnitsOfTime = fhir.UnitsOfTime;
-import MedicationIngredient = fhir.MedicationIngredient;
+import decimal = fhir.decimal;
 
 export interface IIntent {
   readonly type: string;
@@ -265,7 +265,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationValue impl
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _durationValue: number) {
+              private _durationValue: decimal) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -276,7 +276,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationValue impl
     return this._nDosage;
   }
 
-  public get durationValue(): number {
+  public get durationValue(): decimal {
     return this._durationValue;
   }
 }

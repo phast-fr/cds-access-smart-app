@@ -25,7 +25,6 @@ import { FhirLabelProviderFactory } from '../../../common/fhir/fhir.label.provid
 import { fhir } from '../../../common/fhir/fhir.types';
 import CodeableConcept = fhir.CodeableConcept;
 import Coding = fhir.Coding;
-import Quantity = fhir.Quantity;
 import Medication = fhir.Medication;
 import MedicationKnowledge = fhir.MedicationKnowledge;
 
@@ -144,11 +143,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
         break;
       case 'AddDoseAndRate':
         const addDoseAndRate = this.dosageInstruction.at(formState.nDosage).get('doseAndRate') as FormArray;
-        const doseQuantity = formState.medicationRequest.dosageInstruction[formState.nDosage]
-          .doseAndRate[addDoseAndRate.length].doseQuantity;
         this.addDoseAndRate(
           formState.nDosage,
-          doseQuantity,
           addDoseAndRate
         );
         break;
@@ -287,15 +283,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
       );
   }
 
-  private addDoseAndRate(nDosage: number, doseQuantity: Quantity, doseAndRate: FormArray): void {
+  private addDoseAndRate(nDosage: number, doseAndRate: FormArray): void {
     const doseAndRateGroup = this.fb.group({
       doseQuantity: this.fb.group({
-        value: [doseQuantity.value],
-        unit: [{
-          code: doseQuantity.code,
-          display: doseQuantity.unit,
-          system: doseQuantity.system
-        }]
+        value: [null],
+        unit: [null]
       }),
     });
     const nDoseAndRate = doseAndRate.length;

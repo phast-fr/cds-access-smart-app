@@ -22,6 +22,10 @@ import Coding = fhir.Coding;
 import MedicationRequestDispenseRequest = fhir.MedicationRequestDispenseRequest;
 import Period = fhir.Period;
 import dateTime = fhir.dateTime;
+import Timing = fhir.Timing;
+import TimingRepeat = fhir.TimingRepeat;
+import decimal = fhir.decimal;
+import UnitsOfTime = fhir.UnitsOfTime;
 
 export class MedicationRequestBuilder {
 
@@ -145,22 +149,37 @@ export class DosageBuilder {
 
   constructor(sequence: integer) {
     this._dosage = {
-      sequence,
-      timing: {
-        repeat: {
-          duration: undefined,
-          durationUnit: 'h',
-          timeOfDay: new Array<time>()
-        }
-      },
-      asNeededCodeableConcept: undefined,
-      route: undefined,
-      doseAndRate: new Array<DoseAndRate>()
+      sequence
     } as Dosage;
   }
 
   public route(route: CodeableConcept): this {
     this._dosage.route = route;
+    return this;
+  }
+
+  public timing(timing: Timing): this {
+    this._dosage.timing = timing;
+    return this;
+  }
+
+  public asNeededCodeableConcept(asNeedCodeableConcept: CodeableConcept): this {
+    this._dosage.asNeededCodeableConcept = asNeedCodeableConcept;
+    return this;
+  }
+
+  public doseAndRate(doseAndRate: DoseAndRate[]): this {
+    this._dosage.doseAndRate = doseAndRate;
+    return this;
+  }
+
+  public addDoseAndRate(doseAndRate: DoseAndRate): this {
+    if (this._dosage.doseAndRate) {
+      this._dosage.doseAndRate = new Array<fhir.DoseAndRate>(doseAndRate);
+    }
+    else {
+      this._dosage.doseAndRate.push(doseAndRate);
+    }
     return this;
   }
 
@@ -234,6 +253,63 @@ export class ReferenceBuilder {
       this._reference.reference = this._resourceType + '/' + this._id;
     }
     return this._reference;
+  }
+}
+
+export class TimingBuilder {
+
+  private readonly _timing: Timing;
+
+  constructor() {
+    this._timing = {} as Timing;
+  }
+
+  public timingReapeat(timingReapeat: TimingRepeat): this {
+    this._timing.repeat = timingReapeat;
+    return this;
+  }
+
+  public build(): Timing {
+    return this._timing;
+  }
+}
+
+export class TimingRepeatBuilder {
+  private readonly _timingRepeat: TimingRepeat;
+
+  constructor() {
+    this._timingRepeat = {
+      durationUnit: 'h'
+    } as TimingRepeat;
+  }
+
+  public duration(duration: decimal): this {
+    this._timingRepeat.duration = duration;
+    return this;
+  }
+
+  public durationUnit(durationUnit: UnitsOfTime): this {
+    this._timingRepeat.durationUnit = durationUnit;
+    return this;
+  }
+
+  public timeOfDay(timeOfDay: time[]): this {
+    this._timingRepeat.timeOfDay = timeOfDay;
+    return this;
+  }
+
+  public addTimeOfDay(timeOfDay: time): this {
+    if (this._timingRepeat.timeOfDay === undefined) {
+      this._timingRepeat.timeOfDay = new Array<time>(timeOfDay);
+    }
+    else {
+      this._timingRepeat.timeOfDay.push(timeOfDay);
+    }
+    return this;
+  }
+
+  public build(): TimingRepeat {
+    return this._timingRepeat;
   }
 }
 

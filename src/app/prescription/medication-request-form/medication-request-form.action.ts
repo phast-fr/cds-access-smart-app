@@ -19,8 +19,7 @@ import {
   DoseAndRateBuilder, DurationBuilder,
   MedicationBuilder, MedicationIngredientBuilder,
   MedicationRequestBuilder, RatioBuilder,
-  ReferenceBuilder,
-  TimeBuilder
+  ReferenceBuilder, TimingBuilder, TimingRepeatBuilder
 } from '../../common/fhir/fhir.resource.builder';
 import { PrescriptionStateService } from '../prescription-state.service';
 import {fhir} from '../../common/fhir/fhir.types';
@@ -36,6 +35,9 @@ import Reference = fhir.Reference;
 import UnitsOfTime = fhir.UnitsOfTime;
 import {FhirCioDcService} from '../../common/services/fhir.cio.dc.service';
 import {MedicationRequestFormService} from './medication-request-form.service';
+import decimal = fhir.decimal;
+import time = fhir.time;
+import DoseAndRate = fhir.DoseAndRate;
 
 export interface IAction {
   readonly type: string;
@@ -352,53 +354,6 @@ export class MedicationFormActionRemoveDosageInstruction implements IAction {
   }
 }
 
-export class MedicationFormActionAddTimeOfDay implements IAction {
-  readonly type = 'AddTimeOfDay';
-
-  constructor(private _nDosage: number) { }
-
-  public execute(): IPartialState {
-    const timeOfDay = new TimeBuilder().build();
-    return new MedicationFormStateAddTimeOfDay(this._nDosage, timeOfDay);
-  }
-}
-
-export class MedicationFormActionRemoveTimeOfDay implements IAction {
-  readonly type = 'RemoveTimeOfDay';
-
-  constructor(private _nDosage: number,
-              private _index: number) {
-  }
-
-  public execute(): IPartialState {
-    return new MedicationFormStateRemoveTimeOfDay(this._nDosage, this._index);
-  }
-}
-
-export class MedicationFormActionAddDoseAndRate implements IAction {
-  readonly type = 'AddDoseAndRate';
-
-  constructor(private _nDosage: number) { }
-
-  public execute(): IPartialState {
-    const doseAndRate = new DoseAndRateBuilder()
-      .build();
-    return new MedicationFormStateAddDoseAndRate(doseAndRate, this._nDosage);
-  }
-}
-
-export class MedicationFormActionRemoveDoseAndRate implements IAction {
-  readonly type = 'RemoveDoseAndRate';
-
-  constructor(private _nDosage: number,
-              private _index: number) {
-  }
-
-  public execute(): IPartialState {
-    return new MedicationFormStateRemoveDoseAndRate(this._nDosage, this._index);
-  }
-}
-
 export class MedicationFormActionValueChangesDispenseRequest implements IAction {
   readonly type = 'ValueChangesDispenseRequest';
 
@@ -457,11 +412,20 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _durationValue: number) { }
+              private _durationValue: decimal) { }
 
   public execute(): IPartialState {
     const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    dosage.timing.repeat.duration = this._durationValue;
+    if (dosage.timing === undefined) {
+      const timingReapeat = new TimingRepeatBuilder().duration(this._durationValue).build();
+      dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
+    }
+    else if (dosage.timing.repeat === undefined) {
+      dosage.timing.repeat = new TimingRepeatBuilder().duration(this._durationValue).build();
+    }
+    else {
+      dosage.timing.repeat.duration = this._durationValue;
+    }
     return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
   }
 }
@@ -480,6 +444,28 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
   }
 }
 
+export class MedicationFormActionAddDoseAndRate implements IAction {
+  readonly type = 'AddDoseAndRate';
+
+  constructor(private _nDosage: number) { }
+
+  public execute(): IPartialState {
+    return new MedicationFormStateAddDoseAndRate(this._nDosage);
+  }
+}
+
+export class MedicationFormActionRemoveDoseAndRate implements IAction {
+  readonly type = 'RemoveDoseAndRate';
+
+  constructor(private _nDosage: number,
+              private _index: number) {
+  }
+
+  public execute(): IPartialState {
+    return new MedicationFormStateRemoveDoseAndRate(this._nDosage, this._index);
+  }
+}
+
 export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue implements IAction {
   readonly type = 'ValueChangesDosageInstructionDoseQuantityValue';
 
@@ -490,7 +476,13 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue 
 
   public execute(): IPartialState {
     const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+    if (dosage.doseAndRate === undefined) {
+      dosage.doseAndRate = new Array<DoseAndRate>(new DoseAndRateBuilder().build());
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+    }
+    else {
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+    }
     return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
   }
 }
@@ -498,7 +490,7 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue 
 export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit implements IAction {
   readonly type = 'ValueChangesDosageInstructionDoseQuantityUnit';
 
-  constructor(private _medicationRequest: fhir.MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nDoseAndRate: number,
               private _doseQuantityUnit: Coding) { }
@@ -512,17 +504,51 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
   }
 }
 
+export class MedicationFormActionAddTimeOfDay implements IAction {
+  readonly type = 'AddTimeOfDay';
+
+  constructor(private _nDosage: number) { }
+
+  public execute(): IPartialState {
+    return new MedicationFormStateAddTimeOfDay(this._nDosage);
+  }
+}
+
+export class MedicationFormActionRemoveTimeOfDay implements IAction {
+  readonly type = 'RemoveTimeOfDay';
+
+  constructor(private _nDosage: number,
+              private _index: number) {
+  }
+
+  public execute(): IPartialState {
+    return new MedicationFormStateRemoveTimeOfDay(this._nDosage, this._index);
+  }
+}
+
 export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue implements IAction {
   readonly type = 'ValueChangesDosageInstructionTimeOfDay';
 
   constructor(private _medicationRequest: fhir.MedicationRequest,
               private _nDosage: number,
               private _nTimeOfDay: number,
-              private _timeOfDayValue: UnitsOfTime) { }
+              private _timeOfDayValue: time) { }
 
   public execute(): IPartialState {
     const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = this._timeOfDayValue;
+    if (dosage.timing === undefined) {
+      const timingReapeat = new TimingRepeatBuilder().addTimeOfDay(this._timeOfDayValue).build();
+      dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
+    }
+    else if (dosage.timing.repeat === undefined) {
+      dosage.timing.repeat = new TimingRepeatBuilder().addTimeOfDay(this._timeOfDayValue).build();
+    }
+    else if (dosage.timing.repeat.timeOfDay === undefined) {
+      dosage.timing.repeat.timeOfDay = new Array<time>(this._timeOfDayValue);
+    }
+    else {
+      dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = this._timeOfDayValue;
+    }
     return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
   }
 }
