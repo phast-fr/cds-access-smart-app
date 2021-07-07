@@ -278,13 +278,12 @@ export class TimingRepeatBuilder {
   private readonly _timingRepeat: TimingRepeat;
 
   constructor() {
-    this._timingRepeat = {
-      durationUnit: 'h'
-    } as TimingRepeat;
+    this._timingRepeat = {} as TimingRepeat;
   }
 
   public duration(duration: decimal): this {
     this._timingRepeat.duration = duration;
+    this._timingRepeat.durationUnit = 'h';
     return this;
   }
 
