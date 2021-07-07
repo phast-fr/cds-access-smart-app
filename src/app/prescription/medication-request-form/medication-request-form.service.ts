@@ -381,6 +381,7 @@ export class MedicationRequestFormService {
       const refHash = hash(value);
       if (valueCodeableConceptHash === refHash) {
         isExist = true;
+        return;
       }
     });
     if (!isExist) {
@@ -403,6 +404,7 @@ export class MedicationRequestFormService {
       const refHash = hash(value);
       if (valueHash === refHash) {
         isExist = true;
+        return;
       }
     });
     if (!isExist) {
@@ -418,6 +420,7 @@ export class MedicationRequestFormService {
       const refHash = hash(value);
       if (valueHash === refHash) {
         isExist = true;
+        return;
       }
     });
     if (!isExist) {

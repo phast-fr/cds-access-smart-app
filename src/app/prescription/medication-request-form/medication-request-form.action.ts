@@ -439,7 +439,16 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
 
   public execute(): IPartialState {
     const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    dosage.timing.repeat.durationUnit = this._durationUnit;
+    if (dosage.timing === undefined) {
+      const timingReapeat = new TimingRepeatBuilder().durationUnit(this._durationUnit).build();
+      dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
+    }
+    else if (dosage.timing.repeat) {
+      dosage.timing.repeat = new TimingRepeatBuilder().durationUnit(this._durationUnit).build();
+    }
+    else {
+      dosage.timing.repeat.durationUnit = this._durationUnit;
+    }
     return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
   }
 }
@@ -480,6 +489,10 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue 
       dosage.doseAndRate = new Array<DoseAndRate>(new DoseAndRateBuilder().build());
       dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
     }
+    else if (dosage.doseAndRate[this._nDoseAndRate] === undefined) {
+      dosage.doseAndRate[this._nDoseAndRate] = new DoseAndRateBuilder().build();
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+    }
     else {
       dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
     }
@@ -497,9 +510,23 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
 
   public execute(): IPartialState {
     const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
-    dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
-    dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+    if (dosage.doseAndRate === undefined) {
+      dosage.doseAndRate = new Array<DoseAndRate>(new DoseAndRateBuilder().build());
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+    }
+    else if (dosage.doseAndRate[this._nDoseAndRate] === undefined) {
+      dosage.doseAndRate[this._nDoseAndRate] = new DoseAndRateBuilder().build();
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+    }
+    else {
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
+      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+    }
     return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
   }
 }
