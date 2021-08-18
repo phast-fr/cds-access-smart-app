@@ -1,0 +1,56 @@
+.header-wrapper {
+  width: 100%;
+  height: 80px;
+  padding: 5px 0 5px 5px;
+  background: -webkit-gradient(linear,left top,left bottom,from(#24fb3f),to(#0cb41f));
+  background: linear-gradient(#24fb3f,#0cb41f);
+}
+
+/deep/ .patient-card.mat-card,
+/deep/ .persona-card.mat-card {
+  height: 100%;
+  padding: 0;
+}
+
+/deep/ .patient-card .mat-card-header,
+/deep/ .persona-card .mat-card-header {
+  padding: 5px 0 0 5px;
+}
+
+/deep/ .patient-card .mat-card-header-text,
+/deep/ .persona-card .mat-card-header-text {
+  width: 100%;
+}
+
+/deep/ .patient-card .mat-card-avatar,
+/deep/ .persona-card .mat-card-avatar {
+  width: 50px;
+  height: 50px;
+  background: white;
+}
+
+.patient-card,
+.persona-card {
+  width: 100%;
+  background: rgba(0, 0, 0, .0);
+  color: #fff;
+}
+
+.header-patient-info,
+.header-persona-info {
+  color: rgba(255, 255, 255, .54);
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+.header-context-value {
+  color: #fff;
+  text-align: center;
+}
+
+.patient-icon,
+.persona-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}

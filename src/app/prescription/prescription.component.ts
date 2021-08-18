@@ -1,93 +1,71 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
+import {ChangeDetectionStrategy, Component, OnDestroy} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
+import {BehaviorSubject, Observable} from 'rxjs';
+import {filter, map, takeUntil} from 'rxjs/operators';
 
-import { StateService } from '../common/services/state.service';
-import { SmartService } from '../smart/services/smart.service';
-import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
-import { PrescriptionStateService } from './prescription-state.service';
-import { CardReadable } from './prescription.model';
-import { fhir } from '../common/fhir/fhir.types';
-import Patient = fhir.Patient;
-import Practitioner = fhir.Practitioner;
+import {StateService} from '../common/cds-access/services/state.service';
+import {FhirSmartService} from '../common/fhir/smart/services/fhir.smart.service';
+import {FhirDataSourceService} from '../common/fhir/services/fhir.data-source.service';
+import {PrescriptionStateService} from './prescription-state.service';
+import {SmartComponent, StateModel} from '../common/cds-access/models/core.model';
 
 @Component({
   selector: 'app-prescription',
   templateUrl: './prescription.component.html',
-  styleUrls: ['./prescription.component.css']
+  styleUrls: ['./prescription.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PrescriptionComponent implements OnInit, OnDestroy  {
+export class PrescriptionComponent extends SmartComponent implements OnDestroy {
 
-  private _unsubscribeTrigger$ = new Subject<void>();
+  private readonly _loading$: BehaviorSubject<boolean>;
 
-  constructor(
-    private _stateService: StateService,
-    private _route: ActivatedRoute,
-    private _smartService: SmartService,
-    private _dataSource: FhirDataSourceService,
-    private _prescriptionState: PrescriptionStateService) {
-    this._stateService.stateSubject$
+  private readonly _needBanner$: BehaviorSubject<boolean>;
+
+  constructor(route: ActivatedRoute,
+              smartService: FhirSmartService,
+              private _stateService: StateService,
+              private _prescriptionState: PrescriptionStateService,
+              private _dataSource: FhirDataSourceService) {
+    super(route, smartService);
+    this._loading$ = new BehaviorSubject<boolean>(true);
+    this._needBanner$ = new BehaviorSubject<boolean>(false);
+    this._stateService.state$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        switchMap(stateModel => this._dataSource.readPatient(stateModel.patient))
+        takeUntil(this.unsubscribeTrigger$),
+        filter(state => state !== false),
+        map(state => state as StateModel),
       )
-      .subscribe((patient: Patient) => this._prescriptionState.patient = patient);
-    this._stateService.stateSubject$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(stateModel => stateModel.userType() === 'Practitioner'),
-        switchMap(stateModel => this._dataSource.readPractitioner(stateModel.userId()))
-      )
-      .subscribe((user: Practitioner) => this._prescriptionState.user = user);
+      .subscribe({
+        next: state => {
+          this._needBanner$.next(state.needPatientBanner);
+          this._loading$.next(false);
+        },
+        error: err => console.error('error', err)
+      });
   }
 
-  public get patient(): Patient {
-    return this._prescriptionState.patient;
+  public cards = this._prescriptionState.cards;
+
+  public get loading$(): Observable<boolean> {
+    return this._loading$.asObservable();
   }
 
-  public get cards(): Array<CardReadable> {
-    return this._prescriptionState.cards;
+  public get needBanner$(): Observable<boolean> {
+    return this._needBanner$.asObservable();
   }
 
-  ngOnInit(): void {
-    const routeWithoutToken$ = this._route.queryParams
-      .pipe(
-        filter(_ => !this._smartService.isTokenExist())
-      );
-    const routeWithToken$ = this._route.queryParams
-      .pipe(
-        filter(_ => this._smartService.isTokenExist())
-      );
-    routeWithoutToken$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        map(params  => {
-          console.log(params);
-          return {
-            code: params.code,
-            state: params.state
-          };
-        })
-      )
-      .subscribe(value => this._smartService.retrieveToken(value.code, value.state));
-    routeWithToken$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe(_ => this._smartService.loadToken());
+  public ngOnDestroy(): void {
+    super.ngOnDestroy();
+
+    this._loading$.complete();
+    this._needBanner$.complete();
   }
 
-  ngOnDestroy(): void {
-    this._unsubscribeTrigger$.next();
-    this._unsubscribeTrigger$.complete();
-  }
-
-  getBadge(): number {
+  public getBadge(): number {
     return this._prescriptionState.cards.filter((obj) => obj.isReaded === false).length;
   }
 
-  onReadCards(): void {
+  public onReadCards(): void {
     this._prescriptionState.cards.forEach(card => {
       card.isReaded = true;
     });

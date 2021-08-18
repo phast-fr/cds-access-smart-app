@@ -1,44 +1,47 @@
-<div class="loading-indicator" *ngIf="patient == null">
+<div class="loading-indicator" *ngIf="loading$ | async">
   <mat-progress-spinner mode="indeterminate" color="primary"></mat-progress-spinner>
 </div>
-<mat-drawer-container class="prescription-container">
-  <mat-drawer-content>
-    <div class="view-medication-prescription" *ngIf="patient != null">
-      <div class="card-notify">
-        <button *ngIf="cards.length == 0 && !drawer.opened" mat-fab disabled>
-          <mat-icon>email</mat-icon>
-        </button>
-        <button *ngIf="cards.length == 0 && drawer.opened" mat-fab color="primary" (click)="drawer.toggle()">
-          <mat-icon>email</mat-icon>
-        </button>
-        <button *ngIf="cards.length > 0" mat-fab color="primary" (click)="drawer.toggle();onReadCards();">
-          <mat-icon *ngIf="getBadge() > 0" matBadge="{{getBadge()}}" matBadgeColor="warn">email</mat-icon>
-          <mat-icon *ngIf="getBadge() == 0">email</mat-icon>
-        </button>
+<app-header *ngIf="needBanner$ | async"></app-header>
+<div class="prescription-container" *ngIf="!(loading$ | async)">
+  <mat-drawer-container>
+    <mat-drawer-content>
+      <div class="view-medication-prescription">
+        <div class="card-notify">
+          <button *ngIf="cards.length == 0 && !drawer.opened" mat-fab disabled>
+            <mat-icon>email</mat-icon>
+          </button>
+          <button *ngIf="cards.length == 0 && drawer.opened" mat-fab color="primary" (click)="drawer.toggle()">
+            <mat-icon>email</mat-icon>
+          </button>
+          <button *ngIf="cards.length > 0" mat-fab color="primary" (click)="drawer.toggle();onReadCards();">
+            <mat-icon *ngIf="getBadge() > 0" matBadge="{{getBadge()}}" matBadgeColor="warn">email</mat-icon>
+            <mat-icon *ngIf="getBadge() == 0">email</mat-icon>
+          </button>
+        </div>
+        <mat-card class="mat-elevation-z1">
+          <mat-card-header>
+            <mat-card-title> Prescription en DC </mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="form-container">
+            <app-medication-request-form></app-medication-request-form>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-divider></mat-divider>
+
+        <!-- Table of display list of Medication Request -->
+        <mat-card class="mat-elevation-z1">
+          <mat-card-header>
+            <mat-card-title> Liste des prescriptions </mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="table-container">
+            <app-medication-request-table></app-medication-request-table>
+          </mat-card-content>
+        </mat-card>
       </div>
-      <mat-card class="mat-elevation-z1">
-        <mat-card-header>
-          <mat-card-title> Prescription en DC </mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="form-container">
-          <app-medication-request-form></app-medication-request-form>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-divider></mat-divider>
-
-      <!-- Table of display list of Medication Request -->
-      <mat-card class="mat-elevation-z1">
-        <mat-card-header>
-          <mat-card-title> Liste des prescriptions </mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="table-container">
-          <app-medication-request-table></app-medication-request-table>
-        </mat-card-content>
-      </mat-card>
-    </div>
-  </mat-drawer-content>
-  <mat-drawer #drawer mode="side" position="end">
-    <app-card-list></app-card-list>
-  </mat-drawer>
-</mat-drawer-container>
+    </mat-drawer-content>
+    <mat-drawer #drawer mode="side" position="end">
+      <app-card-list></app-card-list>
+    </mat-drawer>
+  </mat-drawer-container>
+</div>

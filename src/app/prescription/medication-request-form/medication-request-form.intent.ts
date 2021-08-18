@@ -1,19 +1,20 @@
-import { fhir } from '../../common/fhir/fhir.types';
-import MedicationKnowledge = fhir.MedicationKnowledge;
-import id = fhir.id;
-import MedicationRequestDispenseRequest = fhir.MedicationRequestDispenseRequest;
-import MedicationRequest = fhir.MedicationRequest;
-import Medication = fhir.Medication;
-import Coding = fhir.Coding;
-import CodeableConcept = fhir.CodeableConcept;
-import Ratio = fhir.Ratio;
-import Reference = fhir.Reference;
-import UnitsOfTime = fhir.UnitsOfTime;
-import decimal = fhir.decimal;
-
-export interface IIntent {
-  readonly type: string;
-}
+/**
+ * @license
+ * Copyright PHAST SARL All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://cds-access.phast.fr/license
+ */
+import {IIntent} from '../../common/cds-access/models/state.model';
+import {
+  CodeableConcept, Coding, decimal,
+  id,
+  Medication,
+  MedicationKnowledge,
+  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner,
+  Ratio,
+  Reference, UnitsOfTime
+} from 'phast-fhir-ts';
 
 export class MedicationFormIntentAddMedicationRequest implements IIntent {
   readonly type = 'AddMedicationRequest';
@@ -40,7 +41,9 @@ export class MedicationFormIntentAddMedication implements IIntent {
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medicationKnowledge: MedicationKnowledge,
-              private _medicationId: id) { }
+              private _medicationId: id,
+              private _patient: Patient,
+              private _practitioner: Practitioner) { }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
@@ -52,6 +55,14 @@ export class MedicationFormIntentAddMedication implements IIntent {
 
   public get medicationId(): id {
     return this._medicationId;
+  }
+
+  public get patient(): Patient {
+    return this._patient;
+  }
+
+  public get practitioner(): Practitioner {
+    return this._practitioner;
   }
 }
 
@@ -222,10 +233,26 @@ export class MedicationFormIntentAddDosageInstruction implements IIntent {
 export class MedicationFormIntentRemoveDosageInstruction implements IIntent {
   readonly type = 'RemoveDosageInstruction';
 
-  constructor(private _nDosage: number) { }
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _medication: Medication) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
 
   public get nDosage(): number {
     return this._nDosage;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get medication(): Medication {
+    return this._medication;
   }
 }
 
@@ -394,8 +421,13 @@ export class MedicationFormIntentAddTimeOfDay implements IIntent {
 export class MedicationFormIntentRemoveTimeOfDay implements IIntent {
   readonly type = 'RemoveTimeOfDay';
 
-  constructor(private _nDosage: number,
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
               private _index: number) { }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
 
   public get nDosage(): number {
     return this._nDosage;
@@ -420,8 +452,13 @@ export class MedicationFormIntentAddDoseAndRate implements IIntent {
 export class MedicationFormIntentRemoveDoseAndRate implements IIntent {
   readonly type = 'RemoveDoseAndRate';
 
-  constructor(private _nDosage: number,
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
               private _index: number) { }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
 
   public get nDosage(): number {
     return this._nDosage;
@@ -435,9 +472,14 @@ export class MedicationFormIntentRemoveDoseAndRate implements IIntent {
 export class MedicationFormIntentValueChangesDispenseRequest implements IIntent {
   readonly type = 'ValueChangesDispenseRequest';
 
-  constructor(private _value: MedicationRequestDispenseRequest) { }
+  constructor(private _medicationRequest: MedicationRequest,
+              private _medicationDispense: MedicationRequestDispenseRequest) { }
 
-  public get value(): MedicationRequestDispenseRequest {
-    return this._value;
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get medicationDispense(): MedicationRequestDispenseRequest {
+    return this._medicationDispense;
   }
 }

@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import {HttpClient, HttpHandler} from '@angular/common/http';
+import {PrescriptionModule} from '../prescription.module';
 import { CardListComponent } from './card-list.component';
 
 describe('CardListComponent', () => {
@@ -8,7 +10,13 @@ describe('CardListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ CardListComponent ]
+      imports: [
+        PrescriptionModule
+      ],
+      providers: [
+        HttpClient,
+        HttpHandler
+      ]
     })
     .compileComponents();
   });

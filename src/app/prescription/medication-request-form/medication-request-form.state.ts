@@ -1,18 +1,21 @@
-import { fhir } from '../../common/fhir/fhir.types';
-import MedicationRequest = fhir.MedicationRequest;
-import Medication = fhir.Medication;
-import id = fhir.id;
-import CodeableConcept = fhir.CodeableConcept;
-import Dosage = fhir.Dosage;
-import MedicationRequestDispenseRequest = fhir.MedicationRequestDispenseRequest;
-import Coding = fhir.Coding;
-import UnitsOfTime = fhir.UnitsOfTime;
-import MedicationKnowledge = fhir.MedicationKnowledge;
-import Ratio = fhir.Ratio;
+/**
+ * @license
+ * Copyright PHAST SARL All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://cds-access.phast.fr/license
+ */
+import {BehaviorSubject, Observable} from 'rxjs';
 
-export interface IPartialState {
-  readonly type: string;
-}
+import {IPartialState, IState} from '../../common/cds-access/models/state.model';
+import {
+  CodeableConcept, Coding,
+  id,
+  Medication,
+  MedicationKnowledge, MedicationKnowledgeIngredient,
+  MedicationRequest,
+  Ratio, UnitsOfTime
+} from 'phast-fhir-ts';
 
 export class MedicationFormStateAddMedicationRequest implements IPartialState {
   readonly type = 'AddMedicationRequest';
@@ -65,61 +68,119 @@ export class MedicationFormStateRemoveMedication implements IPartialState {
 export class MedicationFormStateValueChangesMedication implements IPartialState {
   readonly type = 'ValueChangesMedication';
 
-  constructor(private _nMedication: number,
-              private _medication: Medication) {
+  constructor(private _medicationRequest: MedicationRequest,
+              private _medicationKnowledge?: MedicationKnowledge,
+              private _medication?: Medication,
+              private _ingredient?: MedicationKnowledgeIngredient[],
+              private _routeValue?: CodeableConcept) {
   }
 
-  public get nMedication(): number {
-    return this._nMedication;
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
   }
 
   public get medication(): Medication {
     return this._medication;
+  }
+
+  public get ingredient(): MedicationKnowledgeIngredient[] {
+    return this._ingredient;
+  }
+
+  public get route(): CodeableConcept {
+    return this._routeValue;
   }
 }
 
 export class MedicationFormStateAddDosageInstruction implements IPartialState {
   readonly type = 'AddDosageInstruction';
 
-  constructor(private _dosageInstruction: Dosage) { }
+  constructor(private _medicationRequest: MedicationRequest) { }
 
-  public get dosageInstruction(): Dosage {
-    return this._dosageInstruction;
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
   }
 }
 
 export class MedicationFormStateRemoveDosageInstruction implements IPartialState {
   readonly type = 'RemoveDosageInstruction';
 
-  constructor(private _nDosage: number) { }
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _medicationKnowledge?: MedicationKnowledge,
+              private _medication?: Medication,
+              private _ingredient?: MedicationKnowledgeIngredient[]) { }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get medication(): Medication {
+    return this._medication;
+  }
+
+  public get ingredient(): MedicationKnowledgeIngredient[] {
+    return this._ingredient;
+  }
 
   public get nDosage(): number {
     return this._nDosage;
   }
 }
 
-export class MedicationFormStateValueChangesDispenseRequest implements IPartialState {
-  readonly type = 'ValueChangesDispenseRequest';
-
-  constructor(private _value: MedicationRequestDispenseRequest) { }
-
-  public get value(): MedicationRequestDispenseRequest {
-    return this._value;
-  }
-}
 
 export class MedicationFormStateValueChangesDosageInstruction implements IPartialState {
   readonly type = 'ValueChangesDosageInstruction';
 
-  constructor(private _nDosage: number,
-              private _value: Dosage) { }
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _medicationKnowledge?: MedicationKnowledge,
+              private _medication?: Medication,
+              private _ingredient?: MedicationKnowledgeIngredient[],
+              private _routeValue?: CodeableConcept) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get medicationKnowledge(): MedicationKnowledge {
+    return this._medicationKnowledge;
+  }
+
+  public get medication(): Medication {
+    return this._medication;
+  }
+
+  public get route(): CodeableConcept {
+    return this._routeValue;
+  }
+
+  public get ingredient(): MedicationKnowledgeIngredient[] {
+    return this._ingredient;
+  }
 
   public get nDosage(): number {
     return this._nDosage;
   }
+}
 
-  public get value(): Dosage {
-    return this._value;
+
+export class MedicationFormStateValueChangesDispenseRequest implements IPartialState {
+  readonly type = 'ValueChangesDispenseRequest';
+
+  constructor(private _medicationRequest: MedicationRequest) { }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
   }
 }
 
@@ -136,8 +197,13 @@ export class MedicationFormStateAddTimeOfDay implements IPartialState {
 export class MedicationFormStateRemoveTimeOfDay implements IPartialState {
   readonly type = 'RemoveTimeOfDay';
 
-  constructor(private _nDosage: number,
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
               private _index: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
   }
 
   public get nDosage(): number {
@@ -162,8 +228,13 @@ export class MedicationFormStateAddDoseAndRate implements IPartialState {
 export class MedicationFormStateRemoveDoseAndRate implements IPartialState {
   readonly type = 'RemoveDoseAndRate';
 
-  constructor(private _nDosage: number,
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
               private _index: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
   }
 
   public get nDosage(): number {
@@ -175,51 +246,58 @@ export class MedicationFormStateRemoveDoseAndRate implements IPartialState {
   }
 }
 
-export class MedicationRequestFormState {
+export class MedicationRequestFormState implements IState {
 
   private _medicationRequest: MedicationRequest;
 
-  private _loading: boolean;
+  private readonly _loading$: BehaviorSubject<boolean>;
 
-  private _nMedicationArray = new Array<number>();
+  private readonly _nMedicationArray: Array<number>;
 
   private _nDosage: number;
 
   private _index: number;
 
-  private _autoIncrement = 0;
+  private _autoIncrement: number;
 
-  private _medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
+  private readonly _medicationKnowledgeMap: Map<id, MedicationKnowledge>;
 
-  private _routeArray = new Array<CodeableConcept>();
+  private readonly _routeArray: Array<CodeableConcept>;
 
-  private _formMap = new Map<id, Array<CodeableConcept>>();
+  private readonly _formMap: Map<id, Array<CodeableConcept>>;
 
-  private _strengthMap = new Map<string, Array<Ratio>>();
+  private readonly _strengthMap: Map<string, Array<Ratio>>;
 
-  private _doseAndRateUnitMap = new Map<id, Array<Coding>>();
+  private readonly _doseAndRateUnitMap: Map<id, Array<Coding>>;
 
-  private _durationUnitArray = new Array<UnitsOfTime>();
+  private readonly _durationUnitArray: Array<UnitsOfTime>;
 
-  constructor(private _type: string) { }
-
-  public set loading(loading: boolean) {
-    this._loading = loading;
+  constructor(private _type: string) {
+    this._loading$ = new BehaviorSubject<boolean>(false);
+    this._nMedicationArray = new Array<number>();
+    this._autoIncrement = 0;
+    this._medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
+    this._routeArray = new Array<CodeableConcept>();
+    this._formMap = new Map<id, Array<CodeableConcept>>();
+    this._strengthMap = new Map<string, Array<Ratio>>();
+    this._doseAndRateUnitMap = new Map<id, Array<Coding>>();
+    this._durationUnitArray = new Array<UnitsOfTime>();
   }
 
-  public get isLoading(): boolean {
-    return this._loading;
+  public get type(): string {
+    return this._type;
   }
 
   public set type(type: string) {
     this._type = type;
   }
 
-  /**
-   * return the workflow state
-   */
-  public get type(): string {
-    return this._type;
+  public set loading(loading: boolean) {
+    this._loading$.next(loading);
+  }
+
+  public get isLoading$(): Observable<boolean> {
+    return this._loading$.asObservable();
   }
 
   public set medicationRequest(medicationRequest: MedicationRequest) {

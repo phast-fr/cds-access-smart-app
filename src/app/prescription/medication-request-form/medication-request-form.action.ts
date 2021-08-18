@@ -1,7 +1,13 @@
+/**
+ * @license
+ * Copyright PHAST SARL All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://cds-access.phast.fr/license
+ */
 import * as lodash from 'lodash';
-import { from } from 'rxjs';
+import {IAction, IPartialState} from '../../common/cds-access/models/state.model';
 import {
-  IPartialState,
   MedicationFormStateAddMedication,
   MedicationFormStateAddMedicationRequest,
   MedicationFormStateAddTimeOfDay,
@@ -20,39 +26,23 @@ import {
   MedicationBuilder, MedicationIngredientBuilder,
   MedicationRequestBuilder, RatioBuilder,
   ReferenceBuilder, TimingBuilder, TimingRepeatBuilder
-} from '../../common/fhir/fhir.resource.builder';
-import { PrescriptionStateService } from '../prescription-state.service';
-import {fhir} from '../../common/fhir/fhir.types';
-import MedicationKnowledge = fhir.MedicationKnowledge;
-import Coding = fhir.Coding;
-import id = fhir.id;
-import MedicationRequestDispenseRequest = fhir.MedicationRequestDispenseRequest;
-import MedicationRequest = fhir.MedicationRequest;
-import Medication = fhir.Medication;
-import CodeableConcept = fhir.CodeableConcept;
-import Ratio = fhir.Ratio;
-import Reference = fhir.Reference;
-import UnitsOfTime = fhir.UnitsOfTime;
-import {FhirCioDcService} from '../../common/services/fhir.cio.dc.service';
-import {MedicationRequestFormService} from './medication-request-form.service';
-import decimal = fhir.decimal;
-import time = fhir.time;
-import DoseAndRate = fhir.DoseAndRate;
-
-export interface IAction {
-  readonly type: string;
-
-  execute(): IPartialState;
-}
+} from '../../common/fhir/builders/fhir.resource.builder';
+import {
+  CodeableConcept, Coding, decimal, Dosage, DosageDoseAndRate,
+  id,
+  Medication,
+  MedicationKnowledge,
+  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner,
+  Ratio,
+  Reference, time, UnitsOfTime
+} from 'phast-fhir-ts';
 
 export class MedicationFormActionAddMedicationRequest implements IAction {
   readonly type = 'AddMedicationRequest';
 
-  constructor(private _prescriptionState: PrescriptionStateService,
-              private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) { }
 
   public execute(): IPartialState {
-    this._prescriptionState.addMedicationRequest(this._medicationRequest);
     return new MedicationFormStateAddMedicationRequest();
   }
 }
@@ -60,11 +50,9 @@ export class MedicationFormActionAddMedicationRequest implements IAction {
 export class MedicationFormActionCdsHelp implements IAction {
   readonly type = 'CdsHelp';
 
-  constructor(private _prescriptionState: PrescriptionStateService,
-              private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) { }
 
   public execute(): IPartialState {
-    this._prescriptionState.callCdsHooks(this._medicationRequest);
     return new MedicationFormStateCdsHelp();
   }
 }
@@ -72,48 +60,48 @@ export class MedicationFormActionCdsHelp implements IAction {
 export class MedicationFormActionAddMedication implements IAction {
   type = 'AddMedication';
 
-  constructor(private _prescriptionState: PrescriptionStateService,
-              private _cioDcSource: FhirCioDcService,
-              private _formStateService: MedicationRequestFormService,
-              private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _medicationKnowledge: MedicationKnowledge,
-              private _medicationId: id) { }
+              private _medicationId: id,
+              private _patient: Patient,
+              private _practitioner: Practitioner) { }
 
   public execute(): IPartialState {
+    let medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const medication = new MedicationBuilder(this._medicationId)
       .code(this._medicationKnowledge.code)
       .form(this._medicationKnowledge.doseForm)
       .ingredient(lodash.cloneDeep(this._medicationKnowledge.ingredient))
       .build();
-    if (this._medicationRequest == null) {
-      const subject = new ReferenceBuilder(this._prescriptionState.patient.id)
-        .resourceType('Patient')
-        .build();
-      this._medicationRequest = new MedicationRequestBuilder('active', 'order', subject)
-        .build();
-      this._medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
-        .build();
-      if (this._prescriptionState.user != null) {
-        this._medicationRequest.requester = new ReferenceBuilder(this._prescriptionState.user.id)
-          .resourceType(this._prescriptionState.user.resourceType)
+    if (!medicationRequest) {
+      if (this._patient) {
+        const subject = new ReferenceBuilder(this._patient.id)
+          .resourceType('Patient')
           .build();
+        medicationRequest = new MedicationRequestBuilder('active', 'order', subject)
+          .build();
+
+        medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+          .build();
+        if (this._practitioner) {
+          medicationRequest.requester = new ReferenceBuilder(this._practitioner.id)
+            .resourceType(this._practitioner.resourceType)
+            .build();
+        }
       }
     }
-    else if (this._medicationRequest.contained.length === 0) {
-      this._medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+    else if (medicationRequest.contained.length === 0) {
+      medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
         .build();
     }
-    else if (this._medicationRequest.contained.length === 1) {
-      const medicationOld = this._medicationRequest.contained.shift() as Medication;
+    else if (medicationRequest.contained.length === 1) {
+      const medicationOld = medicationRequest.contained.shift() as Medication;
 
-      // TODO use a builder
-      const medicationRoot = {
-        resourceType: 'Medication',
-        id: 'med-root',
-        code: {
+      const medicationRoot = new MedicationBuilder('med-root')
+        .code({
           text: medicationOld.code.text + '&' + medication.code.text
-        },
-        ingredient: [{
+        })
+        .ingredient([{
           itemReference: {
             reference: '#' + medicationOld.id,
             display: medicationOld.code.text
@@ -124,15 +112,15 @@ export class MedicationFormActionAddMedication implements IAction {
             reference: '#' + medication.id,
             display: medication.code.text
           }
-        }]
-      } as Medication;
-      this._medicationRequest.contained.push(medicationRoot);
-      this._medicationRequest.contained.push(medicationOld);
-      this._medicationRequest.medicationReference = new ReferenceBuilder(medicationRoot.id)
+        }])
+        .build();
+      medicationRequest.contained.push(medicationRoot);
+      medicationRequest.contained.push(medicationOld);
+      medicationRequest.medicationReference = new ReferenceBuilder(medicationRoot.id)
         .build();
     }
-    else if (this._medicationRequest.contained.length !== 0) {
-      const medicationRoot = this._medicationRequest.contained[0] as Medication;
+    else if (medicationRequest.contained.length !== 0) {
+      const medicationRoot = medicationRequest.contained[0] as Medication;
       medicationRoot.code.text += '&' + medication.code.text;
       medicationRoot.ingredient.push(new MedicationIngredientBuilder()
         .setItemReference(new ReferenceBuilder(medication.id)
@@ -140,15 +128,10 @@ export class MedicationFormActionAddMedication implements IAction {
           .build())
         .build());
     }
-    this._medicationRequest.contained.push(medication);
-    this._formStateService.initList(this._medicationKnowledge, medication.id);
-    this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-      this._medicationKnowledge.id, this._medicationKnowledge.code, undefined, undefined, undefined
-      ).then(
-        parameters => this._formStateService.buildList(medication.id, parameters)
-      );
-
-    return new MedicationFormStateAddMedication(this._medicationRequest, this._medicationKnowledge, medication);
+    if (medicationRequest) {
+      medicationRequest.contained.push(medication);
+    }
+    return new MedicationFormStateAddMedication(medicationRequest, this._medicationKnowledge, medication);
   }
 }
 
@@ -159,17 +142,17 @@ export class MedicationFormActionRemoveMedication implements IAction {
               private _nMedication: number) { }
 
   public execute(): IPartialState {
-    const copyMedicationRequest = lodash.cloneDeep(this._medicationRequest);
-    const contained = copyMedicationRequest.contained;
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const contained = medicationRequest.contained;
     if (this._nMedication === 0) {
       contained.length = 0;
-      copyMedicationRequest.medicationReference = undefined;
+      medicationRequest.medicationReference = undefined;
     }
     else if (this._nMedication !== 0 && contained.length === 3) {
       contained.splice(this._nMedication, 1);
       contained.splice(0, 1);
       const medication = contained[0];
-      copyMedicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+      medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
         .build();
     }
     else {
@@ -177,16 +160,14 @@ export class MedicationFormActionRemoveMedication implements IAction {
       medicationRoot.ingredient.splice(this._nMedication, 1);
       contained.splice(this._nMedication, 1);
     }
-    return new MedicationFormStateRemoveMedication(copyMedicationRequest, this._nMedication);
+    return new MedicationFormStateRemoveMedication(medicationRequest, this._nMedication);
   }
 }
 
 export class MedicationFormActionValueChangesMedicationForm implements IAction {
   readonly type = 'ValueChangesMedicationForm';
 
-  constructor(private _formStateService: MedicationRequestFormService,
-              private _cioDcSource: FhirCioDcService,
-              private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _formValue: CodeableConcept,
               private _medicationKnowledge: MedicationKnowledge,
@@ -194,38 +175,31 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
   }
 
   public execute(): IPartialState {
-    const nMedication = this._medicationRequest.contained.findIndex(
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const nMedication = medicationRequest.contained.findIndex(
       (value) => {
         return value.id === this._medication.id;
       }
     );
     this._medication.form = this._formValue;
+    medicationRequest.contained[nMedication] = this._medication;
 
-    const ingredient = (this._medicationRequest.contained.length > 1) ?
+    const ingredient = (medicationRequest.contained.length > 1) ?
       this._medicationKnowledge.ingredient : this._medication.ingredient;
 
-    const medList = (this._medicationRequest.contained.length > 1) ?
-      this._medicationRequest.contained[1] as Medication : this._medication;
-    this._formStateService.clearList(medList);
-    from(this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-      this._medicationKnowledge.id,
-      this._medicationKnowledge.code,
-      this._formValue,
-      ingredient,
-      this._intendedRoute
-    ))
-      .subscribe(value => this._formStateService.buildList(medList.id, value));
+    const medication = (medicationRequest.contained.length > 1) ?
+      medicationRequest.contained[1] as Medication : this._medication;
 
-    return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
+    return new MedicationFormStateValueChangesMedication(
+      medicationRequest, this._medicationKnowledge, medication, ingredient, this._intendedRoute
+    );
   }
 }
 
 export class MedicationFormActionValueChangesMedicationIngredientStrength implements IAction {
   readonly type = 'ValueChangesMedicationIngredientStrength';
 
-  constructor(private _formStateService: MedicationRequestFormService,
-              private _cioDcSource: FhirCioDcService,
-              private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemCodeableConcept: CodeableConcept,
               private _strengthValue: Ratio,
@@ -235,7 +209,8 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
   }
 
   public execute(): IPartialState {
-    const nMedication = this._medicationRequest.contained.findIndex(
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const nMedication = medicationRequest.contained.findIndex(
       (value) => {
         return value.id === this._medication.id;
       }
@@ -244,18 +219,11 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
       value => value.itemCodeableConcept === this._itemCodeableConcept
     );
     this._medication.ingredient[nIngredient].strength = this._strengthValue;
+    medicationRequest.contained[nMedication] = this._medication;
 
-    this._formStateService.clearList(this._medication);
-    from(this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-      this._medicationKnowledge.id,
-      this._medicationKnowledge.code,
-      this._form,
-      this._medication.ingredient,
-      this._intendedRoute
-    ))
-      .subscribe(value => this._formStateService.buildList(this._medication.id, value));
-
-    return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
+    return new MedicationFormStateValueChangesMedication(
+      medicationRequest, this._medicationKnowledge, this._medication, this._medication.ingredient, this._intendedRoute
+    );
   }
 }
 
@@ -269,6 +237,7 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthValue i
   }
 
   public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const nMedication = this._medicationRequest.contained.findIndex(
       (value) => {
         return value.id === this._medication.id;
@@ -286,7 +255,8 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthValue i
     else {
       this._medication.ingredient[nIngredient].strength.numerator.value = this._strengthValue;
     }
-    return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
+    medicationRequest.contained[nMedication] = this._medication;
+    return new MedicationFormStateValueChangesMedication(medicationRequest);
   }
 }
 
@@ -300,7 +270,8 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthUnit im
   }
 
   public execute(): IPartialState {
-    const nMedication = this._medicationRequest.contained.findIndex(
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const nMedication = medicationRequest.contained.findIndex(
       (value) => {
         return value.id === this._medication.id;
       }
@@ -327,8 +298,8 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthUnit im
       this._medication.ingredient[nIngredient].strength.numerator.code = null;
       this._medication.ingredient[nIngredient].strength.numerator.system = null;
     }
-
-    return new MedicationFormStateValueChangesMedication(nMedication, this._medication);
+    medicationRequest.contained[nMedication] = this._medication;
+    return new MedicationFormStateValueChangesMedication(medicationRequest);
   }
 }
 
@@ -338,72 +309,68 @@ export class MedicationFormActionAddDosageInstruction implements IAction {
   constructor(private _medicationRequest: MedicationRequest) { }
 
   public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    if (!medicationRequest.dosageInstruction) {
+      medicationRequest.dosageInstruction = new Array<Dosage>();
+    }
     const dosageInstruction =
-      new DosageBuilder(this._medicationRequest.dosageInstruction.length + 1).build();
-    return new MedicationFormStateAddDosageInstruction(dosageInstruction);
+      new DosageBuilder(medicationRequest.dosageInstruction.length + 1).build();
+    medicationRequest.dosageInstruction.push(dosageInstruction);
+    return new MedicationFormStateAddDosageInstruction(medicationRequest);
   }
 }
 
 export class MedicationFormActionRemoveDosageInstruction implements IAction {
   readonly type = 'RemoveDosageInstruction';
 
-  constructor(private _nDosage: number) { }
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _medicationKnowledge: MedicationKnowledge,
+              private _medication: Medication) { }
 
   execute(): IPartialState {
-    return new MedicationFormStateRemoveDosageInstruction(this._nDosage);
-  }
-}
-
-export class MedicationFormActionValueChangesDispenseRequest implements IAction {
-  readonly type = 'ValueChangesDispenseRequest';
-
-  constructor(private _value: MedicationRequestDispenseRequest) { }
-
-  public execute(): IPartialState {
-    if (this._value.expectedSupplyDuration != null) {
-      const value = this._value.expectedSupplyDuration.value;
-      this._value.expectedSupplyDuration = new DurationBuilder()
-        .setValue(value)
-        .setUnit('days')
-        .setCode('d')
-        .setSystem('http://unitsofmeasure.org')
-        .build();
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    if (medicationRequest.dosageInstruction[this._nDosage]) {
+      medicationRequest.dosageInstruction.splice(this._nDosage, 1);
     }
-    return new MedicationFormStateValueChangesDispenseRequest(this._value);
+    if (medicationRequest.dosageInstruction.length === 0) {
+      delete medicationRequest.dosageInstruction;
+    }
+    const ingredient = (this._medicationRequest.contained.length > 1) ?
+      this._medicationKnowledge.ingredient : this._medication.ingredient;
+
+    const medication = (this._medicationRequest.contained.length > 1) ?
+      this._medicationRequest.contained[1] as Medication : this._medication;
+
+    return new MedicationFormStateRemoveDosageInstruction(
+      medicationRequest, this._nDosage, this._medicationKnowledge, medication, ingredient
+    );
   }
 }
 
 export class MedicationFormActionValueChangesDosageInstructionRoute implements IAction {
   readonly type = 'ValueChangesDosageInstructionRoute';
 
-  constructor(private _formStateService: MedicationRequestFormService,
-              private _cioDcSource: FhirCioDcService,
-              private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _routeValue: CodeableConcept,
               private _medicationKnowledge: MedicationKnowledge,
               private _medication: Medication) { }
 
   public execute(): IPartialState {
-    const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
     dosage.route = this._routeValue;
 
     const ingredient = (this._medicationRequest.contained.length > 1) ?
       this._medicationKnowledge.ingredient : this._medication.ingredient;
 
-    const medList = (this._medicationRequest.contained.length > 1) ?
+    const medication = (this._medicationRequest.contained.length > 1) ?
       this._medicationRequest.contained[1] as Medication : this._medication;
-    this._formStateService.clearList(medList);
-    from(this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-      this._medicationKnowledge.id,
-      this._medicationKnowledge.code,
-      medList.form,
-      ingredient,
-      this._routeValue
-    ))
-      .subscribe(value => this._formStateService.buildList(medList.id, value));
 
-    return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(
+      medicationRequest, this._nDosage, this._medicationKnowledge, medication, ingredient, this._routeValue
+    );
   }
 }
 
@@ -415,7 +382,8 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
               private _durationValue: decimal) { }
 
   public execute(): IPartialState {
-    const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
     if (dosage.timing === undefined) {
       const timingReapeat = new TimingRepeatBuilder().duration(this._durationValue).build();
       dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
@@ -426,7 +394,8 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
     else {
       dosage.timing.repeat.duration = this._durationValue;
     }
-    return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
   }
 }
 
@@ -438,7 +407,8 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
               private _durationUnit: UnitsOfTime) { }
 
   public execute(): IPartialState {
-    const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
     if (dosage.timing === undefined) {
       const timingReapeat = new TimingRepeatBuilder().durationUnit(this._durationUnit).build();
       dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
@@ -449,7 +419,32 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
     else {
       dosage.timing.repeat.durationUnit = this._durationUnit;
     }
-    return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
+  }
+}
+
+export class MedicationFormActionValueChangesDispenseRequest implements IAction {
+  readonly type = 'ValueChangesDispenseRequest';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _medicationDispense: MedicationRequestDispenseRequest) { }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    if (this._medicationDispense.expectedSupplyDuration.value) {
+      const value = this._medicationDispense.expectedSupplyDuration.value;
+      this._medicationDispense.expectedSupplyDuration = new DurationBuilder()
+        .setValue(value)
+        .setUnit('days')
+        .setCode('d')
+        .setSystem('http://unitsofmeasure.org')
+        .build();
+    }
+    else {
+      delete this._medicationDispense.expectedSupplyDuration;
+    }
+    medicationRequest.dispenseRequest = this._medicationDispense;
+    return new MedicationFormStateValueChangesDispenseRequest(medicationRequest);
   }
 }
 
@@ -466,37 +461,56 @@ export class MedicationFormActionAddDoseAndRate implements IAction {
 export class MedicationFormActionRemoveDoseAndRate implements IAction {
   readonly type = 'RemoveDoseAndRate';
 
-  constructor(private _nDosage: number,
-              private _index: number) {
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number) {
   }
 
   public execute(): IPartialState {
-    return new MedicationFormStateRemoveDoseAndRate(this._nDosage, this._index);
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+    if (dosage.doseAndRate) {
+      if (dosage.doseAndRate[this._nDoseAndRate]) {
+        dosage.doseAndRate.splice(this._nDoseAndRate, 1);
+      }
+      if (dosage.doseAndRate.length === 0) {
+        delete dosage.doseAndRate;
+      }
+    }
+    return new MedicationFormStateRemoveDoseAndRate(medicationRequest, this._nDosage, this._nDoseAndRate);
   }
 }
 
 export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue implements IAction {
   readonly type = 'ValueChangesDosageInstructionDoseQuantityValue';
 
-  constructor(private _medicationRequest: fhir.MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nDoseAndRate: number,
               private _doseQuantityValue: number) { }
 
   public execute(): IPartialState {
-    const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    if (dosage.doseAndRate === undefined) {
-      dosage.doseAndRate = new Array<DoseAndRate>(new DoseAndRateBuilder().build());
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
-    }
-    else if (dosage.doseAndRate[this._nDoseAndRate] === undefined) {
-      dosage.doseAndRate[this._nDoseAndRate] = new DoseAndRateBuilder().build();
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+    if (this._doseQuantityValue) {
+      if (dosage.doseAndRate === undefined) {
+        dosage.doseAndRate = new Array<DosageDoseAndRate>(new DoseAndRateBuilder().build());
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+      }
+      else if (dosage.doseAndRate[this._nDoseAndRate] === undefined) {
+        dosage.doseAndRate[this._nDoseAndRate] = new DoseAndRateBuilder().build();
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+      }
+      else {
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+      }
     }
     else {
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.value = this._doseQuantityValue;
+      if (dosage.doseAndRate[this._nDoseAndRate]) {
+        dosage.doseAndRate.splice(this._nDoseAndRate, 1);
+      }
     }
-    return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
   }
 }
 
@@ -509,25 +523,36 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
               private _doseQuantityUnit: Coding) { }
 
   public execute(): IPartialState {
-    const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    if (dosage.doseAndRate === undefined) {
-      dosage.doseAndRate = new Array<DoseAndRate>(new DoseAndRateBuilder().build());
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
-    }
-    else if (dosage.doseAndRate[this._nDoseAndRate] === undefined) {
-      dosage.doseAndRate[this._nDoseAndRate] = new DoseAndRateBuilder().build();
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+    if (this._doseQuantityUnit) {
+      if (!dosage.doseAndRate) {
+        dosage.doseAndRate = new Array<DosageDoseAndRate>(new DoseAndRateBuilder().build());
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+      }
+      else if (!dosage.doseAndRate[this._nDoseAndRate]) {
+        dosage.doseAndRate[this._nDoseAndRate] = new DoseAndRateBuilder().build();
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+      }
+      else {
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+      }
     }
     else {
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = this._doseQuantityUnit.display;
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = this._doseQuantityUnit.code;
-      dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = this._doseQuantityUnit.system;
+      if (dosage.doseAndRate && dosage.doseAndRate[this._nDoseAndRate]) {
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.unit = '';
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.code = '';
+        dosage.doseAndRate[this._nDoseAndRate].doseQuantity.system = '';
+      }
     }
-    return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
   }
 }
 
@@ -544,38 +569,61 @@ export class MedicationFormActionAddTimeOfDay implements IAction {
 export class MedicationFormActionRemoveTimeOfDay implements IAction {
   readonly type = 'RemoveTimeOfDay';
 
-  constructor(private _nDosage: number,
-              private _index: number) {
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nTimeOfDay: number) {
   }
 
   public execute(): IPartialState {
-    return new MedicationFormStateRemoveTimeOfDay(this._nDosage, this._index);
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+    if (dosage.timing) {
+      if (dosage.repeat) {
+        if (dosage.timing.repeat.timeOfDay) {
+          if (dosage.timing.repeat.timeOfDay[this._nTimeOfDay]) {
+            dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
+          }
+          if (dosage.timing.repeat.timeOfDay.length === 0) {
+            delete dosage.timing.repeat.timeOfDay;
+          }
+        }
+      }
+    }
+    return new MedicationFormStateRemoveTimeOfDay(medicationRequest, this._nDosage, this._nTimeOfDay);
   }
 }
 
 export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue implements IAction {
   readonly type = 'ValueChangesDosageInstructionTimeOfDay';
 
-  constructor(private _medicationRequest: fhir.MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nTimeOfDay: number,
               private _timeOfDayValue: time) { }
 
   public execute(): IPartialState {
-    const dosage = this._medicationRequest.dosageInstruction[this._nDosage];
-    if (dosage.timing === undefined) {
-      const timingReapeat = new TimingRepeatBuilder().addTimeOfDay(this._timeOfDayValue).build();
-      dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
-    }
-    else if (dosage.timing.repeat === undefined) {
-      dosage.timing.repeat = new TimingRepeatBuilder().addTimeOfDay(this._timeOfDayValue).build();
-    }
-    else if (dosage.timing.repeat.timeOfDay === undefined) {
-      dosage.timing.repeat.timeOfDay = new Array<time>(this._timeOfDayValue);
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+    if (this._timeOfDayValue) {
+      if (dosage.timing === undefined) {
+        const timingReapeat = new TimingRepeatBuilder().addTimeOfDay(this._timeOfDayValue).build();
+        dosage.timing = new TimingBuilder().timingReapeat(timingReapeat).build();
+      }
+      else if (dosage.timing.repeat === undefined) {
+        dosage.timing.repeat = new TimingRepeatBuilder().addTimeOfDay(this._timeOfDayValue).build();
+      }
+      else if (dosage.timing.repeat.timeOfDay === undefined) {
+        dosage.timing.repeat.timeOfDay = new Array<time>(this._timeOfDayValue);
+      }
+      else {
+        dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = this._timeOfDayValue;
+      }
     }
     else {
-      dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = this._timeOfDayValue;
+      if (dosage.timing.repeat.timeOfDay[this._nTimeOfDay]) {
+        dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
+      }
     }
-    return new MedicationFormStateValueChangesDosageInstruction(this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
   }
 }

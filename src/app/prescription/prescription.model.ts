@@ -1,4 +1,4 @@
-import { Card } from '../common/fhir/fhir.cdshooks.model';
+import { Card } from '../common/fhir/cds-hooks/models/fhir.cdshooks.model';
 
 export interface Readable {
   isReaded: boolean;
@@ -10,7 +10,7 @@ export class CardReadable implements Readable {
 
   constructor(private card: Card) { }
 
-  getCard(): Card {
+  public getCard(): Card {
     return this.card;
   }
 }

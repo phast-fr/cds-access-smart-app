@@ -2,19 +2,19 @@
   <div fxLayout="row" class="form-field-row form-field-medication-knowledge">
     <div fxFlex="100%">
       <button mat-stroked-button color="primary"
-              #tooltip="matTooltip"
               matTooltip="Ajouter le produit selectionné"
               matTooltipPosition="below"
               aria-label="Ajouter le produit selectionné"
               (click)="onAddMedication()"
               [disabled]="!isMedicationAddable"> + </button>
       <mat-form-field fxFlex="100%" appearance="fill">
-        <i matPrefix matTooltip="Library Add" class="material-icons icon">library_add</i>
+        <mat-icon svgIcon="medicines" aria-hidden="false" aria-label="chercher un produit" matPrefix
+                  matTooltip="Chercher un produit"></mat-icon>
         <mat-label> Dénomination commune </mat-label>
         <input type="text" placeholder="Ex. PARACETAMOL"
                aria-label="Dénomination commune"
                matInput
-               [formControl]="medicationKnowledge"
+               [formControl]="toControl(medicationRequestGroup.get('medicationKnowledge'))"
                [matAutocomplete]="autoMedicationKnowledge"/>
       </mat-form-field>
     </div>
@@ -24,18 +24,18 @@
   <app-dispense-request-form></app-dispense-request-form>
   <div class="form-field-row form-control">
     <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
-            *ngIf="formState.medicationRequest != null"> Ajouter </button>
+            *ngIf="medicationRequest != null" [disabled]="!(isMedicationRequestAddable$ | async)"> Ajouter </button>
     <mat-divider></mat-divider>
     <button mat-raised-button color="secondary" (click)="onCDSHelp()"
-            *ngIf="formState.medicationRequest != null"> Aide (CDS) </button>
+            *ngIf="medicationRequest != null"> Aide (CDS) </button>
   </div>
   <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
-                    [displayWith]="displayFnMedicationKnowledge.bind(this)">
-    <mat-option *ngIf="formState.isLoading" class="is-loading"> Recherche... </mat-option>
-    <ng-container *ngIf="!formState.isLoading">
+                    [displayWith]="displayFn.bind(this)">
+    <mat-option *ngIf="isLoading$ | async" class="is-loading"> Recherche... </mat-option>
+    <ng-container *ngIf="!(isLoading$ | async)">
       <mat-option *ngFor="let medicationKnowledge of medicationKnowledgeArray;
-            index as i trackBy: trackByMedicationKnowledge" [value]="medicationKnowledge">
-        {{labelProviderFactory.getProvider(medicationKnowledge).getText(medicationKnowledge)}}
+          index as i trackBy: trackByMedicationKnowledge" [value]="medicationKnowledge">
+        {{medicationKnowledge | medicationKnowledge}}
       </mat-option>
     </ng-container>
   </mat-autocomplete>

@@ -1,63 +1,57 @@
-<div class="form-group-row form-field-medication"
-     *ngFor="let medicationGroup of medication.controls; index as nMedication; trackBy: trackByControl">
-  <div fxLayout="row" class="form-group-header" *ngIf="nMedication === 0">
+<div class="form-group-row form-field-medication" *ngIf="medicationGroup$ | async">
+  <div fxLayout="row" class="form-group-header">
     <button mat-stroked-button color="primary"
-            #tooltip="matTooltip"
             matTooltip="Supprimer ce produit"
             matTooltipPosition="right"
             aria-label="Supprimer ce produit"
-            (click)="onRemoveMedication(nMedication)"> - </button>
+            (click)="onRemoveMedication(0)"> - </button>
     <div class="form-group-title">
-      {{labelProviderFactory.getProvider(medicationGroup.get('medication').value)
-      .getText(medicationGroup.get('medication').value)}}
+      {{medicationGroup.get('medication').value | medication}}
     </div>
   </div>
-  <div class="form-group-body" *ngIf="nMedication === 0">
+  <div class="form-group-body">
     <div fxLayout="row" class="form-field-row form-field-medication-ingredient"
-         *ngFor="let ingredientGroup of getIngredient(medicationGroup).controls; index as nIngredient;
-         trackBy: trackByControl">
-      <ng-container *ngIf="ingredientGroup.get('itemCodeableConcept') != null">
+         *ngFor="let ingredientGroup of toFormArray(medicationGroup.get('ingredient')).controls; index as nIngredient;
+       trackBy: trackByControl">
+      <ng-container *ngIf="ingredientGroup.get('itemCodeableConcept')">
         <mat-form-field fxFlex="100%" appearance="fill">
           <mat-label>
-            {{labelProviderFactory.getProvider('fhir.CodeableConcept').getText(
-            ingredientGroup.get('itemCodeableConcept').value)}}
+            {{ingredientGroup.get('itemCodeableConcept').value | codeableConcept}}
             Dosage
           </mat-label>
           <input type="text"
                  aria-label="Dosage"
                  matInput
-                 [formControl]="ingredientGroup.get('strength')"
+                 [formControl]="toFormControl(ingredientGroup.get('strength'))"
                  [matAutocomplete]="autoDosage" />
         </mat-form-field>
 
         <mat-autocomplete #autoDosage="matAutocomplete" [displayWith]="displayFnRatio.bind(this)">
-          <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
-          <ng-container *ngIf="!formState.isLoading">
-            <mat-option *ngFor="let dosageRatio of formState.strengthMap.get(ingredientGroup.get('itemCodeableConcept').value.text);
-          index as i trackBy: trackByRatio"
+          <mat-option *ngIf="isLoading$ | async" class="is-loading"> Chargement... </mat-option>
+          <ng-container *ngIf="!(isLoading$ | async)">
+            <mat-option *ngFor="let dosageRatio of
+            strengthMap.get(ingredientGroup.get('itemCodeableConcept').value.text); trackBy: trackByRatio"
                         [value]="dosageRatio">
-              {{labelProviderFactory.getProvider('fhir.Ratio').getText(dosageRatio)}}
+              {{dosageRatio | ratio}}
             </mat-option>
           </ng-container>
         </mat-autocomplete>
       </ng-container>
-      <ng-container *ngIf="ingredientGroup.get('itemReference') != null">
+      <ng-container *ngIf="ingredientGroup.get('itemReference')">
         <button mat-stroked-button color="primary"
-                #tooltip="matTooltip"
-                matTooltip="Supprimer ce produit"
+                matTooltip="Supprimer cet ingrédient"
                 matTooltipPosition="right"
-                aria-label="Supprimer ce produit"
+                aria-label="Supprimer cet ingrédient"
                 (click)="onRemoveIngredient(nIngredient)"> - </button>
         <mat-form-field fxFlex="75%" appearance="fill">
           <mat-label>
-            {{labelProviderFactory.getProvider('fhir.Reference')
-            .getText(ingredientGroup.get('itemReference').value)}}
+            {{ingredientGroup.get('itemReference').value | reference}}
             Dose
           </mat-label>
           <input type="text"
                  aria-label="Dose"
                  matInput
-                 [formControl]="ingredientGroup.get('strength').get('numerator').get('value')" />
+                 [formControl]="toFormControl(ingredientGroup.get(['strength', 'numerator', 'value']))" />
         </mat-form-field>
         <mat-form-field fxFlex="25%" appearance="fill">
           <mat-label>
@@ -66,46 +60,42 @@
           <input type="text"
                  aria-label="unité"
                  matInput
-                 [formControl]="ingredientGroup.get('strength').get('numerator').get('unit')"
+                 [formControl]="toFormControl(ingredientGroup.get(['strength', 'numerator', 'unit']))"
                  [matAutocomplete]="autoStrengthUnit"/>
         </mat-form-field>
 
         <mat-autocomplete #autoStrengthUnit="matAutocomplete" [displayWith]="displayFnCoding.bind(this)">
-          <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
-          <ng-container *ngIf="!formState.isLoading">
+          <mat-option *ngIf="isLoading$ | async" class="is-loading"> Chargement... </mat-option>
+          <ng-container *ngIf="!(isLoading$ | async)">
             <mat-option *ngFor="let unitCode of doseAndRateUnitMap(ingredientGroup.get('itemReference').value);
-            index as i trackBy: trackByCoding" [value]="unitCode">
-              {{labelProviderFactory.getProvider('fhir.Coding').getText(unitCode)}}
+          index as i trackBy: trackByCoding" [value]="unitCode">
+              {{unitCode | coding}}
             </mat-option>
           </ng-container>
         </mat-autocomplete>
       </ng-container>
-
     </div>
     <div fxLayout="row" class="form-field-row form-field-medication-form">
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-label>
-          {{labelProviderFactory.getProvider('fhir.CodeableConcept')
-          .getText(medicationGroup.get('medication').value.code)}}
+          {{medicationGroup.get('medication').value.code | codeableConcept}}
           Forme
         </mat-label>
         <input type="text"
                aria-label="Forme"
                matInput
-               [formControl]="getFormControlByGroup(medicationGroup)"
+               [formControl]="toFormControl(medicationGroup.get('form'))"
                [matAutocomplete]="autoForm"/>
       </mat-form-field>
     </div>
   </div>
 
   <mat-autocomplete #autoForm="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
-    <mat-option *ngIf="formState.isLoading" class="is-loading"> Loading... </mat-option>
-    <ng-container *ngIf="!formState.isLoading">
-      <mat-option *ngFor="let formCode of formMap;
-       trackBy: trackByCodeableConcept" [value]="formCode">
-        {{labelProviderFactory.getProvider('fhir.CodeableConcept').getText(formCode)}}
+    <mat-option *ngIf="isLoading$ | async" class="is-loading"> Chargement... </mat-option>
+    <ng-container *ngIf="!(isLoading$ | async)">
+      <mat-option *ngFor="let formCode of formMap; trackBy: trackByCodeableConcept" [value]="formCode">
+        {{formCode | codeableConcept}}
       </mat-option>
     </ng-container>
   </mat-autocomplete>
-
 </div>

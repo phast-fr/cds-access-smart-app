@@ -1,10 +1,7 @@
 import { Injectable } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 
-import { fhir } from '../common/fhir/fhir.types';
-import Practitioner = fhir.Practitioner;
-import Patient = fhir.Patient;
-import {Observable, Subject} from 'rxjs';
-import Composition = fhir.Composition;
+import { Composition, Patient, Practitioner } from 'phast-fhir-ts';
 
 @Injectable()
 export class FormularyStateService {

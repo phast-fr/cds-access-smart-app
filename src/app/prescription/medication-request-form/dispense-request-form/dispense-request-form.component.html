@@ -1,4 +1,4 @@
-<div class="form-group-row form-field-dispense-request" *ngIf="formState.medicationRequest != null">
+<div class="form-group-row form-field-dispense-request" *ngIf="dispenseRequestGroup$ | async">
   <div fxLayout="row" class="form-group-header">
     <div class="form-group-title"> Durée de prescription </div>
   </div>

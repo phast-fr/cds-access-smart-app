@@ -1,10 +1,19 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormArray, FormBuilder } from '@angular/forms';
-import { Observable, Subject } from 'rxjs';
+/**
+ * @license
+ * Copyright PHAST SARL All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://cds-access.phast.fr/license
+ */
+import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
+import {AbstractControl, FormArray, FormBuilder, FormControl, Validators} from '@angular/forms';
+import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, takeUntil, tap } from 'rxjs/operators';
 
-import { Utils } from '../../../common/utils';
-import { MedicationRequestFormService } from '../medication-request-form.service';
+import {IRender} from '../../../common/cds-access/models/state.model';
+import { Utils } from '../../../common/cds-access/utils/utils';
+import { FhirLabelProviderFactory } from '../../../common/fhir/providers/fhir.label.provider.factory';
+import { MedicationRequestFormViewModel } from '../medication-request-form-view-model';
 import { MedicationRequestFormState } from '../medication-request-form.state';
 import {
   MedicationFormIntentAddDosageInstruction,
@@ -20,156 +29,199 @@ import {
   MedicationFormIntentValueChangesDosageInstructionRoute,
   MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue,
 } from '../medication-request-form.intent';
-import { FhirCioDcService } from '../../../common/services/fhir.cio.dc.service';
-import { FhirLabelProviderFactory } from '../../../common/fhir/fhir.label.provider.factory';
-import { fhir } from '../../../common/fhir/fhir.types';
-import CodeableConcept = fhir.CodeableConcept;
-import Coding = fhir.Coding;
-import Medication = fhir.Medication;
-import MedicationKnowledge = fhir.MedicationKnowledge;
+import {CodeableConcept, Coding, Medication, MedicationKnowledge, UnitsOfTime} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-dosage-instruction-form',
   templateUrl: './dosage-instruction-form.component.html',
-  styleUrls: ['./dosage-instruction-form.component.css']
+  styleUrls: ['./dosage-instruction-form.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DosageInstructionFormComponent implements OnInit, OnDestroy {
+export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRender<MedicationRequestFormState | boolean> {
 
-  private _unsubscribeTrigger$ = new Subject<void>();
+  private readonly _unsubscribeTrigger$: Subject<void>;
 
-  private _labelProviderFactory = new FhirLabelProviderFactory();
+  private readonly _dosageInstruction$: BehaviorSubject<FormArray | boolean>;
 
-  dosageInstruction = this.fb.array([]);
-
-  constructor(private _cioDcSource: FhirCioDcService,
-              private _formStateService: MedicationRequestFormService,
-              private fb: FormBuilder) { }
-
-  public get formState(): MedicationRequestFormState {
-    return this._formStateService.formState;
+  constructor(private _viewModel: MedicationRequestFormViewModel,
+              private _labelProviderFactory: FhirLabelProviderFactory,
+              private _fb: FormBuilder) {
+    this._unsubscribeTrigger$ = new Subject<void>();
+    this._dosageInstruction$ = new BehaviorSubject<FormArray | boolean>(false);
   }
 
-  public get labelProviderFactory(): FhirLabelProviderFactory {
-    return this._labelProviderFactory;
+  public toFormControl(control: AbstractControl): FormControl {
+    return control as FormControl;
+  }
+
+  public toFormArray(control: AbstractControl): FormArray {
+    return control as FormArray;
+  }
+
+  public get dosageInstruction$(): Observable<FormArray | boolean> {
+    return this._dosageInstruction$.asObservable();
+  }
+
+  public get dosageInstruction(): FormArray | null {
+    if (this._dosageInstruction$.value) {
+      return this._dosageInstruction$.value as FormArray;
+    }
+    return null;
+  }
+
+  public get isLoading$(): Observable<boolean> {
+    return this._viewModel.isLoading$;
+  }
+
+  public get routeArray(): Array<CodeableConcept> {
+    return this._viewModel.routeArray;
+  }
+
+  public get durationUnitArray(): Array<UnitsOfTime> {
+    return this._viewModel.durationUnitArray;
   }
 
   public get doseAndRateUnitArray(): Array<Coding> {
-    if (this.formState.medicationRequest.contained.length > 1) {
-      return this.formState.doseAndRateUnitMap.get(
-        this.formState.medicationRequest.contained[1].id);
+    if (this._viewModel.medicationRequest.contained.length > 1) {
+      return this._viewModel.doseAndRateUnitMap.get(
+        this._viewModel.medicationRequest.contained[1].id);
     }
-    return this.formState.doseAndRateUnitMap.get(
-      this.formState.medicationRequest.contained[0].id);
+    return this._viewModel.doseAndRateUnitMap.get(
+      this._viewModel.medicationRequest.contained[0].id);
   }
 
-  ngOnInit(): void {
-    this.subscribeUI(this._formStateService.formStateObservable);
+  public ngOnInit(): void {
+    this._viewModel.state$()
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        filter(state => state !== null)
+      )
+      .subscribe({
+        next: state => this.render(state),
+        error: err => console.error('error', err)
+      });
   }
 
-  ngOnDestroy(): void {
+  public ngOnDestroy(): void {
     this._unsubscribeTrigger$.next();
     this._unsubscribeTrigger$.complete();
+
+    this._dosageInstruction$.complete();
   }
 
-  subscribeUI(state$: Observable<MedicationRequestFormState>): void {
-    state$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe(
-      formState => {
-        this.render(formState);
-      }
+  public render(state: MedicationRequestFormState): void {
+    const dosageInstruction = this._dosageInstruction$.value as FormArray;
+    switch (state.type) {
+      case 'AddMedication':
+        this._dosageInstruction$.next(this._fb.array([], this.formArrayMinLength(1)));
+        break;
+      case 'AddDosageInstruction':
+        this.addDosageInstruction(dosageInstruction);
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'RemoveDosageInstruction':
+        dosageInstruction.removeAt(state.nDosage);
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'AddTimeOfDay':
+        const addTimeOfDay = dosageInstruction.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
+        this.addTimeOfDay(state.nDosage, addTimeOfDay);
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'RemoveTimeOfDay':
+        const removeTimeOfDay = dosageInstruction.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
+        removeTimeOfDay.removeAt(state.index);
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'AddDoseAndRate':
+        const addDoseAndRate = dosageInstruction.at(state.nDosage).get('doseAndRate') as FormArray;
+        this.addDoseAndRate(
+          state.nDosage,
+          addDoseAndRate
+        );
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'RemoveDoseAndRate':
+        const removeDoseAndRate = dosageInstruction.at(state.nDosage).get('doseAndRate') as FormArray;
+        removeDoseAndRate.removeAt(state.index);
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'AddMedicationRequest':
+        this._dosageInstruction$.next(false);
+        break;
+      default:
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+    }
+  }
+
+  public onAddDosageInstruction(): void {
+    this._viewModel.dispatchIntent(
+      new MedicationFormIntentAddDosageInstruction(this._viewModel.medicationRequest)
     );
   }
 
-  onAddDosageInstruction(): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentAddDosageInstruction(this.formState.medicationRequest));
+  public onRemoveDosageInstruction(nDosage: number): void {
+    const medication = this._viewModel.medicationRequest.contained[0] as Medication;
+    const medicationKnowledge = this.medicationKnowledgeMap(medication);
+
+    this._viewModel.dispatchIntent(
+      new MedicationFormIntentRemoveDosageInstruction(this._viewModel.medicationRequest, nDosage, medicationKnowledge, medication)
+    );
   }
 
-  onRemoveDosageInstruction(nDosage: number): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentRemoveDosageInstruction(nDosage));
+  public onAddTimeOfDay(nDosage: number): void {
+    this._viewModel.dispatchIntent(new MedicationFormIntentAddTimeOfDay(nDosage));
   }
 
-  onAddTimeOfDay(nDosage: number): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentAddTimeOfDay(nDosage));
+  public onRemoveTimeOfDay(nDosage: number, index: number): void {
+    this._viewModel.dispatchIntent(
+      new MedicationFormIntentRemoveTimeOfDay(this._viewModel.medicationRequest, nDosage, index)
+    );
   }
 
-  onRemoveTimeOfDay(nDosage: number, index: number): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentRemoveTimeOfDay(nDosage, index));
+  public onAddDoseAndRate(nDosage: number): void {
+    this._viewModel.dispatchIntent(new MedicationFormIntentAddDoseAndRate(nDosage));
   }
 
-  onAddDoseAndRate(nDosage: number): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentAddDoseAndRate(nDosage));
+  public onRemoveDoseAndRate(nDosage: number, index: number): void {
+    this._viewModel.dispatchIntent(
+      new MedicationFormIntentRemoveDoseAndRate(this._viewModel.medicationRequest, nDosage, index)
+    );
   }
 
-  onRemoveDoseAndRate(nDosage: number, index: number): void {
-    this._formStateService.dispatchIntent(new MedicationFormIntentRemoveDoseAndRate(nDosage, index));
-  }
-
-  trackByCodeableConcept(_, codeableConcept: CodeableConcept): string {
+  public trackByCodeableConcept(_, codeableConcept: CodeableConcept): string {
     return codeableConcept.text;
   }
 
-  displayFnCodeableConcept(codeableConcept: CodeableConcept): string | null {
+  public displayFnCodeableConcept(codeableConcept: CodeableConcept): string | null {
     return this._labelProviderFactory.getProvider('fhir.CodeableConcept').getText(codeableConcept);
   }
 
-  trackByCoding(_, coding: Coding): string {
+  public trackByCoding(_, coding: Coding): string {
     return coding.code;
   }
 
-  displayFnCoding(coding: Coding): string | null {
+  public displayFnCoding(coding: Coding): string | null {
     return this._labelProviderFactory.getProvider('fhir.Coding').getText(coding);
   }
 
-  private render(formState: MedicationRequestFormState): void {
-    switch (formState.type) {
-      case 'AddDosageInstruction':
-        this.addDosageInstruction(
-          this.dosageInstruction
-        );
-        break;
-      case 'RemoveDosageInstruction':
-        this.dosageInstruction.removeAt(formState.nDosage);
-        break;
-      case 'AddTimeOfDay':
-        const addTimeOfDay = this.dosageInstruction.at(formState.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
-        this.addTimeOfDay(formState.nDosage, addTimeOfDay);
-        break;
-      case 'RemoveTimeOfDay':
-        const removeTimeOfDay = this.dosageInstruction.at(formState.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
-        removeTimeOfDay.removeAt(formState.index);
-        break;
-      case 'AddDoseAndRate':
-        const addDoseAndRate = this.dosageInstruction.at(formState.nDosage).get('doseAndRate') as FormArray;
-        this.addDoseAndRate(
-          formState.nDosage,
-          addDoseAndRate
-        );
-        break;
-      case 'RemoveDoseAndRate':
-        const removeDoseAndRate = this.dosageInstruction.at(formState.nDosage).get('doseAndRate') as FormArray;
-        removeDoseAndRate.removeAt(formState.index);
-        break;
-      case 'AddMedicationRequest':
-        this.dosageInstruction.clear();
-        break;
-    }
+  public trackByIndex(index: number): number {
+    return index;
   }
 
   private addDosageInstruction(dosageInstruction: FormArray): void {
-    const dosageInstructionGroup = this.fb.group({
+    const dosageInstructionGroup = this._fb.group({
       'track-id': Utils.randomString(16),
-      route: [undefined],
-      timing: this.fb.group({
-        repeat: this.fb.group({
+      route: [undefined, [Validators.required]],
+      timing: this._fb.group({
+        repeat: this._fb.group({
           duration: [undefined], // How long when it happens
           durationUnit: [undefined], // s | min | h | d | wk | mo | a - unit of time (UCUM)
-          timeOfDay: this.fb.array([]) // Time of day for action
+          timeOfDay: this._fb.array([]) // Time of day for action
         })
       }),
-      doseAndRate: this.fb.array([])
+      doseAndRate: this._fb.array([])
     });
     const nDosage = dosageInstruction.length;
     dosageInstruction.push(dosageInstructionGroup);
@@ -185,107 +237,134 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
     routeString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        tap(_ => dosageInstructionGroup.get('route').setValue(null, {emitEvent: false}))
+        tap(() => dosageInstructionGroup.get('route').setValue(null, {emitEvent: false}))
       )
-      .subscribe(_ => {
-        const medication = this.formState.medicationRequest.contained[0] as Medication;
-        const medicationKnowledge = this.medicationKnowledgeMap(medication);
-        this._formStateService.dispatchIntent(
-          new MedicationFormIntentValueChangesDosageInstructionRoute(
-            this.formState.medicationRequest,
-            nDosage,
-            null,
-            medicationKnowledge,
-            medication
-          )
-        );
+      .subscribe({
+        next: () => {
+          const medication = this._viewModel.medicationRequest.contained[0] as Medication;
+          const medicationKnowledge = this.medicationKnowledgeMap(medication);
+          this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRoute(
+              this._viewModel.medicationRequest,
+              nDosage,
+              null,
+              medicationKnowledge,
+              medication
+            )
+          );
+        },
+        error: err => console.error('error', err)
       });
     routeObj$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$)
+        takeUntil(this._unsubscribeTrigger$),
+        tap(value => dosageInstructionGroup.get('route').setValue(value, {emitEvent: false}))
       )
-      .subscribe(value => {
-        const medication = this.formState.medicationRequest.contained[0] as Medication;
-        const medicationKnowledge = this.medicationKnowledgeMap(medication);
-        this._formStateService.dispatchIntent(
-          new MedicationFormIntentValueChangesDosageInstructionRoute(
-            this.formState.medicationRequest,
-            nDosage,
-            value,
-            medicationKnowledge,
-            medication
-          )
-        );
+      .subscribe({
+        next: value => {
+          const medication = this._viewModel.medicationRequest.contained[0] as Medication;
+          const medicationKnowledge = this.medicationKnowledgeMap(medication);
+          this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRoute(
+              this._viewModel.medicationRequest,
+              nDosage,
+              value,
+              medicationKnowledge,
+              medication
+            )
+          );
+        },
+        error: err => console.error('error', err)
       });
     dosageInstructionGroup.get(['timing', 'repeat', 'duration']).valueChanges
       .pipe(
-        takeUntil(this._unsubscribeTrigger$)
+        takeUntil(this._unsubscribeTrigger$),
+        tap(value => dosageInstructionGroup.get(['timing', 'repeat', 'duration']).setValue(value, {emitEvent: false}))
       )
-      .subscribe(durationValue => this._formStateService.dispatchIntent(
-        new MedicationFormIntentValueChangesDosageInstructionDurationValue(
-          this.formState.medicationRequest,
-          nDosage,
-          durationValue
-        )
-      ));
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDurationValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
     const durationUnitValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).valueChanges
       .pipe(
-        filter(predicate => this.formState.durationUnitArray.findIndex(
+        filter(predicate => this._viewModel.durationUnitArray.findIndex(
           value => value === predicate
         ) > -1)
       );
     const durationUnitNotValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).valueChanges
       .pipe(
-        filter(predicate => this.formState.durationUnitArray.findIndex(
+        filter(predicate => this._viewModel.durationUnitArray.findIndex(
           value => value === predicate
         ) === -1)
       );
 
     durationUnitValid$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$)
+        takeUntil(this._unsubscribeTrigger$),
+        tap(value => dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit'])
+          .setValue(value, {emitEvent: false}))
       )
-      .subscribe(durationUnit => this._formStateService.dispatchIntent(
-        new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
-          this.formState.medicationRequest,
-          nDosage,
-          durationUnit
-        )
-      ));
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
     durationUnitNotValid$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$)
+        takeUntil(this._unsubscribeTrigger$),
+        tap(() => dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit'])
+          .setValue(null, {emitEvent: false}))
       )
-      .subscribe(_ =>
-        dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).setValue(null, {emitEvent: false})
-    );
+      .subscribe({
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
+            this._viewModel.medicationRequest,
+            nDosage,
+            null
+          )
+        ),
+        error: err => console.error('error', err)
+      });
   }
 
   private addTimeOfDay(nDosage: number, timeOfDay: FormArray): void {
     const nTimeOfDay = timeOfDay.length;
-    const timeOfDayControl = this.fb.control(undefined);
+    const timeOfDayControl = this._fb.control(undefined);
     timeOfDay.push(timeOfDayControl);
     timeOfDayControl.valueChanges
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged()
+        distinctUntilChanged(),
+        tap(value => timeOfDayControl.setValue(value, {emitEvent: false}))
       )
-      .subscribe(timeOfDayValue =>
-        this._formStateService.dispatchIntent(
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
           new MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue(
-            this.formState.medicationRequest,
+            this._viewModel.medicationRequest,
             nDosage,
             nTimeOfDay,
-            timeOfDayValue
+            value
           )
-        )
-      );
+        ),
+        error: err => console.error('error', err)
+      });
   }
 
   private addDoseAndRate(nDosage: number, doseAndRate: FormArray): void {
-    const doseAndRateGroup = this.fb.group({
-      doseQuantity: this.fb.group({
+    const doseAndRateGroup = this._fb.group({
+      doseQuantity: this._fb.group({
         value: [null],
         unit: [null]
       }),
@@ -296,18 +375,20 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged()
+        distinctUntilChanged(),
+        tap(value => doseAndRateGroup.get(['doseQuantity', 'value']).setValue(value, {emitEvent: false}))
       )
-      .subscribe(doseQuantityValue =>
-        this._formStateService.dispatchIntent(
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
           new MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue(
-            this.formState.medicationRequest,
+            this._viewModel.medicationRequest,
             nDosage,
             nDoseAndRate,
-            doseQuantityValue
+            value
           )
-        )
-      );
+        ),
+        error: err => console.error('error', err)
+      });
     const doseQuantityUnitString$ = doseAndRateGroup.get(['doseQuantity', 'unit']).valueChanges
       .pipe(
         filter(value => typeof value === 'string')
@@ -319,40 +400,49 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy {
     doseQuantityUnitString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        debounceTime(500),
-        distinctUntilChanged(),
+        tap(() => doseAndRateGroup.get(['doseQuantity', 'unit']).setValue(null, {emitEvent: false}))
       )
-      .subscribe(_ => {
-        this._formStateService.dispatchIntent(
+      .subscribe({
+        next: () => this._viewModel.dispatchIntent(
           new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
-            this.formState.medicationRequest,
+            this._viewModel.medicationRequest,
             nDosage,
             nDoseAndRate,
             null
           )
-        );
+        ),
+        error: err => console.error('error', err)
       });
     doseQuantityUnitObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
+        tap(value => doseAndRateGroup.get(['doseQuantity', 'unit']).setValue(value, {emitEvent: false}))
       )
-      .subscribe(doseQuantityUnit =>
-        this._formStateService.dispatchIntent(
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
           new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
-            this.formState.medicationRequest,
+            this._viewModel.medicationRequest,
             nDosage,
             nDoseAndRate,
-            doseQuantityUnit
+            value
           )
-        )
-      );
+        ),
+        error: err => console.error('error', err)
+      });
   }
 
   private medicationKnowledgeMap(medication: Medication): MedicationKnowledge {
-    if (this.formState.medicationKnowledgeMap.has(medication.id)) {
-      return this.formState.medicationKnowledgeMap.get(medication.id);
+    if (this._viewModel.medicationKnowledgeMap.has(medication.id)) {
+      return this._viewModel.medicationKnowledgeMap.get(medication.id);
     }
     const medicationId = medication.ingredient[0].itemReference.reference.substring(1);
-    return this.formState.medicationKnowledgeMap.get(medicationId);
+    return this._viewModel.medicationKnowledgeMap.get(medicationId);
+  }
+
+  private formArrayMinLength = (min: number) => {
+    return (c: AbstractControl): {[key: string]: any} => {
+      if (c.value.length >= min) { return null; }
+      return {formArrayMinLength: true};
+    };
   }
 }

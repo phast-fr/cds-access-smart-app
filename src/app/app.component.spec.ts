@@ -1,12 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+
 import { AppComponent } from './app.component';
+import {AppModule} from './app.module';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [
-        AppComponent
-      ],
+      imports: [
+        AppModule
+      ]
     }).compileComponents();
   });
 
@@ -19,13 +21,6 @@ describe('AppComponent', () => {
   it(`should have as title 'cds-access'`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('cds-access');
-  });
-
-  it('should render title', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement;
-    expect(compiled.querySelector('.content span').textContent).toContain('cds-access app is running!');
+    expect(app.title).toEqual('cds-access app');
   });
 });

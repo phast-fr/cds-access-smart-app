@@ -1,0 +1,55 @@
+<div class="header">
+  <div fxLayout="row" class="header-wrapper">
+    <div fxFlex="30%" class="header-patient-wrapper">
+      <mat-card class="patient-card">
+        <mat-card-header class="header-patient">
+          <div mat-card-avatar>
+            <mat-icon svgIcon="health-worker-form" aria-hidden="false" aria-label="patient icon" class="patient-icon"></mat-icon>
+          </div>
+          <mat-card-title>
+            {{(patient$ | async) | personName}}
+          </mat-card-title>
+          <mat-card-subtitle class="header-patient-info">
+            <div fxLayout="row" class="header-patient-info-row">
+              <div fxFlex="50%" class="header-info dob">
+                <span>DDN : </span><span>{{(patient$ | async).birthDate | date:'dd/MM/yyyy'}}</span>
+              </div>
+              <div fxFlex="50%" class="header-info age">
+                <span>Age : </span><span>{{(patient$ | async).birthDate | age}}</span>
+              </div>
+            </div>
+            <div fxLayout="row" class="header-patient-info-row">
+              <div fxFlex="50%" class="header-info mrn">
+                <span>MRN : </span><span></span>
+              </div>
+              <div fxFlex="50%" class="header-info gender">
+                <span>Sexe : </span><span>{{(patient$ | async).gender | titlecase}}</span>
+              </div>
+            </div>
+          </mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+    </div>
+    <div fxFlex="40%" class="header-context-wrapper">
+      <div class="header-context-value">
+        <i matTooltip="Intention de prescription" class="material-icons icon">lightbulb</i>
+        <span>{{(intent$ | async) | i18nSelect:{'nephrology': 'Néphrologie'} }}</span>
+      </div>
+    </div>
+    <div fxFlex="30%" class="header-persona-wrapper">
+      <mat-card class="persona-card">
+        <mat-card-header>
+          <div mat-card-avatar>
+            <mat-icon svgIcon="doctor" aria-hidden="false" aria-label="doctor icon" class="persona-icon"></mat-icon>
+          </div>
+          <mat-card-title>
+            <span>{{(practitioner$ | async) | personName}}</span>
+          </mat-card-title>
+          <mat-card-subtitle class="header-persona-info">
+            <span>FHIR ID : </span><span>{{(practitioner$ | async).id}}</span>
+          </mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+    </div>
+  </div>
+</div>
