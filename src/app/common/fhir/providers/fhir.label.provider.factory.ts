@@ -11,7 +11,11 @@ import {
   QuantityLabelProvider,
   RatioLabelProvider,
   MedicationLabelProvider,
-  CodeableConceptLabelProvider, ReferenceLabelProvider, CompositionLabelProvider, ParametersParameterLabelProvider
+  CodeableConceptLabelProvider,
+  ReferenceLabelProvider,
+  CompositionLabelProvider,
+  ParametersParameterLabelProvider,
+  ValueSetContainsLabelProvider
 } from './fhir.label.provider';
 
 @Injectable({
@@ -115,11 +119,19 @@ export class FhirLabelProviderFactory {
       this._labelProviders[object] = provider;
       return provider;
     }
-    else if (object === 'fhir.ParametersParameter'){
+    else if (object === 'fhir.ParametersParameter') {
       if (this._labelProviders.hasOwnProperty(object)) {
         return this._labelProviders[object];
       }
       const provider = new ParametersParameterLabelProvider();
+      this._labelProviders[object] = provider;
+      return provider;
+    }
+    else if (object === 'fhir.ValueSetContains') {
+      if (this._labelProviders.hasOwnProperty(object)) {
+        return this._labelProviders[object];
+      }
+      const provider = new ValueSetContainsLabelProvider();
       this._labelProviders[object] = provider;
       return provider;
     }

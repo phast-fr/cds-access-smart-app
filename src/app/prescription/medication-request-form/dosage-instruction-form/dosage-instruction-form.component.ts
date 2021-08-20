@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
-import {AbstractControl, FormArray, FormBuilder, FormControl, Validators} from '@angular/forms';
+import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, takeUntil, tap } from 'rxjs/operators';
 
@@ -28,8 +28,12 @@ import {
   MedicationFormIntentValueChangesDosageInstructionDurationUnit,
   MedicationFormIntentValueChangesDosageInstructionRoute,
   MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue,
+  MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue,
+  MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit,
+  MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart,
+  MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd,
 } from '../medication-request-form.intent';
-import {CodeableConcept, Coding, Medication, MedicationKnowledge, UnitsOfTime} from 'phast-fhir-ts';
+import {CodeableConcept, code, Coding, Dosage, Medication, MedicationKnowledge, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-dosage-instruction-form',
@@ -77,7 +81,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return this._viewModel.routeArray;
   }
 
-  public get durationUnitArray(): Array<UnitsOfTime> {
+  public get durationUnitArray(): Array<ValueSetContains> {
     return this._viewModel.durationUnitArray;
   }
 
@@ -116,7 +120,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         this._dosageInstruction$.next(this._fb.array([], this.formArrayMinLength(1)));
         break;
       case 'AddDosageInstruction':
-        this.addDosageInstruction(dosageInstruction);
+        const dosageInstructionGroup = this.addDosageInstruction(
+          state.medicationRequest.dosageInstruction[state.nDosage],
+          state.nDosage
+        );
+        dosageInstruction.push(dosageInstructionGroup);
         this._dosageInstruction$.next(dosageInstruction);
         break;
       case 'RemoveDosageInstruction':
@@ -144,6 +152,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       case 'RemoveDoseAndRate':
         const removeDoseAndRate = dosageInstruction.at(state.nDosage).get('doseAndRate') as FormArray;
         removeDoseAndRate.removeAt(state.index);
+        this._dosageInstruction$.next(dosageInstruction);
+        break;
+      case 'ValueChangesDosageInstruction':
+        this.updateDosageInstruction(
+          state.medicationRequest.dosageInstruction[state.nDosage],
+          dosageInstruction.at(state.nDosage) as FormGroup
+        );
         this._dosageInstruction$.next(dosageInstruction);
         break;
       case 'AddMedicationRequest':
@@ -206,25 +221,42 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return this._labelProviderFactory.getProvider('fhir.Coding').getText(coding);
   }
 
+  public trackByValueSetContains(_, valueSetContains: ValueSetContains): string {
+    return valueSetContains.code;
+  }
+
+  public displayFnValueSetContains(valueSetContains: ValueSetContains): string | null {
+    return this._labelProviderFactory.getProvider('fhir.ValueSetContains').getText(valueSetContains);
+  }
+
   public trackByIndex(index: number): number {
     return index;
   }
 
-  private addDosageInstruction(dosageInstruction: FormArray): void {
+  private addDosageInstruction(dosage: Dosage, nDosage: number): FormGroup {
+    const boundsDurationUnit = this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code);
+    const durationUnit = this.durationUnit(dosage?.timing?.repeat?.durationUnit);
+
     const dosageInstructionGroup = this._fb.group({
       'track-id': Utils.randomString(16),
-      route: [undefined, [Validators.required]],
+      route: [dosage?.route, [Validators.required]],
       timing: this._fb.group({
         repeat: this._fb.group({
-          duration: [undefined], // How long when it happens
-          durationUnit: [undefined], // s | min | h | d | wk | mo | a - unit of time (UCUM)
+          boundsDuration: this._fb.group({
+            value: [dosage?.timing?.repeat?.boundsDuration?.value],
+            unit: [boundsDurationUnit],
+          }),
+          boundsPeriod: this._fb.group({
+            start: [dosage?.timing?.repeat?.boundsPeriod?.start],
+            end: [dosage?.timing?.repeat?.boundsPeriod?.end]
+          }),
+          duration: [dosage?.timing?.repeat?.duration], // How long when it happens
+          durationUnit: [durationUnit],
           timeOfDay: this._fb.array([]) // Time of day for action
         })
       }),
       doseAndRate: this._fb.array([])
     });
-    const nDosage = dosageInstruction.length;
-    dosageInstruction.push(dosageInstructionGroup);
 
     const routeString$ = dosageInstructionGroup.get('route').valueChanges
       .pipe(
@@ -276,6 +308,104 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         },
         error: err => console.error('error', err)
       });
+
+    dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
+    const boundsDurationUnitValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit']).valueChanges
+      .pipe(
+        filter(predicate => this._viewModel.durationUnitArray.findIndex(
+          value => value.code === predicate.code
+        ) > -1)
+      );
+    const boundsDurationUnitNotValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit']).valueChanges
+      .pipe(
+        filter(predicate => this._viewModel.durationUnitArray.findIndex(
+          value => value.code === predicate.code
+        ) === -1)
+      );
+
+    boundsDurationUnitValid$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        tap(value => dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
+          .setValue(value, {emitEvent: false}))
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+    boundsDurationUnitNotValid$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        tap(() => dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
+          .setValue(null, {emitEvent: false}))
+      )
+      .subscribe({
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit(
+            this._viewModel.medicationRequest,
+            nDosage,
+            null
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
+    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
+    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
     dosageInstructionGroup.get(['timing', 'repeat', 'duration']).valueChanges
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -294,13 +424,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     const durationUnitValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).valueChanges
       .pipe(
         filter(predicate => this._viewModel.durationUnitArray.findIndex(
-          value => value === predicate
+          value => value.code === predicate.code
         ) > -1)
       );
     const durationUnitNotValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']).valueChanges
       .pipe(
         filter(predicate => this._viewModel.durationUnitArray.findIndex(
-          value => value === predicate
+          value => value.code === predicate.code
         ) === -1)
       );
 
@@ -336,6 +466,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         ),
         error: err => console.error('error', err)
       });
+    return dosageInstructionGroup;
   }
 
   private addTimeOfDay(nDosage: number, timeOfDay: FormArray): void {
@@ -431,6 +562,27 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       });
   }
 
+  private updateDosageInstruction(dosage: Dosage, dosageInstructionGroup: FormGroup): void {
+    if (dosage.timing.repeat.boundsDuration) {
+      dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value'])
+        .setValue(dosage.timing.repeat.boundsDuration?.value, {emitEvent: false});
+
+      const index = this.durationUnitArray.findIndex(
+        value => value.code === dosage.timing.repeat.boundsDuration?.code
+      );
+
+      dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
+        .setValue(this.durationUnitArray[index], {emitEvent: false});
+    }
+
+    if (dosage.timing.repeat.boundsPeriod) {
+      dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start'])
+        .setValue(dosage.timing.repeat.boundsPeriod?.start, {emitEvent: false});
+      dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end'])
+        .setValue(dosage.timing.repeat.boundsPeriod?.end, {emitEvent: false});
+    }
+  }
+
   private medicationKnowledgeMap(medication: Medication): MedicationKnowledge {
     if (this._viewModel.medicationKnowledgeMap.has(medication.id)) {
       return this._viewModel.medicationKnowledgeMap.get(medication.id);
@@ -444,5 +596,25 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       if (c.value.length >= min) { return null; }
       return {formArrayMinLength: true};
     };
+  }
+
+  private boundsDurationUnit(boundsDurationUnitCode: code): ValueSetContains | undefined {
+    const boundsDurationUnitIndex = this.durationUnitArray.findIndex(
+      value => value.code === boundsDurationUnitCode
+    );
+    if (boundsDurationUnitIndex > -1) {
+      return  this.durationUnitArray[boundsDurationUnitIndex];
+    }
+    return undefined;
+  }
+
+  private durationUnit(durationUnitCode: UnitsOfTime): ValueSetContains | undefined {
+    const durationUnitIndex = this.durationUnitArray.findIndex(
+      value => value.code === durationUnitCode
+    );
+    if (durationUnitIndex > -1) {
+      return  this.durationUnitArray[durationUnitIndex];
+    }
+    return undefined;
   }
 }

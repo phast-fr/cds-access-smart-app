@@ -34,7 +34,7 @@
     <mat-option *ngIf="isLoading$ | async" class="is-loading"> Recherche... </mat-option>
     <ng-container *ngIf="!(isLoading$ | async)">
       <mat-option *ngFor="let medicationKnowledge of medicationKnowledgeArray;
-          index as i trackBy: trackByMedicationKnowledge" [value]="medicationKnowledge">
+          index as i trackBy: trackById" [value]="medicationKnowledge">
         {{medicationKnowledge | medicationKnowledge}}
       </mat-option>
     </ng-container>

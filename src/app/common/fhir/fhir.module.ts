@@ -12,7 +12,7 @@ import {
   MedicationPipe, MedicationRequestPipe,
   PersonNamePipe,
   RatioPipe, ReferencePipe,
-  SnomedPipe
+  SnomedPipe, ValueSetContainsPipe
 } from './pipes/fhir.pipe';
 
 import {SmartLaunchComponent} from './smart/components/launch/smart.launch.component';
@@ -30,6 +30,7 @@ import {FhirClientService} from './services/fhir.client.service';
     ReferencePipe,
     CodingPipe,
     CompositionPipe,
+    ValueSetContainsPipe,
     SnomedPipe
   ],
   imports: [
@@ -46,7 +47,8 @@ import {FhirClientService} from './services/fhir.client.service';
     ReferencePipe,
     CodingPipe,
     CompositionPipe,
-    SnomedPipe
+    SnomedPipe,
+    ValueSetContainsPipe
   ],
   providers: [
     FhirClientService,

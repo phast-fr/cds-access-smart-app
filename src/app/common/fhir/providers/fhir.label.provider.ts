@@ -7,7 +7,7 @@ import {
   MedicationKnowledge,
   MedicationRequest, ParametersParameter,
   Patient,
-  Practitioner, Quantity, Ratio, Reference
+  Practitioner, Quantity, Ratio, Reference, ValueSetContains
 } from 'phast-fhir-ts';
 
 export class NamedResourceLabelProvider implements ILabelProvider<Patient | Practitioner> {
@@ -217,6 +217,7 @@ export class ReferenceLabelProvider implements ILabelProvider<Reference> {
     return reference.reference;
   }
 }
+
 export class ParametersParameterLabelProvider implements ILabelProvider<ParametersParameter> {
 
   constructor() {}
@@ -231,5 +232,16 @@ export class ParametersParameterLabelProvider implements ILabelProvider<Paramete
     else {
       return null;
     }
+  }
+}
+
+export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetContains> {
+
+  constructor() {
+  }
+
+  public getText(valueSetContains: ValueSetContains): string | null {
+    if (! valueSetContains) { return null; }
+    return valueSetContains.display;
   }
 }

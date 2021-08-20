@@ -11,7 +11,7 @@ import {
   Patient,
   Practitioner,
   Ratio,
-  Reference
+  Reference, ValueSetContains
 } from 'phast-fhir-ts';
 
 @Pipe({
@@ -143,5 +143,18 @@ export class CodingPipe implements PipeTransform {
 
   public transform(coding: Coding): string | null {
     return this._labelProviderFactory.getProvider('fhir.Coding').getText(coding);
+  }
+}
+
+@Pipe({
+  name: 'valueSetContains'
+})
+export class ValueSetContainsPipe implements PipeTransform {
+
+  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  }
+
+  public transform(valueSetContains: ValueSetContains): string | null {
+    return this._labelProviderFactory.getProvider('fhir.ValueSetContains').getText(valueSetContains);
   }
 }

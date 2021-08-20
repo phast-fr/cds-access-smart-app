@@ -85,10 +85,6 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     this._isMedicationAddable = false;
   }
 
-  public get viewModel(): MedicationRequestFormViewModel {
-    return this._viewModel;
-  }
-
   public get isLoading$(): Observable<boolean> {
     return this._loading$.asObservable();
   }
@@ -175,7 +171,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     return control as FormControl;
   }
 
-  public trackByMedicationKnowledge(_, medicationKnowledge: MedicationKnowledge): string {
+  public trackById(_, medicationKnowledge: MedicationKnowledge): string {
     return medicationKnowledge.id;
   }
 

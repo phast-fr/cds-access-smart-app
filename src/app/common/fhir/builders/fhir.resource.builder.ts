@@ -8,14 +8,16 @@ import {
   MedicationRequestIntent,
   MedicationRequestStatus, Period, Quantity, Ratio,
   Reference,
-  Resource, time, Timing, TimingRepeat, UnitsOfTime, uri
+  Resource, time, Timing, TimingRepeat, UnitsOfTime, uri, ValueSetContains
 } from 'phast-fhir-ts';
 
 export class MedicationRequestBuilder {
 
   private readonly _resource: MedicationRequest;
 
-  constructor(status: MedicationRequestStatus, intent: MedicationRequestIntent, subject: Reference) {
+  constructor(status: MedicationRequestStatus,
+              intent: MedicationRequestIntent,
+              subject: Reference) {
     this._resource = {
       resourceType: 'MedicationRequest',
       contained: new Array<Resource>(),
@@ -23,21 +25,24 @@ export class MedicationRequestBuilder {
       intent,
       subject,
       dispenseRequest: new MedicationRequestDispenseRequestBuilder()
-        .setValidityPeriod(new PeriodBuilder()
-          .setStart(Utils.now())
+        .validityPeriod(new PeriodBuilder()
+          .start(Utils.now())
           .build())
-        .setExpectedSupplyDuration(new DurationBuilder().build())
         .build()
     };
   }
 
   public intent(intent: MedicationRequestIntent): this {
-    this._resource.intent = intent;
+    if (intent) {
+      this._resource.intent = intent;
+    }
     return this;
   }
 
   public subject(subject: Reference): this {
-    this._resource.subject = subject;
+    if (subject) {
+      this._resource.subject = subject;
+    }
     return this;
   }
 
@@ -47,6 +52,7 @@ export class MedicationRequestBuilder {
 }
 
 export class MedicationBuilder {
+
   private readonly _medication: Medication;
 
   constructor(medicationId: id) {
@@ -57,17 +63,23 @@ export class MedicationBuilder {
   }
 
   public code(medicationCode: CodeableConcept): this {
-    this._medication.code = medicationCode;
+    if (medicationCode) {
+      this._medication.code = medicationCode;
+    }
     return this;
   }
 
   public form(medicationForm: CodeableConcept): this {
-    this._medication.form = medicationForm;
+    if (medicationForm) {
+      this._medication.form = medicationForm;
+    }
     return this;
   }
 
   public ingredient(ingredient: Array<MedicationIngredient>): this {
-    this._medication.ingredient = ingredient;
+    if (ingredient) {
+      this._medication.ingredient = ingredient;
+    }
     return this;
   }
 
@@ -77,19 +89,24 @@ export class MedicationBuilder {
 }
 
 export class MedicationRequestDispenseRequestBuilder {
+
   private readonly _dispenseRequest: MedicationRequestDispenseRequest;
 
   constructor() {
     this._dispenseRequest = {} as MedicationRequestDispenseRequest;
   }
 
-  public setValidityPeriod(period: Period): this {
-    this._dispenseRequest.validityPeriod = period;
+  public validityPeriod(period: Period): this {
+    if (period) {
+      this._dispenseRequest.validityPeriod = period;
+    }
     return this;
   }
 
-  public setExpectedSupplyDuration(duration: Duration): this {
-    this._dispenseRequest.expectedSupplyDuration = duration;
+  public expectedSupplyDuration(duration: Duration): this {
+    if (duration) {
+      this._dispenseRequest.expectedSupplyDuration = duration;
+    }
     return this;
   }
 
@@ -99,26 +116,29 @@ export class MedicationRequestDispenseRequestBuilder {
 }
 
 export class MedicationIngredientBuilder {
+
   private readonly _medicationIngredient: MedicationIngredient;
 
   constructor() {
-    this._medicationIngredient = {
-
-    } as MedicationIngredient;
+    this._medicationIngredient = {} as MedicationIngredient;
   }
 
-  public setItemCodeableConcept(concept: CodeableConcept): this {
+  public itemCodeableConcept(concept: CodeableConcept): this {
     this._medicationIngredient.itemCodeableConcept = concept;
     return this;
   }
 
-  public setItemReference(reference: Reference): this {
-    this._medicationIngredient.itemReference = reference;
+  public itemReference(reference: Reference): this {
+    if (reference) {
+      this._medicationIngredient.itemReference = reference;
+    }
     return this;
   }
 
-  public setStrength(strength: Ratio): this {
-    this._medicationIngredient.strength = strength;
+  public strength(strength: Ratio): this {
+    if (strength) {
+      this._medicationIngredient.strength = strength;
+    }
     return this;
   }
 
@@ -128,6 +148,7 @@ export class MedicationIngredientBuilder {
 }
 
 export class DosageBuilder {
+
   private readonly _dosage: Dosage;
 
   constructor(sequence: integer) {
@@ -137,22 +158,30 @@ export class DosageBuilder {
   }
 
   public route(route: CodeableConcept): this {
-    this._dosage.route = route;
+    if (route) {
+      this._dosage.route = route;
+    }
     return this;
   }
 
   public timing(timing: Timing): this {
-    this._dosage.timing = timing;
+    if (timing) {
+      this._dosage.timing = timing;
+    }
     return this;
   }
 
   public asNeededCodeableConcept(asNeedCodeableConcept: CodeableConcept): this {
-    this._dosage.asNeededCodeableConcept = asNeedCodeableConcept;
+    if (asNeedCodeableConcept) {
+      this._dosage.asNeededCodeableConcept = asNeedCodeableConcept;
+    }
     return this;
   }
 
   public doseAndRate(doseAndRate: DosageDoseAndRate[]): this {
-    this._dosage.doseAndRate = doseAndRate;
+    if (doseAndRate) {
+      this._dosage.doseAndRate = doseAndRate;
+    }
     return this;
   }
 
@@ -172,20 +201,27 @@ export class DosageBuilder {
 }
 
 export class DoseAndRateBuilder {
+
   private readonly _dosageDoseAndRate: DosageDoseAndRate;
 
   constructor() {
     this._dosageDoseAndRate = {
       type: new CodeableConceptBuilder()
         .addCoding(new CodingBuilder()
-          .setCode('ordered')
-          .setSystem('http://terminology.hl7.org/CodeSystem/dose-rate-type')
-          .setDisplay('Ordered')
+          .code('ordered')
+          .system('http://terminology.hl7.org/CodeSystem/dose-rate-type')
+          .display('Ordered')
           .build())
-        .setText('Ordered')
-        .build(),
-      doseQuantity: new QuantityBuilder().build()
+        .text('Ordered')
+        .build()
     };
+  }
+
+  public doseQuantity(doseQuantity: Quantity): this {
+    if (doseQuantity) {
+      this._dosageDoseAndRate.doseQuantity = doseQuantity;
+    }
+    return this;
   }
 
   public build(): DosageDoseAndRate {
@@ -205,23 +241,27 @@ export class ReferenceBuilder {
 
   constructor(referenceId: id) {
     this._id = referenceId;
-    this._reference = {
-
-    } as Reference;
+    this._reference = {} as Reference;
   }
 
   public resourceType(resourceType: code): this {
-    this._resourceType = resourceType;
+    if (resourceType) {
+      this._resourceType = resourceType;
+    }
     return this;
   }
 
-  public display(display: string): this {
-    this._reference.display = display;
+  public display(referenceDisplay: string): this {
+    if (referenceDisplay) {
+      this._reference.display = referenceDisplay;
+    }
     return this;
   }
 
   public baseUrl(baseUrl: uri): this {
-    this._baseUrl = baseUrl;
+    if (baseUrl) {
+      this._baseUrl = baseUrl;
+    }
     return this;
   }
 
@@ -247,8 +287,10 @@ export class TimingBuilder {
     this._timing = {} as Timing;
   }
 
-  public timingReapeat(timingReapeat: TimingRepeat): this {
-    this._timing.repeat = timingReapeat;
+  public timingRepeat(timingRepeat: TimingRepeat): this {
+    if (timingRepeat) {
+      this._timing.repeat = timingRepeat;
+    }
     return this;
   }
 
@@ -258,34 +300,57 @@ export class TimingBuilder {
 }
 
 export class TimingRepeatBuilder {
+
   private readonly _timingRepeat: TimingRepeat;
 
   constructor() {
     this._timingRepeat = {} as TimingRepeat;
   }
 
+  public boundsDuration(boundsDuration: Duration): this {
+    if (boundsDuration) {
+      this._timingRepeat.boundsDuration = boundsDuration;
+    }
+    return this;
+  }
+
+  public boundsPeriod(boundsPeriod: Period): this {
+    if (boundsPeriod) {
+      this._timingRepeat.boundsPeriod = boundsPeriod;
+    }
+    return this;
+  }
+
   public duration(duration: decimal): this {
-    this._timingRepeat.duration = duration;
-    this._timingRepeat.durationUnit = 'h';
+    if (duration) {
+      this._timingRepeat.duration = duration;
+      this._timingRepeat.durationUnit = 'h';
+    }
     return this;
   }
 
   public durationUnit(durationUnit: UnitsOfTime): this {
-    this._timingRepeat.durationUnit = durationUnit;
+    if (durationUnit) {
+      this._timingRepeat.durationUnit = durationUnit;
+    }
     return this;
   }
 
   public timeOfDay(timeOfDay: time[]): this {
-    this._timingRepeat.timeOfDay = timeOfDay;
+    if (timeOfDay) {
+      this._timingRepeat.timeOfDay = timeOfDay;
+    }
     return this;
   }
 
   public addTimeOfDay(timeOfDay: time): this {
-    if (this._timingRepeat.timeOfDay === undefined) {
-      this._timingRepeat.timeOfDay = new Array<time>(timeOfDay);
-    }
-    else {
-      this._timingRepeat.timeOfDay.push(timeOfDay);
+    if (timeOfDay) {
+      if (!this._timingRepeat.timeOfDay) {
+        this._timingRepeat.timeOfDay = new Array<time>(timeOfDay);
+      }
+      else {
+        this._timingRepeat.timeOfDay.push(timeOfDay);
+      }
     }
     return this;
   }
@@ -295,44 +360,81 @@ export class TimingRepeatBuilder {
   }
 }
 
-export class TimeBuilder {
-  private readonly _time: time;
-
-  constructor() {
-    this._time = '' as time;
-  }
-
-  public build(): time {
-    return this._time;
-  }
-}
-
 export class RatioBuilder {
+
   private readonly _ratio: Ratio;
 
   constructor() {
-    this._ratio = {
-      numerator: new QuantityBuilder().build()
-    } as Ratio;
+    this._ratio = {} as Ratio;
   }
 
-  public setNumeratorValue(value: number): this {
-    this._ratio.numerator.value = value;
+  public numeratorQuantity(numeratorQuantity: Quantity): this {
+    if (numeratorQuantity) {
+      this._ratio.numerator = numeratorQuantity;
+    }
     return this;
   }
 
-  public setNumeratorUnit(unit: string): this {
-    this._ratio.numerator.unit = unit;
+  public numeratorValue(numeratorValue: number): this {
+    if (numeratorValue) {
+      this._ratio.numerator.value = numeratorValue;
+    }
     return this;
   }
 
-  public setNumeratorCode(numeratorCode: code): this {
-    this._ratio.numerator.code = numeratorCode;
+  public numeratorUnit(numeratorUnit: string): this {
+    if (numeratorUnit) {
+      this._ratio.numerator.unit = numeratorUnit;
+    }
     return this;
   }
 
-  public setNumeratorSystem(system: uri): this {
-    this._ratio.numerator.system = system;
+  public numeratorCode(numeratorCode: code): this {
+    if (numeratorCode) {
+      this._ratio.numerator.code = numeratorCode;
+    }
+    return this;
+  }
+
+  public numeratorSystem(numeratorSystem: uri): this {
+    if (numeratorSystem) {
+      this._ratio.numerator.system = numeratorSystem;
+    }
+    return this;
+  }
+
+  public denominatorQuality(denominatorQuantity: Quantity): this {
+    if (denominatorQuantity) {
+      this._ratio.denominator = denominatorQuantity;
+    }
+    return this;
+  }
+
+  public denominatorValue(denominatorValue: number): this {
+    if (denominatorValue) {
+      this._ratio.denominator.value = denominatorValue;
+    }
+    return this;
+  }
+
+  public denominatorUnit(denominatorUnit: string): this {
+    if (denominatorUnit) {
+      this._ratio.denominator.unit = denominatorUnit;
+    }
+    return this;
+  }
+
+  public denominatorCode(denominatorCode: code): this {
+    if (denominatorCode) {
+      this._ratio.denominator.code = denominatorCode;
+    }
+    return this;
+  }
+
+  public denominatorSystem(denominatorSystem: uri): this {
+    if (denominatorSystem) {
+      this._ratio.denominator.system = denominatorSystem;
+    }
     return this;
   }
 
@@ -342,29 +444,38 @@ export class RatioBuilder {
 }
 
 export class QuantityBuilder {
+
   private readonly _quantity: Quantity;
 
   constructor() {
     this._quantity = {} as Quantity;
   }
 
-  public setValue(value: number): this {
-    this._quantity.value = value;
+  public value(quantityValue: number): this {
+    if (quantityValue) {
+      this._quantity.value = quantityValue;
+    }
     return this;
   }
 
-  public setUnit(unit: string): this {
-    this._quantity.unit = unit;
+  public unit(quantityUnit: string): this {
+    if (quantityUnit) {
+      this._quantity.unit = quantityUnit;
+    }
     return this;
   }
 
-  public setCode(quantityCode: code): this {
-    this._quantity.code = quantityCode;
+  public code(quantityCode: code): this {
+    if (quantityCode) {
+      this._quantity.code = quantityCode;
+    }
     return this;
   }
 
-  public setSystem(system: uri): this {
-    this._quantity.system = system;
+  public system(quantitySystem: uri): this {
+    if (quantitySystem) {
+      this._quantity.system = quantitySystem;
+    }
     return this;
   }
 
@@ -374,29 +485,45 @@ export class QuantityBuilder {
 }
 
 export class DurationBuilder {
+
   private readonly _duration: Duration;
 
   constructor() {
     this._duration = {} as Duration;
   }
 
-  public setValue(value: number): this {
-    this._duration.value = value;
+  public value(durationValue: number): this {
+    if (durationValue) {
+      this._duration.value = durationValue;
+    }
     return this;
   }
 
-  public setUnit(unit: string): this {
-    this._duration.unit = unit;
+  public unit(durationUnit: string): this {
+    if (durationUnit) {
+      this._duration.unit = durationUnit;
+    }
     return this;
   }
 
-  public setCode(durationCode: code): this {
-    this._duration.code = durationCode;
+  public code(durationCode: code): this {
+    if (durationCode) {
+      this._duration.code = durationCode;
+    }
     return this;
   }
 
-  public setSystem(system: uri): this {
-    this._duration.system = system;
+  public system(durationSystem: uri): this {
+    if (durationSystem) {
+      this._duration.system = durationSystem;
+    }
+    return this;
+  }
+
+  public default(): this {
+    this._duration.code = 'd';
+    this._duration.unit = 'j';
+    this._duration.system = 'http://unitsofmeasure.org';
     return this;
   }
 
@@ -406,21 +533,29 @@ export class DurationBuilder {
 }
 
 export class CodeableConceptBuilder {
+
   private readonly _concept: CodeableConcept;
 
   constructor() {
-    this._concept = {
-      coding: new Array<Coding>()
-    } as CodeableConcept;
+    this._concept = {} as CodeableConcept;
   }
 
   public addCoding(coding: Coding): this {
-    this._concept.coding.push(coding);
+    if (coding) {
+      if (this._concept.coding) {
+        this._concept.coding.push(coding);
+      }
+      else {
+        this._concept.coding = new Array<Coding>(coding);
+      }
+    }
     return this;
   }
 
-  public setText(text: string): this {
-    this._concept.text = text;
+  public text(text: string): this {
+    if (text) {
+      this._concept.text = text;
+    }
     return this;
   }
 
@@ -430,24 +565,31 @@ export class CodeableConceptBuilder {
 }
 
 export class CodingBuilder {
+
   private readonly _coding: Coding;
 
   constructor() {
     this._coding = {} as Coding;
   }
 
-  public setCode(codingCode: code): this {
-    this._coding.code = codingCode;
+  public code(codingCode: code): this {
+    if (codingCode) {
+      this._coding.code = codingCode;
+    }
     return this;
   }
 
-  public setSystem(system: uri): this {
-    this._coding.system = system;
+  public system(codingSystem: uri): this {
+    if (codingSystem) {
+      this._coding.system = codingSystem;
+    }
     return this;
   }
 
-  public setDisplay(display: string): this {
-    this._coding.display = display;
+  public display(codingDisplay: string): this {
+    if (codingDisplay) {
+      this._coding.display = codingDisplay;
+    }
     return this;
   }
 
@@ -457,23 +599,83 @@ export class CodingBuilder {
 }
 
 export class PeriodBuilder {
+
   private readonly _period: Period;
 
   constructor() {
     this._period = {} as Period;
   }
 
-  public setStart(periodStart: dateTime): this {
-    this._period.start = periodStart;
+  public start(periodStart: dateTime): this {
+    if (periodStart) {
+      this._period.start = periodStart;
+    }
     return this;
   }
 
-  public setEnd(periodEnd: dateTime): this {
-    this._period.end = periodEnd;
+  public end(periodEnd: dateTime): this {
+    if (periodEnd) {
+      this._period.end = periodEnd;
+    }
     return this;
   }
 
   public build(): Period {
     return this._period;
+  }
+}
+
+export class ValueSetContainsBuilder {
+
+  private readonly _valueSetContains: ValueSetContains;
+
+  constructor() {
+    this._valueSetContains = {} as ValueSetContains;
+  }
+
+  public system(containsSystem: uri): this {
+    if (containsSystem) {
+      this._valueSetContains.system = containsSystem;
+    }
+    return this;
+  }
+
+  public abstract(containsAbstract: boolean): this {
+    if (containsAbstract) {
+      this._valueSetContains.abstract = containsAbstract;
+    }
+    return this;
+  }
+
+  public inactive(containsInactive: boolean): this {
+    if (containsInactive) {
+      this._valueSetContains.inactive = containsInactive;
+    }
+    return this;
+  }
+
+  public version(containsVersion: string): this {
+    if (containsVersion) {
+      this._valueSetContains.version = containsVersion;
+    }
+    return this;
+  }
+
+  public code(containsCode: code): this {
+    if (containsCode) {
+      this._valueSetContains.code = containsCode;
+    }
+    return this;
+  }
+
+  public display(containsDisplay: string): this {
+    if (containsDisplay) {
+      this._valueSetContains.display = containsDisplay;
+    }
+    return this;
+  }
+
+  public build(): ValueSetContains {
+    return this._valueSetContains;
   }
 }

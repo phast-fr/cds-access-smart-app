@@ -181,6 +181,7 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
 
   private addDosageInstruction(newState: MedicationRequestFormState, partialState: MedicationFormStateAddDosageInstruction): void {
     newState.medicationRequest = partialState.medicationRequest;
+    newState.nDosage = partialState.medicationRequest.dosageInstruction.length - 1;
   }
 
   private removeDosageInstruction(newState: MedicationRequestFormState,

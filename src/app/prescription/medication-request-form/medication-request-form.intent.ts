@@ -7,13 +7,13 @@
  */
 import {IIntent} from '../../common/cds-access/models/state.model';
 import {
-  CodeableConcept, Coding, decimal,
+  CodeableConcept, Coding, dateTime, decimal,
   id,
   Medication,
   MedicationKnowledge,
   MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner,
   Ratio,
-  Reference, UnitsOfTime
+  Reference, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
 
 export class MedicationFormIntentAddMedicationRequest implements IIntent {
@@ -287,6 +287,90 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
   }
 }
 
+export class MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionBoundsDurationValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _boundsDurationValue: decimal) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get boundsDurationValue(): decimal {
+    return this._boundsDurationValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionBoundsDurationUnit';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _boundsDurationUnit: ValueSetContains) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get boundsDurationUnit(): ValueSetContains {
+    return this._boundsDurationUnit;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionBoundsPeriodStart';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _boundsPeriodStart: dateTime) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get boundsPeriodStart(): dateTime {
+    return this._boundsPeriodStart;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionBoundsPeriodEnd';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _boundsPeriodEnd: dateTime) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get boundsPeriodEnd(): dateTime {
+    return this._boundsPeriodEnd;
+  }
+}
+
 export class MedicationFormIntentValueChangesDosageInstructionDurationValue implements IIntent {
   readonly type = 'ValueChangesDosageInstructionDurationValue';
 
@@ -313,7 +397,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationUnit imple
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _durationUnit: UnitsOfTime) {
+              private _durationUnit: ValueSetContains) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -324,7 +408,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationUnit imple
     return this._nDosage;
   }
 
-  public get durationUnit(): UnitsOfTime {
+  public get durationUnit(): ValueSetContains {
     return this._durationUnit;
   }
 }

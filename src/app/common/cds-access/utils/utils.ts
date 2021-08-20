@@ -41,6 +41,28 @@ export class Utils {
       '-' + Utils.pad( now.getUTCDate() );
   }
 
+  public static adaptUnitsOfTime(code: string): string {
+    let unit;
+    switch (code) {
+      case 'a':
+        unit = 'y';
+        break;
+      case 'wk':
+        unit = 'w';
+        break;
+      case 'mo':
+        unit = 'M';
+        break;
+      case 'min':
+        unit = 'm';
+        break;
+      default:
+        unit = code;
+        break;
+    }
+    return unit;
+  }
+
   private static pad(num: number): string {
     if (num < 10) {
       return '0' + num;

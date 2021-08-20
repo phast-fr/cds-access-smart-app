@@ -35,7 +35,11 @@ import {
   MedicationFormIntentValueChangesDosageInstructionDurationUnit,
   MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue,
   MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit,
-  MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue, MedicationFormIntentCdsHelp
+  MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue,
+  MedicationFormIntentCdsHelp,
+  MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue,
+  MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit,
+  MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart, MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd
 } from './medication-request-form.intent';
 import {
   MedicationFormActionAddDosageInstruction,
@@ -57,7 +61,11 @@ import {
   MedicationFormActionValueChangesDosageInstructionDurationUnit,
   MedicationFormActionValueChangesDosageInstructionDoseQuantityValue,
   MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit,
-  MedicationFormActionValueChangesDosageInstructionTimeOfDayValue, MedicationFormActionCdsHelp
+  MedicationFormActionValueChangesDosageInstructionTimeOfDayValue,
+  MedicationFormActionCdsHelp,
+  MedicationFormActionValueChangesDosageInstructionBoundsDurationValue,
+  MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit,
+  MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd, MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart
 } from './medication-request-form.action';
 import {
   CodeableConcept, Coding,
@@ -66,8 +74,9 @@ import {
   MedicationKnowledge, MedicationRequest,
   Parameters, ParametersParameter,
   Ratio,
-  UnitsOfTime, ValueSet
+  ValueSet
 } from 'phast-fhir-ts';
+import {ValueSetContains} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 @Injectable()
 export class MedicationRequestFormViewModel implements IViewModel<IIntent, MedicationRequestFormState>{
@@ -134,7 +143,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get durationUnitArray(): Array<UnitsOfTime> | undefined {
+  public get durationUnitArray(): Array<ValueSetContains> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
       return state.durationUnitArray;
@@ -159,7 +168,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
   }
 
   public nextMedicationId(): id {
-    return 'med-' + this._state$.value;
+    if (this._state$.value) {
+      return 'med-' + this._state$.value.autoIncrement;
+    }
+    return 'med-1';
   }
 
   public updateList(state: MedicationRequestFormState, medicationKnowledge: MedicationKnowledge, medication: Medication,
@@ -170,8 +182,8 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       this._tioSource.valueSet$expand('units-of-time')
         .subscribe({
           next: (valueSet: ValueSet) => {
-            for (const valueSetExpansionContains of valueSet.expansion.contains) {
-              state.durationUnitArray.push(valueSetExpansionContains.display as UnitsOfTime);
+            for (const valueSetContains of valueSet.expansion.contains) {
+              state.durationUnitArray.push(valueSetContains);
             }
           },
           error: err => console.error('error', err)
@@ -246,7 +258,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         map(partialState => this._reducer.reduce(this._state$.value as MedicationRequestFormState, partialState))
       )
       .subscribe({
-        next: newState => this.emitNewState(newState as MedicationRequestFormState),
+        next: state => this.emitState(state as MedicationRequestFormState),
         error: err => console.error('error', err)
       });
   }
@@ -325,6 +337,34 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationKnowledge,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medication
+        );
+        break;
+      case 'ValueChangesDosageInstructionBoundsDurationValue':
+        action = new MedicationFormActionValueChangesDosageInstructionBoundsDurationValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).boundsDurationValue
+        );
+        break;
+      case 'ValueChangesDosageInstructionBoundsDurationUnit':
+        action = new MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit(
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).boundsDurationUnit
+        );
+        break;
+      case 'ValueChangesDosageInstructionBoundsPeriodStart':
+        action = new MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart(
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).boundsPeriodStart
+        );
+        break;
+      case 'ValueChangesDosageInstructionBoundsPeriodEnd':
+        action = new MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd(
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).boundsPeriodEnd
         );
         break;
       case 'ValueChangesDosageInstructionDurationValue':
@@ -412,7 +452,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return action;
   }
 
-  private emitNewState(newSate: MedicationRequestFormState): void {
+  private emitState(newSate: MedicationRequestFormState): void {
     this._state$.next(newSate);
   }
 

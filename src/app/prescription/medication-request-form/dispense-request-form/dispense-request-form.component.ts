@@ -16,6 +16,7 @@ import {
   MedicationFormIntentValueChangesDispenseRequest
 } from '../medication-request-form.intent';
 import { MedicationRequestFormState } from '../medication-request-form.state';
+import {MedicationRequestDispenseRequest} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-dispense-request-form',
@@ -79,54 +80,50 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
   }
 
   public render(state: MedicationRequestFormState): void {
-    const options = {emitEvent: false};
     switch (state.type) {
       case 'AddMedication':
-        const dispenseGroup = this._fb.group({
-          validityPeriod: this._fb.group({
-            start: [undefined],
-            end: [undefined]
-          }),
-          expectedSupplyDuration: this._fb.group({
-            value: [undefined]
-          })
-        });
-        dispenseGroup.valueChanges
-          .pipe(
-            takeUntil(this._unsubscribeTrigger$),
-            debounceTime(500),
-            distinctUntilChanged()
-          ).subscribe({
-          next: changes => {
-            this.dispenseRequestValidityPeriodStart.setValue(
-              changes.validityPeriod.start, options
-            );
-            this.dispenseRequestValidityPeriodEnd.setValue(
-              changes.validityPeriod.end, options
-            );
-            this.dispenseRequestExpectedSupplyDurationValue.setValue(
-              changes.expectedSupplyDuration.value, options
-            );
-            this._viewModel.dispatchIntent(
-              new MedicationFormIntentValueChangesDispenseRequest(this._viewModel.medicationRequest, changes)
-            );
-          },
-          error: err => console.error('error', err)
-        });
+        const dispenseGroup = this.addMedication(state.medicationRequest?.dispenseRequest);
         this._dispenseRequestGroup$.next(dispenseGroup);
-        this.dispenseRequestValidityPeriodStart.setValue(
-          this._viewModel.medicationRequest.dispenseRequest.validityPeriod.start, options
-        );
-        this.dispenseRequestValidityPeriodEnd.setValue(
-          this._viewModel.medicationRequest.dispenseRequest.validityPeriod.end, options
-        );
-        this.dispenseRequestExpectedSupplyDurationValue.setValue(
-          this._viewModel.medicationRequest.dispenseRequest.expectedSupplyDuration.value, options
-        );
         break;
       case 'AddMedicationRequest':
         this._dispenseRequestGroup$.next(false);
         break;
     }
+  }
+
+  private addMedication(dispenseRequest: MedicationRequestDispenseRequest): FormGroup {
+    const options = {emitEvent: false};
+    const dispenseGroup = this._fb.group({
+      validityPeriod: this._fb.group({
+        start: [dispenseRequest?.validityPeriod?.start],
+        end: [dispenseRequest?.validityPeriod?.end]
+      }),
+      expectedSupplyDuration: this._fb.group({
+        value: [dispenseRequest?.expectedSupplyDuration?.value]
+      })
+    });
+    dispenseGroup.valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        debounceTime(500),
+        distinctUntilChanged()
+      ).subscribe({
+      next: changes => {
+        this.dispenseRequestValidityPeriodStart.setValue(
+          changes.validityPeriod.start, options
+        );
+        this.dispenseRequestValidityPeriodEnd.setValue(
+          changes.validityPeriod.end, options
+        );
+        this.dispenseRequestExpectedSupplyDurationValue.setValue(
+          changes.expectedSupplyDuration.value, options
+        );
+        this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDispenseRequest(this._viewModel.medicationRequest, changes)
+        );
+      },
+      error: err => console.error('error', err)
+    });
+    return dispenseGroup;
   }
 }

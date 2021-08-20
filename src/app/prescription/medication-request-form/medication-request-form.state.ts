@@ -14,19 +14,22 @@ import {
   Medication,
   MedicationKnowledge, MedicationKnowledgeIngredient,
   MedicationRequest,
-  Ratio, UnitsOfTime
+  Ratio,
+  ValueSetContains
 } from 'phast-fhir-ts';
 
 export class MedicationFormStateAddMedicationRequest implements IPartialState {
   readonly type = 'AddMedicationRequest';
 
-  constructor() { }
+  constructor() {
+  }
 }
 
 export class MedicationFormStateCdsHelp implements IPartialState {
   readonly type = 'CdsHelp';
 
-  constructor() { }
+  constructor() {
+  }
 }
 
 export class MedicationFormStateAddMedication implements IPartialState {
@@ -270,18 +273,18 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _doseAndRateUnitMap: Map<id, Array<Coding>>;
 
-  private readonly _durationUnitArray: Array<UnitsOfTime>;
+  private readonly _durationUnitArray: Array<ValueSetContains>;
 
   constructor(private _type: string) {
     this._loading$ = new BehaviorSubject<boolean>(false);
     this._nMedicationArray = new Array<number>();
-    this._autoIncrement = 0;
+    this._autoIncrement = 1;
     this._medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
     this._routeArray = new Array<CodeableConcept>();
     this._formMap = new Map<id, Array<CodeableConcept>>();
     this._strengthMap = new Map<string, Array<Ratio>>();
     this._doseAndRateUnitMap = new Map<id, Array<Coding>>();
-    this._durationUnitArray = new Array<UnitsOfTime>();
+    this._durationUnitArray = new Array<ValueSetContains>();
   }
 
   public get type(): string {
@@ -352,7 +355,7 @@ export class MedicationRequestFormState implements IState {
     return this._doseAndRateUnitMap;
   }
 
-  public get durationUnitArray(): Array<UnitsOfTime> {
+  public get durationUnitArray(): Array<ValueSetContains> {
     return this._durationUnitArray;
   }
 }
