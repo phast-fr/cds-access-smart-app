@@ -13,29 +13,46 @@ import {Bundle, Medication, MedicationRequest, OperationOutcome, Patient, Resour
 @Injectable()
 export class PrescriptionStateService {
 
-  private readonly _medicationRequestSubject$: BehaviorSubject<MedicationRequest | boolean>;
+  private readonly _medicationRequest$: BehaviorSubject<MedicationRequest | boolean>;
 
   private readonly _cards: Array<CardReadable>;
+
+  private readonly _medicationRequestMode$: BehaviorSubject<string>;
 
   constructor(private _stateService: StateService,
               private _dataSource: FhirDataSourceService,
               private _cdsHooksService: FhirCdsHooksService) {
-    this._medicationRequestSubject$ = new BehaviorSubject<MedicationRequest | boolean>(false);
+    this._medicationRequest$ = new BehaviorSubject<MedicationRequest | boolean>(false);
     this._cards = new Array<CardReadable>();
+    this._medicationRequestMode$ = new BehaviorSubject<string>('dc');
   }
 
   public get cards(): Array<CardReadable> {
     return this._cards;
   }
 
-  public get medicationRequestSubject$(): Observable<MedicationRequest | boolean> {
-    return this._medicationRequestSubject$.asObservable();
+  public get medicationRequest$(): Observable<MedicationRequest | boolean> {
+    return this._medicationRequest$.asObservable();
+  }
+
+  public set medicationRequestMode(mode) {
+    this._medicationRequestMode$.next(mode);
+  }
+
+  public get medicationRequestMode$(): Observable<string> {
+    return this._medicationRequestMode$.asObservable();
   }
 
   public addMedicationRequest(medicationRequest: MedicationRequest): void {
+    medicationRequest.dosageInstruction.forEach((dosage) => {
+      if (dosage?.timing?.repeat?.boundsDuration) {
+        delete dosage.timing.repeat.boundsDuration;
+      }
+    });
+
     console.log('Medication Request: ', medicationRequest);
     this._cards.length = 0;
-    this._medicationRequestSubject$.next(medicationRequest);
+    this._medicationRequest$.next(medicationRequest);
   }
 
   public callCdsHooks(medicationRequest: MedicationRequest): void {
@@ -45,7 +62,8 @@ export class PrescriptionStateService {
     if (medication.code != null) {
       lMedicationRequest.medicationCodeableConcept = medication.code;
 
-      this._cdsHooksService.getServices().subscribe(
+      this._cdsHooksService.getServices()
+        .subscribe(
         {
           next: services => {
             const service = services.services[0];
@@ -87,7 +105,7 @@ export class PrescriptionStateService {
               item1: patient,
               item2: lMedicationRequest
             };
-            // TODO test it !
+
             const observables: Array<Observable<object>> = [];
             for (const item of Object.keys(service.prefetch)) {
               if ('Patient?_id={{context.patientId}}' !== service.prefetch[item]) {

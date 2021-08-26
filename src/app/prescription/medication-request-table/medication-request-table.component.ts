@@ -55,7 +55,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   public ngOnInit(): void {
-    this._prescriptionState.medicationRequestSubject$
+    this._prescriptionState.medicationRequest$
       .pipe(
         filter(medicationRequest => medicationRequest !== false),
         map(medicationRequest => medicationRequest as MedicationRequest)

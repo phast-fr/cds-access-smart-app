@@ -3,9 +3,9 @@ import {TestBed} from '@angular/core/testing';
 import {HttpHeaders} from '@angular/common/http';
 import {FhirModule} from '../fhir.module';
 import {FhirClientService, Options} from '../services/fhir.client.service';
-import {Patient} from '../hl7/4.0.1/fhir.types';
 import {HttpClientTestingModule} from '@angular/common/http/testing';
 import Expected = jasmine.Expected;
+import {Patient} from 'phast-fhir-ts';
 
 /*describe('fhir.client.service', () => {
   let client: FhirClientService;

@@ -5,7 +5,7 @@ import {map} from 'rxjs/operators';
 
 import * as queryString from 'querystring';
 import {ParsedUrlQueryInput} from 'querystring';
-import {OperationOutcome, Resource} from 'phast-fhir-ts';
+import {id, OperationOutcome, Resource} from 'phast-fhir-ts';
 
 export interface Options {
   headers?: HttpHeaders;
@@ -40,7 +40,7 @@ export interface SearchParameters {
 export interface Parameters {
   name?: string;
   resourceType?: string;
-  id?: string;
+  id?: id;
   method?: string;
   input?: any;
 }
@@ -67,23 +67,23 @@ export class FhirClientService {
   }
 
   public operation<T>(baseUrl: string, params: Parameters, options: Options): Observable<T> {
-    const url = ['/'];
+    const finalUrl = ['/'];
 
-    if (params.resourceType) { url.push(`${params.resourceType}/`); }
-    if (params.id) { url.push(`${params.id}/`); }
+    if (params.resourceType) { finalUrl.push(`${params.resourceType}/`); }
+    if (params.id) { finalUrl.push(`${params.id}/`); }
 
-    url.push(`${params.name.startsWith('$') ? params.name : `$${params.name}`}`);
+    finalUrl.push(`${params.name.startsWith('$') ? params.name : `$${params.name}`}`);
 
     if (params.method === 'post') {
-      return this._http.post<T>(baseUrl + url.join(''), params.input, options);
+      return this._http.post<T>(baseUrl + finalUrl.join(''), params.input, options);
     }
     else if (params.method === 'get') {
       if (params.input) {
-        url.push(`?${queryString.stringify(params.input)}`);
+        finalUrl.push(`?${queryString.stringify(params.input)}`);
       }
-      return this._http.get<T>(baseUrl + url.join(''), options);
+      return this._http.get<T>(baseUrl + finalUrl.join(''), options);
     }
-    return this._http.post<T>(baseUrl + url.join(''), params.input, options);
+    return this._http.post<T>(baseUrl + finalUrl.join(''), params.input, options);
   }
 
   public request(method: string, baseUrl: string, options: RequestOptions): Observable<OperationOutcome | Resource> {
