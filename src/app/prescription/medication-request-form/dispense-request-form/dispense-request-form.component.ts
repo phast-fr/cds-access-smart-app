@@ -82,11 +82,23 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
       case 'AddMedication':
-        const dispenseGroup = this.addMedication(state.medicationRequest?.dispenseRequest);
-        this._dispenseRequestGroup$.next(dispenseGroup);
+        this._dispenseRequestGroup$.next(
+          this.addMedication(state.medicationRequest?.dispenseRequest)
+        );
+        break;
+      case 'RemoveMedication':
+        if (state.medicationRequest) {
+          this._dispenseRequestGroup$.next(this.dispenseRequestGroup);
+        }
+        else {
+          this._dispenseRequestGroup$.next(false);
+        }
         break;
       case 'AddMedicationRequest':
         this._dispenseRequestGroup$.next(false);
+        break;
+      default:
+        this._dispenseRequestGroup$.next(this.dispenseRequestGroup);
         break;
     }
   }
