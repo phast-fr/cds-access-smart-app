@@ -11,7 +11,7 @@ import {Observable} from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
-import { id, OperationOutcome, ValueSet } from 'phast-fhir-ts';
+import { id, OperationOutcome, ValueSet, url } from 'phast-fhir-ts';
 
 /**
  * @ngModule CdsAccessModule
@@ -40,14 +40,14 @@ export class PhastTioService {
     }, this._options);
   }
 
-  public valueSet$expand(valueSetId: id): Observable<OperationOutcome | ValueSet> {
+  public valueSet$expand(valueSetUrl: url): Observable<OperationOutcome | ValueSet> {
     const input = {
+      url: valueSetUrl,
       displayLanguage: environment.display_language
     };
     return this._fhirClient.operation<OperationOutcome | ValueSet>(environment.tio_url, {
       name: '$expand',
       resourceType: 'ValueSet',
-      id: valueSetId,
       method: 'get',
       input
     }, this._options);
