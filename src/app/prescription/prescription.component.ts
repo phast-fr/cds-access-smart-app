@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, OnDestroy} from '@angular/core';
+import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {filter, map, takeUntil} from 'rxjs/operators';
@@ -15,11 +15,13 @@ import {SmartComponent, StateModel} from '../common/cds-access/models/core.model
   styleUrls: ['./prescription.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PrescriptionComponent extends SmartComponent implements OnDestroy {
+export class PrescriptionComponent extends SmartComponent implements OnInit, OnDestroy {
 
   private readonly _loading$: BehaviorSubject<boolean>;
 
   private readonly _needBanner$: BehaviorSubject<boolean>;
+
+  private _mode: string;
 
   constructor(route: ActivatedRoute,
               smartService: FhirSmartService,
@@ -29,6 +31,29 @@ export class PrescriptionComponent extends SmartComponent implements OnDestroy {
     super(route, smartService);
     this._loading$ = new BehaviorSubject<boolean>(true);
     this._needBanner$ = new BehaviorSubject<boolean>(false);
+  }
+
+  public cards = this._prescriptionState.cards;
+
+  public get loading$(): Observable<boolean> {
+    return this._loading$.asObservable();
+  }
+
+  public get needBanner$(): Observable<boolean> {
+    return this._needBanner$.asObservable();
+  }
+
+  public get medicationRequestMode$(): Observable<string> {
+    return this._prescriptionState.medicationRequestMode$;
+  }
+
+  public get mode(): string {
+    return this._mode;
+  }
+
+  public ngOnInit(): void {
+    super.ngOnInit();
+
     this._stateService.state$
       .pipe(
         takeUntil(this.unsubscribeTrigger$),
@@ -42,16 +67,6 @@ export class PrescriptionComponent extends SmartComponent implements OnDestroy {
         },
         error: err => console.error('error', err)
       });
-  }
-
-  public cards = this._prescriptionState.cards;
-
-  public get loading$(): Observable<boolean> {
-    return this._loading$.asObservable();
-  }
-
-  public get needBanner$(): Observable<boolean> {
-    return this._needBanner$.asObservable();
   }
 
   public ngOnDestroy(): void {

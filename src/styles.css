@@ -23,6 +23,20 @@ body { margin: 0; font-family: 'Source Sans Pro', sans-serif; }
   background-color: #24903F !important;
 }
 
+.mat-radio-button.mat-accent .mat-radio-ripple .mat-ripple-element {
+  background-color: #24903F !important;
+}
+
+.mat-radio-button.mat-accent .mat-radio-inner-circle {
+  background-color: #24903F !important;   /*inner circle color change*/
+}
+
+.mat-radio-button.mat-accent.mat-radio-checked .mat-radio-outer-circle {
+  border-color: #24903F !important; /*outer ring color change*/
+}
+
+.mat-radio-group,
+.mat-radio-button,
 .mat-checkbox,
 .mat-paginator, .mat-paginator-page-size .mat-select-trigger
 .mat-button,

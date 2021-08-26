@@ -18,6 +18,7 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import {MatRadioModule} from '@angular/material/radio';
 import { FlexLayoutModule } from '@angular/flex-layout';
 
 import {FhirModule} from '../common/fhir/fhir.module';
@@ -35,42 +36,45 @@ import { DosageInstructionFormComponent } from './medication-request-form/dosage
 import { DispenseRequestFormComponent } from './medication-request-form/dispense-request-form/dispense-request-form.component';
 import { MedicationRequestTableComponent } from './medication-request-table/medication-request-table.component';
 import {CdsAccessModule} from '../common/cds-access/cds-access.module';
+import {MetadataFormComponent} from './medication-request-form/metadata-form/metadata-form.component';
 
 @NgModule({
   declarations: [
     PrescriptionComponent,
     MedicationRequestFormComponent,
+    MetadataFormComponent,
     MedicationFormComponent,
     DosageInstructionFormComponent,
     DispenseRequestFormComponent,
     MedicationRequestTableComponent,
     CardListComponent
   ],
-  imports: [
-    CommonModule,
-    FlexLayoutModule,
-    MatProgressSpinnerModule,
-    MatIconModule,
-    MatInputModule,
-    MatAutocompleteModule,
-    MatTooltipModule,
-    MatFormFieldModule,
-    MatCardModule,
-    MatListModule,
-    MatButtonModule,
-    MatTableModule,
-    MatCheckboxModule,
-    MatSortModule,
-    MatMenuModule,
-    ReactiveFormsModule,
-    MatPaginatorModule,
-    MatSelectModule,
-    MatBadgeModule,
-    MatSidenavModule,
-    CdsAccessModule,
-    FhirModule,
-    PrescriptionRoutingModule
-  ],
+    imports: [
+        CommonModule,
+        FlexLayoutModule,
+        MatProgressSpinnerModule,
+        MatIconModule,
+        MatInputModule,
+        MatAutocompleteModule,
+        MatTooltipModule,
+        MatFormFieldModule,
+        MatCardModule,
+        MatListModule,
+        MatButtonModule,
+        MatTableModule,
+        MatCheckboxModule,
+        MatSortModule,
+        MatMenuModule,
+        ReactiveFormsModule,
+        MatPaginatorModule,
+        MatSelectModule,
+        MatBadgeModule,
+        MatSidenavModule,
+        CdsAccessModule,
+        FhirModule,
+        PrescriptionRoutingModule,
+        MatRadioModule
+    ],
   providers: [
     PrescriptionStateService,
     MedicationRequestFormViewModel

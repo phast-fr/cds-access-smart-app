@@ -20,7 +20,9 @@
         </div>
         <mat-card class="mat-elevation-z1">
           <mat-card-header>
-            <mat-card-title> Prescription en DC </mat-card-title>
+            <mat-card-title> Prescription en
+              {{(medicationRequestMode$ | async) | i18nSelect:{'dc': 'DC', 'sp': 'Spécialité'} }}
+            </mat-card-title>
           </mat-card-header>
           <mat-card-content class="form-container">
             <app-medication-request-form></app-medication-request-form>
