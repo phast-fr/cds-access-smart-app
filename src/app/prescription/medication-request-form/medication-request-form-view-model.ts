@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
 import { Injectable } from '@angular/core';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
+import {BehaviorSubject, forkJoin, Observable, Subject} from 'rxjs';
 import {map, retry} from 'rxjs/operators';
 
 import hash from 'object-hash';
@@ -39,7 +39,9 @@ import {
   MedicationFormIntentCdsHelp,
   MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue,
   MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit,
-  MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart, MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd
+  MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart,
+  MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd,
+  MedicationFormIntentValueChangesTreatmentIntent
 } from './medication-request-form.intent';
 import {
   MedicationFormActionAddDosageInstruction,
@@ -65,18 +67,19 @@ import {
   MedicationFormActionCdsHelp,
   MedicationFormActionValueChangesDosageInstructionBoundsDurationValue,
   MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit,
-  MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd, MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart
+  MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd,
+  MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart,
+  MedicationFormActionValueChangesTreatmentIntent
 } from './medication-request-form.action';
 import {
   CodeableConcept, Coding,
   id,
-  Medication, MedicationIngredient,
+  Medication,
   MedicationKnowledge, MedicationRequest,
   Parameters, ParametersParameter,
   Ratio,
-  ValueSet
+  ValueSet, ValueSetContains
 } from 'phast-fhir-ts';
-import {ValueSetContains} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 @Injectable()
 export class MedicationRequestFormViewModel implements IViewModel<IIntent, MedicationRequestFormState>{
@@ -103,10 +106,18 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return this._state$.asObservable();
   }
 
-  public get isLoading$(): Observable<boolean> {
+  public get isLoadingCIOList$(): Observable<boolean> {
     if (this._state$.value) {
       const state = this._state$.value;
-      return state.isLoading$;
+      return state.isLoadingCIOList$;
+    }
+    return new BehaviorSubject<boolean>(false).asObservable();
+  }
+
+  public get isLoadingTIOList$(): Observable<boolean> {
+    if (this._state$.value) {
+      const state = this._state$.value;
+      return state.isLoadingTIOList$;
     }
     return new BehaviorSubject<boolean>(false).asObservable();
   }
@@ -119,7 +130,15 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get formMap(): Map<id, Array<CodeableConcept>> | undefined {
+  public get medication(): Medication | undefined {
+    if (this._state$.value) {
+      const state = this._state$.value;
+      return state.medication;
+    }
+    return undefined;
+  }
+
+  public get formMap(): Map<id, Map<number, Array<CodeableConcept>>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
       return state.formMap;
@@ -127,18 +146,34 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get routeArray(): Array<CodeableConcept> | undefined {
+  public get strengthMap(): Map<id, Map<number, Array<Ratio>>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
-      return state.routeArray;
+      return state.strengthMap;
     }
     return undefined;
   }
 
-  public get doseAndRateUnitMap(): Map<id, Array<Coding>> | undefined {
+  public get doseAndRateUnitMap(): Map<id, Map<number, Array<Coding>>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
       return state.doseAndRateUnitMap;
+    }
+    return undefined;
+  }
+
+  public get routeMap(): Map<number, Array<CodeableConcept>> | undefined {
+    if (this._state$.value) {
+      const state = this._state$.value;
+      return state.routeMap;
+    }
+    return undefined;
+  }
+
+  public get treatmentIntent(): Array<ValueSetContains> | undefined {
+    if (this._state$.value) {
+      const state = this._state$.value;
+      return state.treatmentIntent;
     }
     return undefined;
   }
@@ -147,14 +182,6 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     if (this._state$.value) {
       const state = this._state$.value;
       return state.durationUnitArray;
-    }
-    return undefined;
-  }
-
-  public get strengthMap(): Map<id, Array<Ratio>> | undefined {
-    if (this._state$.value) {
-      const state = this._state$.value;
-      return state.strengthMap;
     }
     return undefined;
   }
@@ -174,68 +201,130 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return 'med-1';
   }
 
-  public updateList(state: MedicationRequestFormState, medicationKnowledge: MedicationKnowledge, medication: Medication,
-                    doseForm: CodeableConcept, ingredient: MedicationIngredient[], intendedRoute: CodeableConcept): void {
-    state.loading = true;
+  public updateList(state: MedicationRequestFormState): void {
+    if (state.durationUnitArray.length === 0
+      && state.treatmentIntent.length === 0) {
+      state.loadingTIOList = true;
+      const tioObservable = [this._tioSource.valueSet$expand('http://hl7.org/fhir/ValueSet/units-of-time'),
+        this._tioSource.valueSet$expand('http://interopsante.org/fhir/ValueSet/fr-treatment-intent')];
 
-    if (state.durationUnitArray.length === 0) {
-      this._tioSource.valueSet$expand('units-of-time')
+      forkJoin(tioObservable)
         .subscribe({
-          next: (valueSet: ValueSet) => {
-            for (const valueSetContains of valueSet.expansion.contains) {
-              state.durationUnitArray.push(valueSetContains);
+          next: (valueSets: ValueSet[]) => valueSets.forEach((valueSet) => {
+            if (valueSet.name === 'UCUMCodesForTime') {
+              valueSet.expansion.contains.forEach(
+                (valueSetContains) => state.durationUnitArray.push(valueSetContains));
             }
-          },
-          error: err => console.error('error', err)
+            else if (valueSet.name === 'FrTreatmentIntent') {
+              valueSet.expansion.contains.forEach(
+                (valueSetContains) => state.treatmentIntent.push(valueSetContains));
+            }
+          }),
+          error: err => console.error('error', err),
+          complete: () => state.loadingTIOList = false
         });
     }
 
-    this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
-      medicationKnowledge.id, medicationKnowledge.code, doseForm, ingredient, intendedRoute
-    )
-      .pipe(
-        retry({count: 3, delay: 1000})
-      )
-      .subscribe({
-        next: parameters => this.buildList(state, medication.id, parameters),
-        error: err => console.error('error', err)
-      });
-  }
-
-  public clearList(state: MedicationRequestFormState, medication: Medication): void {
-    state.loading = true;
-
-    if (state.formMap.get(medication.id)) {
-      state.formMap.get(medication.id).length = 0;
-    }
-
-    for (const ingredient of medication.ingredient) {
-      if (ingredient.itemCodeableConcept) {
-        state.strengthMap.get(ingredient.itemCodeableConcept.text).length = 0;
+    const medication = state.medication;
+    if (medication) {
+      state.loadingCIOList = true;
+      const medicationKnowledge = state.medicationKnowledgeMap.get(medication.id);
+      if (state.medicationRequest.dosageInstruction) {
+        const observables = new Array<Observable<Parameters>>();
+        state.medicationRequest.dosageInstruction.forEach((dosage) => {
+          observables.push(
+            this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+              medicationKnowledge.id, medicationKnowledge.code, medication.form, medication.ingredient, dosage?.route
+            )
+              .pipe(
+                retry({count: 3, delay: 1000})
+              )
+          );
+        });
+        forkJoin(observables)
+          .subscribe({
+            next: parameters => parameters.forEach((parameter, nDosage) =>
+              this.buildList(state, state.medication.id, nDosage, parameter)),
+            error: err => console.error('error', err),
+            complete: () => state.loadingCIOList = false
+          });
+      }
+      else {
+        this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+          medicationKnowledge.id, medicationKnowledge.code, medication.form, medication.ingredient
+        )
+          .pipe(
+            retry({count: 3, delay: 1000})
+          )
+          .subscribe({
+            next: parameters => this.buildList(state, state.medication.id, 0, parameters),
+            error: err => console.error('error', err),
+            complete: () => state.loadingCIOList = false
+          });
       }
     }
-    if (state.doseAndRateUnitMap.get(medication.id)) {
-      state.doseAndRateUnitMap.get(medication.id).length = 0;
-    }
-    state.routeArray.length = 0;
   }
 
-  public buildList(state: MedicationRequestFormState, medicationId: id, parameters: Parameters): void {
+  public clearList(state: MedicationRequestFormState): void {
+    const medication = state.medication;
+    if (medication && state.medicationRequest.dosageInstruction) {
+      state.medicationRequest.dosageInstruction.forEach((dosage, nDosage) => {
+        if (state.formMap.get(medication.id).get(nDosage)) {
+          state.formMap.get(medication.id).get(nDosage).length = 0;
+        }
+
+        for (const ingredient of medication.ingredient) {
+          if (ingredient.itemCodeableConcept) {
+            state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage).length = 0;
+          }
+        }
+
+        if (state.doseAndRateUnitMap.get(medication.id).get(nDosage)) {
+          state.doseAndRateUnitMap.get(medication.id).get(nDosage).length = 0;
+        }
+
+        if (state.routeMap.get(nDosage)) {
+          state.routeMap.get(nDosage).length = 0;
+        }
+      });
+    }
+    else if (medication) {
+      if (state.formMap.get(medication.id).get(0)) {
+        state.formMap.get(medication.id).get(0).length = 0;
+      }
+
+      for (const ingredient of medication.ingredient) {
+        if (ingredient.itemCodeableConcept) {
+          state.strengthMap.get(ingredient.itemCodeableConcept.text).get(0).length = 0;
+        }
+      }
+
+      if (state.doseAndRateUnitMap.get(medication.id).get(0)) {
+        state.doseAndRateUnitMap.get(medication.id).get(0).length = 0;
+      }
+
+      if (state.routeMap.get(0)) {
+        state.routeMap.get(0).length = 0;
+      }
+    }
+  }
+
+  public buildList(state: MedicationRequestFormState, medicationId: id, nDosage: number, parameters: Parameters): void {
     if (parameters.parameter) {
       for (const parameter of parameters.parameter) {
         switch (parameter.name) {
           case 'intendedRoute':
-            this.addUniqueCodeableConcept(state.routeArray, parameter);
+            this.addUniqueCodeableConcept(state.routeMap.get(nDosage), parameter);
             break;
           case 'doseForm':
-            this.addUniqueCodeableConcept(state.formMap.get(medicationId), parameter);
+            this.addUniqueCodeableConcept(state.formMap.get(medicationId).get(nDosage), parameter);
             break;
           case 'ingredient':
             const ingredientCode = parameter.part[1].valueCodeableConcept;
-            this.addUniqueRatio(state.strengthMap.get(ingredientCode.text), parameter);
+            this.addUniqueRatio(state.strengthMap.get(ingredientCode.text).get(nDosage), parameter);
             break;
           case 'unite':
-            this.addUniqueCoding(state.doseAndRateUnitMap.get(medicationId), parameter);
+            this.addUniqueCoding(state.doseAndRateUnitMap.get(medicationId).get(nDosage), parameter);
             break;
           default:
             // relatedMedicationKnowledge
@@ -243,10 +332,81 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         }
       }
     }
-    state.loading = false;
   }
 
-  public searchMedicationKnowledge(value: string): Observable<any> {
+  public addList(state: MedicationRequestFormState, nDosage: number): void {
+    const medication = state.medication;
+    const medicationKnowledge = state.medicationKnowledgeMap.get(medication.id);
+
+    if (!state.formMap.get(medication.id)) {
+      state.formMap.set(medication.id, new Map<number, Array<CodeableConcept>>());
+    }
+
+    if (!state.formMap.get(medication.id).get(nDosage)) {
+      state.formMap.get(medication.id).set(nDosage, new Array<CodeableConcept>());
+    }
+    else {
+      state.formMap.get(medication.id).get(nDosage).length = 0;
+    }
+
+    medicationKnowledge.ingredient.forEach(ingredient => {
+      if (!state.strengthMap.get(ingredient.itemCodeableConcept.text)) {
+        state.strengthMap.set(ingredient.itemCodeableConcept.text, new Map<number, Array<Ratio>>());
+      }
+
+      if (!state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage)) {
+        state.strengthMap.get(ingredient.itemCodeableConcept.text).set(nDosage, new Array<Ratio>());
+      }
+      else {
+        state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage).length = 0;
+      }
+    });
+
+    if (!state.doseAndRateUnitMap.get(medication.id)) {
+      state.doseAndRateUnitMap.set(medication.id, new Map<number, Array<Coding>>());
+    }
+
+    if (!state.doseAndRateUnitMap.get(medication.id).get(nDosage)) {
+      state.doseAndRateUnitMap.get(medication.id).set(nDosage, new Array<Coding>());
+    }
+    else {
+      state.doseAndRateUnitMap.get(medication.id).get(nDosage).length = 0;
+    }
+
+    if (!state.routeMap.get(nDosage)) {
+      state.routeMap.set(nDosage, new Array<CodeableConcept>());
+    }
+    else {
+      state.routeMap.get(nDosage).length = 0;
+    }
+  }
+
+  public removeList(state: MedicationRequestFormState, nDosage: number): void {
+    const medication = state.medication;
+
+    if (state.formMap.get(medication.id).get(nDosage)) {
+      state.formMap.get(medication.id).delete(nDosage);
+    }
+
+    for (const ingredient of medication.ingredient) {
+      if (ingredient.itemCodeableConcept) {
+        state.strengthMap.get(ingredient.itemCodeableConcept.text).delete(nDosage);
+      }
+    }
+
+    if (state.doseAndRateUnitMap.get(medication.id).get(nDosage)) {
+      state.doseAndRateUnitMap.get(medication.id).delete(nDosage);
+    }
+
+    if (state.routeMap.get(nDosage)) {
+      state.routeMap.delete(nDosage);
+    }
+  }
+
+  public searchMedicationKnowledge(value: string, option: string): Observable<any> {
+    if (option === 'sp') {
+      return this._cioDcSource.searchMedicationKnowledgeUCD(value);
+    }
     return this._cioDcSource.searchMedicationKnowledgeDC(value);
   }
 
@@ -285,9 +445,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         action = new MedicationFormActionValueChangesMedicationForm(
           (intent as MedicationFormIntentValueChangesMedicationForm).medicationRequest,
           (intent as MedicationFormIntentValueChangesMedicationForm).medication,
-          (intent as MedicationFormIntentValueChangesMedicationForm).formValue,
-          (intent as MedicationFormIntentValueChangesMedicationForm).medicationKnowledge,
-          (intent as MedicationFormIntentValueChangesMedicationForm).intendedRoute
+          (intent as MedicationFormIntentValueChangesMedicationForm).formValue
         );
         break;
       case 'ValueChangesMedicationIngredientStrength':
@@ -295,10 +453,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medicationRequest,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medication,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).itemCodeableConcept,
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).strengthValue,
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medicationKnowledge,
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).form,
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).intendedRoute
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).strengthValue
         );
         break;
       case 'ValueChangesMedicationIngredientStrengthValue':
@@ -325,9 +480,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       case 'RemoveDosageInstruction':
         action = new MedicationFormActionRemoveDosageInstruction(
           (intent as MedicationFormIntentRemoveDosageInstruction).medicationRequest,
-          (intent as MedicationFormIntentRemoveDosageInstruction).nDosage,
-          (intent as MedicationFormIntentRemoveDosageInstruction).medicationKnowledge,
-          (intent as MedicationFormIntentRemoveDosageInstruction).medication
+          (intent as MedicationFormIntentRemoveDosageInstruction).nDosage
         );
         break;
       case 'ValueChangesDosageInstructionRoute':
@@ -335,7 +488,6 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationRequest,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationKnowledge,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medication
         );
         break;
@@ -443,6 +595,12 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       case 'CdsHelp':
         action = new MedicationFormActionCdsHelp(
           (intent as MedicationFormIntentCdsHelp).medicationRequest
+        );
+        break;
+      case 'ValueChangesTreatmentIntent':
+        action = new MedicationFormActionValueChangesTreatmentIntent(
+          (intent as MedicationFormIntentValueChangesTreatmentIntent).medicationRequest,
+          (intent as MedicationFormIntentValueChangesTreatmentIntent).treatmentIntent
         );
         break;
       default:

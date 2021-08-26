@@ -63,19 +63,26 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return null;
   }
 
-  public get isLoading$(): Observable<boolean> {
-    return this._viewModel.isLoading$;
+  public get isLoadingList$(): Observable<boolean> {
+    return this._viewModel.isLoadingCIOList$;
   }
 
-  public get formMap(): Array<CodeableConcept> {
-    if (this._viewModel.medicationRequest.contained.length > 1) {
-      return this._viewModel.formMap.get(this._viewModel.medicationRequest.contained[1].id);
-    }
-    return this._viewModel.formMap.get(this._viewModel.medicationRequest.contained[0].id);
+  public get formList(): Array<CodeableConcept> {
+    const map = this._viewModel.formMap.get(this._viewModel.medication.id);
+    const input = Array.from(map.values());
+    const comparator = (a: CodeableConcept, b: CodeableConcept) => {
+      return a.text === b.text;
+    };
+    return Utils.intersect<CodeableConcept>(input[0], input, comparator);
   }
 
-  public get strengthMap(): Map<id, Array<Ratio>> {
-    return this._viewModel.strengthMap;
+  public strengthList(itemCodeableConcept: id): Array<Ratio> {
+    const map = this._viewModel.strengthMap.get(itemCodeableConcept);
+    const input = Array.from(map.values());
+    const comparator = (a: Ratio, b: Ratio) => {
+      return a.numerator.value === b.numerator.value;
+    };
+    return Utils.intersect<Ratio>(input[0], input, comparator);
   }
 
   public toFormControl(control: AbstractControl): FormControl {
@@ -108,45 +115,23 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
       case 'AddMedication':
-        const medication = state.medicationRequest.contained[0] as Medication;
-        const medicationGroup = this.addMedication(0, medication);
-        this._medicationGroup$.next(medicationGroup);
+        this._medicationGroup$.next(
+          this.addMedication(0, state.medicationRequest.contained[0])
+        );
         break;
       case 'RemoveMedication':
         this._medicationGroup$.next(false);
+        break;
+      case 'ValueChangesMedication':
+      case 'ValueChangesDosageInstruction':
+        this._medicationGroup$.next(
+          this.updateMedication(0, state.medicationRequest.contained[0])
+        );
         break;
       case 'AddMedicationRequest':
         this._medicationGroup$.next(false);
         break;
     }
-
-    /*let count = 0;
-    for (const ingredientControl of ingredient.controls) {
-      if (this._formStateService.formState.dosageRatioSet[count].size === 1) {
-        ingredientControl.get('strength').setValue(
-          this._formStateService.formState.dosageRatioSet[count].values().next().value, options);
-      }
-      ingredientControl.get('strength').setValidators(
-        [DosageInstructionFormComponent.ratioSelected(this._formStateService.formState.dosageRatioSet[count])]);
-      ingredientControl.get('strength').updateValueAndValidity(options);
-      count++;
-    }
-
-    const routeControl = dosageInstructionGroup.get('route');
-    if (this._formStateService.formState.routeCodeSet.size === 1) {
-      routeControl.setValue(this._formStateService.formState.routeCodeSet.values().next().value, options);
-    }
-    routeControl.setValidators(
-      [DosageInstructionFormComponent.codingSelected(this._formStateService.formState.routeCodeSet)]);
-    routeControl.updateValueAndValidity(options);
-
-    const formControl = medicationGroup.get('form');
-    if (this._formStateService.formState.formCodeSet.size === 1) {
-      formControl.setValue(this._formStateService.formState.formCodeSet.values().next().value, options);
-    }
-    formControl.setValidators(
-      [DosageInstructionFormComponent.codingSelected(this._formStateService.formState.formCodeSet)]);
-    formControl.updateValueAndValidity(options);*/
   }
 
   public trackByCodeableConcept(_, codeableConcept: CodeableConcept): string {
@@ -177,8 +162,13 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return ac['track-id'];
   }
 
-  public doseAndRateUnitMap(reference: Reference): Array<Coding> {
-    return this._viewModel.doseAndRateUnitMap.get(reference.reference.substring(1));
+  public doseAndRateUnitList(reference: Reference): Array<Coding> {
+    const map = this._viewModel.doseAndRateUnitMap.get(reference.reference.substring(1));
+    const input = Array.from(map.values());
+    const comparator = (a: Coding, b: Coding) => {
+      return a.code === b.code && a.system === b.system;
+    };
+    return Utils.intersect<Coding>(input[0], input, comparator);
   }
 
   public onRemoveMedication(nMedication: number): void {
@@ -200,7 +190,6 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       ingredient: this._fb.array([]),
       form: [medication.form]
     });
-    const medicationKnowledge = this.medicationKnowledgeMap(medication);
     const formString$ = medicationGroup.get('form').valueChanges
       .pipe(
         filter(value => typeof value === 'string')
@@ -213,18 +202,15 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     formString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        tap(() => medicationGroup.get('form').setValue(null, {emitEvent: false}))
+        tap(() => medicationGroup.get('form').reset(null, {emitEvent: false}))
       )
       .subscribe({
         next: () => {
-          const intendedRoute = this.intendedRoute();
           this._viewModel.dispatchIntent(
             new MedicationFormIntentValueChangesMedicationForm(
               this._viewModel.medicationRequest,
               medication,
-              null,
-              medicationKnowledge,
-              intendedRoute
+              null
             )
           );
         },
@@ -233,35 +219,74 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     formObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
+        distinctUntilChanged<CodeableConcept>((prev, curr) => prev.text === curr.text),
         tap(value => medicationGroup.get('form').setValue(value, {emitEvent: false}))
       )
       .subscribe({
-        next: value => {
-          const intendedRoute = this.intendedRoute();
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesMedicationForm(
-              this._viewModel.medicationRequest,
-              medication,
-              value,
-              medicationKnowledge,
-              intendedRoute
-            )
-          );
-        },
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationForm(
+            this._viewModel.medicationRequest,
+            medication,
+            value
+          )
+        ),
         error: err => console.error('error', err)
       });
 
     const ingredientArray = medicationGroup.get('ingredient') as FormArray;
     for (const ingredient of medication.ingredient) {
       if (ingredient.itemCodeableConcept) {
-        ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medicationKnowledge, medication, ingredient));
+        ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
       }
       else if (ingredient.itemReference) {
         ingredientArray.push(this.addIngredientReference(medication, ingredient));
       }
     }
 
+    const loadedList$ = this.isLoadingList$
+      .pipe(
+        filter(value => !value)
+      );
+
+    loadedList$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: () => this.onLoadedList(),
+        error: err => console.error('error', err)
+      });
+
     return medicationGroup;
+  }
+
+  private updateMedication(nMedication: number, medication: Medication): FormGroup | boolean {
+    if (this._medicationGroup$.value) {
+      const medicationGroup = this._medicationGroup$.value as FormGroup;
+      if (medication?.form) {
+        medicationGroup.get('form').setValue(medication.form, {emitEvent: false});
+      }
+      else {
+        medicationGroup.get('form').reset(undefined, {emitEvent: false});
+      }
+
+      const ingredientArray = medicationGroup.get('ingredient') as FormArray;
+      let nIngredient = 0;
+      for (const item of medication.ingredient) {
+        if (item.itemCodeableConcept) {
+          if (item?.strength) {
+            ingredientArray.at(nIngredient).get('strength').setValue(item.strength, {emitEvent: false});
+          }
+          else {
+            ingredientArray.at(nIngredient).get('strength').reset(undefined, {emitEvent: false});
+          }
+        }
+        nIngredient++;
+      }
+
+      return medicationGroup;
+    }
+    return false;
   }
 
   private medicationKnowledgeMap(medication: Medication): MedicationKnowledge {
@@ -272,7 +297,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return this._viewModel.medicationKnowledgeMap.get(medicationId);
   }
 
-  private addIngredientCodeableConcept(nMedication: number, medicationKnowledge: MedicationKnowledge, medication: Medication,
+  private addIngredientCodeableConcept(nMedication: number, medication: Medication,
                                        ingredient: MedicationIngredient): FormGroup {
     const ingredientGroup = this._fb.group({
       'track-id': Utils.randomString(16),
@@ -291,23 +316,19 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     strengthString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        tap(() => ingredientGroup.get('strength').setValue(null, {emitEvent: false}))
+        tap(() => ingredientGroup.get('strength').reset(null, {emitEvent: false}))
       )
       .subscribe({
         next: () => {
           const itemCodeableConcept = ingredientGroup.get('itemCodeableConcept').value;
           const form = this.form(nMedication);
-          const intendedRoute = this.intendedRoute();
 
           this._viewModel.dispatchIntent(
             new MedicationFormIntentValueChangesMedicationIngredientStrength(
               this._viewModel.medicationRequest,
               medication,
               itemCodeableConcept,
-              null,
-              medicationKnowledge,
-              form,
-              intendedRoute
+              null
             )
           );
         },
@@ -316,23 +337,20 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     strengthObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
+        distinctUntilChanged<Ratio>((prev, curr) => prev.numerator.value === curr.numerator.value),
         tap(value => ingredientGroup.get('strength').setValue(value, {emitEvent: false}))
       )
       .subscribe({
         next: value => {
           const itemCodeableConcept = ingredientGroup.get('itemCodeableConcept').value;
           const form = this.form(nMedication);
-          const intendedRoute = this.intendedRoute();
 
           this._viewModel.dispatchIntent(
             new MedicationFormIntentValueChangesMedicationIngredientStrength(
               this._viewModel.medicationRequest,
               medication,
               itemCodeableConcept,
-              value,
-              medicationKnowledge,
-              form,
-              intendedRoute
+              value
             )
           );
         },
@@ -389,9 +407,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     strengthNumeratorUnitString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        debounceTime(500),
-        distinctUntilChanged(),
-        tap(() => ingredientGroup.get(['strength', 'numerator', 'unit']).setValue(null, {emitEvent: false}))
+        tap(() => ingredientGroup.get(['strength', 'numerator', 'unit']).reset(null, {emitEvent: false}))
       )
       .subscribe({
         next: () => {
@@ -410,6 +426,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     strengthNumeratorUnitObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
+        distinctUntilChanged<Coding>((prev, cur) => prev.code === cur.code),
         tap(value => ingredientGroup.get(['strength', 'numerator', 'unit']).setValue(value, {emitEvent: false}))
       )
       .subscribe({
@@ -437,11 +454,28 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return undefined;
   }
 
-  private intendedRoute(): CodeableConcept | undefined {
-    if (this._viewModel.medicationRequest.dosageInstruction
-      && this._viewModel.medicationRequest.dosageInstruction.length > 0) {
-      return this._viewModel.medicationRequest.dosageInstruction[0].route;
+  private onLoadedList(): void {
+    if (this._medicationGroup$.value) {
+      const medicationGroup = this._medicationGroup$.value as FormGroup;
+      if (this.formList.length === 0) {
+        medicationGroup.get('form').disable();
+      }
+      else {
+        medicationGroup.get('form').enable();
+      }
+
+      const ingredientFormArray = medicationGroup.get('ingredient') as FormArray;
+      this._viewModel.medicationRequest.contained.forEach((value) => {
+        const medication = value as Medication;
+        medication.ingredient.forEach((ingredient, nIngredient) => {
+          if (ingredient.itemCodeableConcept && this.strengthList(ingredient.itemCodeableConcept.text).length === 0) {
+            ingredientFormArray.at(nIngredient).disable();
+          }
+          else if (ingredient.itemCodeableConcept) {
+            ingredientFormArray.at(nIngredient).enable();
+          }
+        });
+      });
     }
-    return undefined;
   }
 }

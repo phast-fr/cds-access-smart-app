@@ -12,11 +12,9 @@ import {
   MedicationFormStateRemoveTimeOfDay,
   MedicationFormStateAddDoseAndRate,
   MedicationFormStateRemoveDoseAndRate,
-  MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication
+  MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication, MedicationFormStateValueChangesTreatmentIntent
 } from './medication-request-form.state';
-
 import {MedicationRequestFormViewModel} from './medication-request-form-view-model';
-import {CodeableConcept, Ratio} from 'phast-fhir-ts';
 
 export class MedicationRequestFormReducer implements IReducer<MedicationRequestFormState>{
 
@@ -70,6 +68,9 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
       case 'ValueChangesDispenseRequest':
         this.valueChangesDispenseRequest(newState, partialState as MedicationFormStateValueChangesDispenseRequest);
         break;
+      case 'ValueChangesTreatmentIntent':
+        this.valueChangesTreatmentIntent(newState, partialState as MedicationFormStateValueChangesTreatmentIntent);
+        break;
       default:
         break;
     }
@@ -89,34 +90,14 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
   private addMedication(newState: MedicationRequestFormState, partialState: MedicationFormStateAddMedication): void {
     newState.medicationRequest = partialState.medicationRequest;
     newState.medicationKnowledgeMap.set(
-      partialState.medication.id, partialState.medicationKnowledge
+      newState.medication.id, partialState.medicationKnowledge
     );
-    if (!newState.formMap.get(partialState.medication.id)) {
-      newState.formMap.set(partialState.medication.id, new Array<CodeableConcept>());
-    }
-    else {
-      newState.formMap.get(partialState.medication.id).length = 0;
-    }
 
-    for (const ingredient of partialState.medicationKnowledge.ingredient) {
-      if (newState.strengthMap.get(ingredient.itemCodeableConcept.text) == null) {
-        newState.strengthMap.set(ingredient.itemCodeableConcept.text, new Array<Ratio>());
-      }
-      else {
-        newState.strengthMap.get(ingredient.itemCodeableConcept.text).length = 0;
-      }
-    }
+    newState.medicationRequest.dosageInstruction.forEach((dosage, nDosage) => {
+      this._viewModel.addList(newState, nDosage);
+    });
 
-    if (newState.doseAndRateUnitMap.get(partialState.medication.id) == null) {
-      newState.doseAndRateUnitMap.set(partialState.medication.id, new Array<CodeableConcept>());
-    }
-    else {
-      newState.doseAndRateUnitMap.get(partialState.medication.id).length = 0;
-    }
-
-    this._viewModel.updateList(
-      newState, partialState.medicationKnowledge, partialState.medication, undefined, undefined, undefined
-    );
+    this._viewModel.updateList(newState);
   }
 
   private removeMedication(newState: MedicationRequestFormState, partialState: MedicationFormStateRemoveMedication): void {
@@ -149,56 +130,38 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
   private valueChangesMedication(newState: MedicationRequestFormState,
                                  partialState: MedicationFormStateValueChangesMedication): void {
     newState.medicationRequest = partialState.medicationRequest;
-    if (partialState.medication) {
-      this._viewModel.clearList(newState, partialState.medication);
-      this._viewModel.updateList(
-        newState,
-        partialState.medicationKnowledge,
-        partialState.medication,
-        partialState.medication.form,
-        partialState.ingredient,
-        partialState.route
-      );
-    }
+    this._viewModel.clearList(newState);
+    this._viewModel.updateList(newState);
   }
 
   private valueChangesDosageInstruction(newState: MedicationRequestFormState,
                                         partialState: MedicationFormStateValueChangesDosageInstruction): void {
     newState.medicationRequest = partialState.medicationRequest;
     newState.nDosage = partialState.nDosage;
-    if (partialState.medication) {
-      this._viewModel.clearList(newState, partialState.medication);
-      this._viewModel.updateList(
-        newState,
-        partialState.medicationKnowledge,
-        partialState.medication,
-        partialState.medication.form,
-        partialState.ingredient,
-        partialState.route
-      );
-    }
+
+    this._viewModel.clearList(newState);
+    this._viewModel.updateList(newState);
   }
 
   private addDosageInstruction(newState: MedicationRequestFormState, partialState: MedicationFormStateAddDosageInstruction): void {
     newState.medicationRequest = partialState.medicationRequest;
     newState.nDosage = partialState.medicationRequest.dosageInstruction.length - 1;
+    if (newState.nDosage > 0) {
+      this._viewModel.addList(newState, newState.nDosage);
+    }
+    this._viewModel.clearList(newState);
+    this._viewModel.updateList(newState);
   }
 
   private removeDosageInstruction(newState: MedicationRequestFormState,
                                   partialState: MedicationFormStateRemoveDosageInstruction): void {
     newState.medicationRequest = partialState.medicationRequest;
     newState.nDosage = partialState.nDosage;
-    if (!newState.medicationRequest.dosageInstruction) {
-      this._viewModel.clearList(newState, partialState.medication);
-      this._viewModel.updateList(
-        newState,
-        partialState.medicationKnowledge,
-        partialState.medication,
-        partialState.medication.form,
-        partialState.ingredient,
-        null
-      );
+    if (newState.medicationRequest.dosageInstruction) {
+      this._viewModel.removeList(newState, newState.nDosage);
     }
+    this._viewModel.clearList(newState);
+    this._viewModel.updateList(newState);
   }
 
   private addTimeOfDay(newState: MedicationRequestFormState, partialState: MedicationFormStateAddTimeOfDay): void {
@@ -226,6 +189,11 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
 
   private valueChangesDispenseRequest(newState: MedicationRequestFormState,
                                       partialState: MedicationFormStateValueChangesDispenseRequest): void {
+    newState.medicationRequest = partialState.medicationRequest;
+  }
+
+  private valueChangesTreatmentIntent(newState: MedicationRequestFormState,
+                                      partialState: MedicationFormStateValueChangesTreatmentIntent): void {
     newState.medicationRequest = partialState.medicationRequest;
   }
 }

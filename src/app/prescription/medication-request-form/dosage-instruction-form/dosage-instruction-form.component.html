@@ -12,7 +12,7 @@
       <div class="form-group-body-title"> Posologie {{nDosage + 1}} </div>
     </div>
     <div fxLayout="row" class="form-field-row form-field-dosage-instruction-route">
-      <mat-form-field fxFlex="100%" appearance="fill">
+      <mat-form-field appearance="fill">
         <mat-label>
           Voie
         </mat-label>
@@ -24,22 +24,34 @@
       </mat-form-field>
 
       <mat-autocomplete #autoRoute="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
-        <mat-option *ngIf="isLoading$ | async" class="is-loading"> Chargement... </mat-option>
-        <ng-container *ngIf="!(isLoading$ | async)">
-          <mat-option *ngFor="let routeCode of routeArray; trackBy: trackByCodeableConcept" [value]="routeCode">
+        <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
+        <ng-container *ngIf="!(isLoadingList$ | async)">
+          <mat-option *ngFor="let routeCode of routeArray(nDosage); trackBy: trackByCodeableConcept" [value]="routeCode">
             {{routeCode | codeableConcept}}
           </mat-option>
         </ng-container>
       </mat-autocomplete>
 
     </div>
-    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-timing-repeat-bounds-period">
-      <mat-card>
+    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-timing-repeat-bounds">
+      <mat-card fxFlex="100%">
         <mat-card-header>
           <mat-card-title class="form-group-title"> Limites de validité de la dose </mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <mat-form-field fxFlex="25%" appearance="fill">
+          <mat-radio-group matTooltip="Sélectionner le mode"
+                           matTooltipPosition="below"
+                           aria-label="sélectionner le mode"
+                           [formControl]="toFormControl(
+                           dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode']))">
+            <mat-radio-button value="duration">
+              <span> Durée </span>
+            </mat-radio-button>
+            <mat-radio-button value="period">
+              <span> Période </span>
+            </mat-radio-button>
+          </mat-radio-group>
+          <mat-form-field appearance="fill">
             <mat-label>
               Début
             </mat-label>
@@ -49,7 +61,8 @@
                    [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start']))"/>
           </mat-form-field>
-          <mat-form-field fxFlex="25%" appearance="fill">
+          <mat-form-field appearance="fill" *ngIf="toFormControl(
+                           dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'period'">
             <mat-label>
               Fin
             </mat-label>
@@ -59,7 +72,8 @@
                    [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end']))"/>
           </mat-form-field>
-          <mat-form-field fxFlex="25%" appearance="fill">
+          <mat-form-field appearance="fill" *ngIf="toFormControl(
+                           dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'">
             <mat-label>
               Durée
             </mat-label>
@@ -69,7 +83,8 @@
                    [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value']))"/>
           </mat-form-field>
-          <mat-form-field fxFlex="25%" appearance="fill">
+          <mat-form-field appearance="fill" *ngIf="toFormControl(
+                           dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'">
             <mat-label>
               Unité de la durée
             </mat-label>
@@ -148,9 +163,9 @@
                        [matAutocomplete]="autoUnit"/>
               </mat-form-field>
               <mat-autocomplete #autoUnit="matAutocomplete" [displayWith]="displayFnCoding.bind(this)">
-                <mat-option *ngIf="isLoading$ | async" class="is-loading"> Chargement... </mat-option>
-                <ng-container *ngIf="!(isLoading$ | async)">
-                  <mat-option *ngFor="let unitCode of doseAndRateUnitArray; index as i trackBy: trackByCoding"
+                <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
+                <ng-container *ngIf="!(isLoadingList$ | async)">
+                  <mat-option *ngFor="let unitCode of doseAndRateUnitArray(nDosage); index as i trackBy: trackByCoding"
                               [value]="unitCode">
                     {{unitCode | coding}}
                   </mat-option>

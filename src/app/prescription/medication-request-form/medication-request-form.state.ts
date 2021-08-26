@@ -12,7 +12,7 @@ import {
   CodeableConcept, Coding,
   id,
   Medication,
-  MedicationKnowledge, MedicationKnowledgeIngredient,
+  MedicationKnowledge,
   MedicationRequest,
   Ratio,
   ValueSetContains
@@ -36,8 +36,7 @@ export class MedicationFormStateAddMedication implements IPartialState {
   readonly type = 'AddMedication';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _medication: Medication) {
+              private _medicationKnowledge: MedicationKnowledge) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -46,10 +45,6 @@ export class MedicationFormStateAddMedication implements IPartialState {
 
   public get medicationKnowledge(): MedicationKnowledge {
     return this._medicationKnowledge;
-  }
-
-  public get medication(): Medication {
-    return this._medication;
   }
 }
 
@@ -71,38 +66,19 @@ export class MedicationFormStateRemoveMedication implements IPartialState {
 export class MedicationFormStateValueChangesMedication implements IPartialState {
   readonly type = 'ValueChangesMedication';
 
-  constructor(private _medicationRequest: MedicationRequest,
-              private _medicationKnowledge?: MedicationKnowledge,
-              private _medication?: Medication,
-              private _ingredient?: MedicationKnowledgeIngredient[],
-              private _routeValue?: CodeableConcept) {
+  constructor(private _medicationRequest: MedicationRequest) {
   }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
-  }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
-  }
-
-  public get medication(): Medication {
-    return this._medication;
-  }
-
-  public get ingredient(): MedicationKnowledgeIngredient[] {
-    return this._ingredient;
-  }
-
-  public get route(): CodeableConcept {
-    return this._routeValue;
   }
 }
 
 export class MedicationFormStateAddDosageInstruction implements IPartialState {
   readonly type = 'AddDosageInstruction';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
@@ -113,25 +89,11 @@ export class MedicationFormStateRemoveDosageInstruction implements IPartialState
   readonly type = 'RemoveDosageInstruction';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _nDosage: number,
-              private _medicationKnowledge?: MedicationKnowledge,
-              private _medication?: Medication,
-              private _ingredient?: MedicationKnowledgeIngredient[]) { }
+              private _nDosage: number) {
+  }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
-  }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
-  }
-
-  public get medication(): Medication {
-    return this._medication;
-  }
-
-  public get ingredient(): MedicationKnowledgeIngredient[] {
-    return this._ingredient;
   }
 
   public get nDosage(): number {
@@ -144,31 +106,11 @@ export class MedicationFormStateValueChangesDosageInstruction implements IPartia
   readonly type = 'ValueChangesDosageInstruction';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _nDosage: number,
-              private _medicationKnowledge?: MedicationKnowledge,
-              private _medication?: Medication,
-              private _ingredient?: MedicationKnowledgeIngredient[],
-              private _routeValue?: CodeableConcept) {
+              private _nDosage: number) {
   }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
-  }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
-  }
-
-  public get medication(): Medication {
-    return this._medication;
-  }
-
-  public get route(): CodeableConcept {
-    return this._routeValue;
-  }
-
-  public get ingredient(): MedicationKnowledgeIngredient[] {
-    return this._ingredient;
   }
 
   public get nDosage(): number {
@@ -249,11 +191,24 @@ export class MedicationFormStateRemoveDoseAndRate implements IPartialState {
   }
 }
 
+export class MedicationFormStateValueChangesTreatmentIntent implements IState {
+  readonly type = 'ValueChangesTreatmentIntent';
+
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+}
+
 export class MedicationRequestFormState implements IState {
 
   private _medicationRequest: MedicationRequest;
 
-  private readonly _loading$: BehaviorSubject<boolean>;
+  private readonly _loadingCIOList$: BehaviorSubject<boolean>;
+
+  private readonly _loadingTIOList$: BehaviorSubject<boolean>;
 
   private readonly _nMedicationArray: Array<number>;
 
@@ -265,26 +220,35 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _medicationKnowledgeMap: Map<id, MedicationKnowledge>;
 
-  private readonly _routeArray: Array<CodeableConcept>;
+  private readonly _routeMap: Map<number, Array<CodeableConcept>>;
 
-  private readonly _formMap: Map<id, Array<CodeableConcept>>;
+  private readonly _formMap: Map<id, Map<number, Array<CodeableConcept>>>;
 
-  private readonly _strengthMap: Map<string, Array<Ratio>>;
+  private readonly _strengthMap: Map<string, Map<number, Array<Ratio>>>;
 
-  private readonly _doseAndRateUnitMap: Map<id, Array<Coding>>;
+  private readonly _doseAndRateUnitMap: Map<id, Map<number, Array<Coding>>>;
+
+  private readonly _treatmentIntentArray: Array<ValueSetContains>;
 
   private readonly _durationUnitArray: Array<ValueSetContains>;
 
   constructor(private _type: string) {
-    this._loading$ = new BehaviorSubject<boolean>(false);
+    this._loadingCIOList$ = new BehaviorSubject<boolean>(false);
+    this._loadingTIOList$ = new BehaviorSubject<boolean>(false);
     this._nMedicationArray = new Array<number>();
     this._autoIncrement = 1;
     this._medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
-    this._routeArray = new Array<CodeableConcept>();
-    this._formMap = new Map<id, Array<CodeableConcept>>();
-    this._strengthMap = new Map<string, Array<Ratio>>();
-    this._doseAndRateUnitMap = new Map<id, Array<Coding>>();
+    this._routeMap = new Map<number, Array<CodeableConcept>>();
+    this._formMap = new Map<id, Map<number, Array<CodeableConcept>>>();
+    this._strengthMap = new Map<string, Map<number, Array<Ratio>>>();
+    this._doseAndRateUnitMap = new Map<id, Map<number, Array<Coding>>>();
+    this._treatmentIntentArray = new Array<ValueSetContains>();
     this._durationUnitArray = new Array<ValueSetContains>();
+  }
+
+  public get medication(): Medication {
+    return (this._medicationRequest.contained.length > 1) ?
+      this._medicationRequest.contained[1] as Medication : this._medicationRequest.contained[0];
   }
 
   public get type(): string {
@@ -295,12 +259,20 @@ export class MedicationRequestFormState implements IState {
     this._type = type;
   }
 
-  public set loading(loading: boolean) {
-    this._loading$.next(loading);
+  public set loadingCIOList(loading: boolean) {
+    this._loadingCIOList$.next(loading);
   }
 
-  public get isLoading$(): Observable<boolean> {
-    return this._loading$.asObservable();
+  public get isLoadingCIOList$(): Observable<boolean> {
+    return this._loadingCIOList$.asObservable();
+  }
+
+  public set loadingTIOList(loading: boolean) {
+    this._loadingTIOList$.next(loading);
+  }
+
+  public get isLoadingTIOList$(): Observable<boolean> {
+    return this._loadingTIOList$.asObservable();
   }
 
   public set medicationRequest(medicationRequest: MedicationRequest) {
@@ -339,20 +311,24 @@ export class MedicationRequestFormState implements IState {
     return this._medicationKnowledgeMap;
   }
 
-  public get formMap(): Map<id, Array<CodeableConcept>> {
+  public get formMap(): Map<id, Map<number, Array<CodeableConcept>>> {
     return this._formMap;
   }
 
-  public get routeArray(): Array<CodeableConcept> {
-    return this._routeArray;
-  }
-
-  public get strengthMap(): Map<string, Array<Ratio>> {
+  public get strengthMap(): Map<string, Map<number, Array<Ratio>>> {
     return this._strengthMap;
   }
 
-  public get doseAndRateUnitMap(): Map<id, Array<Coding>> {
+  public get doseAndRateUnitMap(): Map<id, Map<number, Array<Coding>>> {
     return this._doseAndRateUnitMap;
+  }
+
+  public get routeMap(): Map<number, Array<CodeableConcept>> {
+    return this._routeMap;
+  }
+
+  public get treatmentIntent(): Array<ValueSetContains> {
+    return this._treatmentIntentArray;
   }
 
   public get durationUnitArray(): Array<ValueSetContains> {

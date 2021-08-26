@@ -33,7 +33,7 @@ import {
   MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart,
   MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd,
 } from '../medication-request-form.intent';
-import {CodeableConcept, code, Coding, Dosage, Medication, MedicationKnowledge, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
+import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-dosage-instruction-form',
@@ -73,25 +73,20 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return null;
   }
 
-  public get isLoading$(): Observable<boolean> {
-    return this._viewModel.isLoading$;
+  public get isLoadingList$(): Observable<boolean> {
+    return this._viewModel.isLoadingCIOList$;
   }
 
-  public get routeArray(): Array<CodeableConcept> {
-    return this._viewModel.routeArray;
+  public routeArray(nDosage: number): Array<CodeableConcept> {
+    return this._viewModel.routeMap.get(nDosage);
   }
 
   public get durationUnitArray(): Array<ValueSetContains> {
     return this._viewModel.durationUnitArray;
   }
 
-  public get doseAndRateUnitArray(): Array<Coding> {
-    if (this._viewModel.medicationRequest.contained.length > 1) {
-      return this._viewModel.doseAndRateUnitMap.get(
-        this._viewModel.medicationRequest.contained[1].id);
-    }
-    return this._viewModel.doseAndRateUnitMap.get(
-      this._viewModel.medicationRequest.contained[0].id);
+  public doseAndRateUnitArray(nDosage: number): Array<Coding> {
+    return this._viewModel.doseAndRateUnitMap.get(this._viewModel.medication.id).get(nDosage);
   }
 
   public ngOnInit(): void {
@@ -114,58 +109,83 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   public render(state: MedicationRequestFormState): void {
-    const dosageInstruction = this._dosageInstruction$.value as FormArray;
     switch (state.type) {
       case 'AddMedication':
-        this._dosageInstruction$.next(this._fb.array([], this.formArrayMinLength(1)));
+        this._dosageInstruction$.next(
+          this._fb.array([
+            this.addDosageInstruction(
+              state.medicationRequest.dosageInstruction[0],
+              0
+            )
+          ], this.formArrayMinLength(1)));
+        break;
+      case 'RemoveMedication':
+        if (state.medicationRequest) {
+          this._dosageInstruction$.next(this.dosageInstruction);
+        }
+        else {
+          this._dosageInstruction$.next(false);
+        }
         break;
       case 'AddDosageInstruction':
-        const dosageInstructionGroup = this.addDosageInstruction(
-          state.medicationRequest.dosageInstruction[state.nDosage],
-          state.nDosage
+        this.dosageInstruction?.push(
+          this.addDosageInstruction(
+            state.medicationRequest.dosageInstruction[state.nDosage],
+            state.nDosage
+          )
         );
-        dosageInstruction.push(dosageInstructionGroup);
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'RemoveDosageInstruction':
-        dosageInstruction.removeAt(state.nDosage);
-        this._dosageInstruction$.next(dosageInstruction);
+        this.dosageInstruction?.removeAt(state.nDosage);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'AddTimeOfDay':
-        const addTimeOfDay = dosageInstruction.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
+        const addTimeOfDay = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
         this.addTimeOfDay(state.nDosage, addTimeOfDay);
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'RemoveTimeOfDay':
-        const removeTimeOfDay = dosageInstruction.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
+        const removeTimeOfDay = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
         removeTimeOfDay.removeAt(state.index);
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'AddDoseAndRate':
-        const addDoseAndRate = dosageInstruction.at(state.nDosage).get('doseAndRate') as FormArray;
+        const addDoseAndRate = this.dosageInstruction?.at(state.nDosage).get('doseAndRate') as FormArray;
         this.addDoseAndRate(
           state.nDosage,
           addDoseAndRate
         );
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'RemoveDoseAndRate':
-        const removeDoseAndRate = dosageInstruction.at(state.nDosage).get('doseAndRate') as FormArray;
+        const removeDoseAndRate = this.dosageInstruction?.at(state.nDosage).get('doseAndRate') as FormArray;
         removeDoseAndRate.removeAt(state.index);
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'ValueChangesDosageInstruction':
         this.updateDosageInstruction(
           state.medicationRequest.dosageInstruction[state.nDosage],
-          dosageInstruction.at(state.nDosage) as FormGroup
+          this.dosageInstruction?.at(state.nDosage) as FormGroup
         );
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
+        break;
+      case 'ValueChangesMedication':
+        if (state.medicationRequest.dosageInstruction) {
+          state.medicationRequest.dosageInstruction.forEach((dosage, nDosage) => {
+            this.updateDosageInstruction(
+              dosage,
+              this.dosageInstruction?.at(nDosage) as FormGroup
+            );
+          });
+        }
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'AddMedicationRequest':
         this._dosageInstruction$.next(false);
         break;
       default:
-        this._dosageInstruction$.next(dosageInstruction);
+        this._dosageInstruction$.next(this.dosageInstruction);
         break;
     }
   }
@@ -177,11 +197,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   public onRemoveDosageInstruction(nDosage: number): void {
-    const medication = this._viewModel.medicationRequest.contained[0] as Medication;
-    const medicationKnowledge = this.medicationKnowledgeMap(medication);
-
     this._viewModel.dispatchIntent(
-      new MedicationFormIntentRemoveDosageInstruction(this._viewModel.medicationRequest, nDosage, medicationKnowledge, medication)
+      new MedicationFormIntentRemoveDosageInstruction(this._viewModel.medicationRequest, nDosage)
     );
   }
 
@@ -189,9 +206,9 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     this._viewModel.dispatchIntent(new MedicationFormIntentAddTimeOfDay(nDosage));
   }
 
-  public onRemoveTimeOfDay(nDosage: number, index: number): void {
+  public onRemoveTimeOfDay(nDosage: number, nTimeOfDay: number): void {
     this._viewModel.dispatchIntent(
-      new MedicationFormIntentRemoveTimeOfDay(this._viewModel.medicationRequest, nDosage, index)
+      new MedicationFormIntentRemoveTimeOfDay(this._viewModel.medicationRequest, nDosage, nTimeOfDay)
     );
   }
 
@@ -199,9 +216,9 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     this._viewModel.dispatchIntent(new MedicationFormIntentAddDoseAndRate(nDosage));
   }
 
-  public onRemoveDoseAndRate(nDosage: number, index: number): void {
+  public onRemoveDoseAndRate(nDosage: number, nDoseAndRate: number): void {
     this._viewModel.dispatchIntent(
-      new MedicationFormIntentRemoveDoseAndRate(this._viewModel.medicationRequest, nDosage, index)
+      new MedicationFormIntentRemoveDoseAndRate(this._viewModel.medicationRequest, nDosage, nDoseAndRate)
     );
   }
 
@@ -234,24 +251,22 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   private addDosageInstruction(dosage: Dosage, nDosage: number): FormGroup {
-    const boundsDurationUnit = this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code);
-    const durationUnit = this.durationUnit(dosage?.timing?.repeat?.durationUnit);
-
     const dosageInstructionGroup = this._fb.group({
       'track-id': Utils.randomString(16),
       route: [dosage?.route, [Validators.required]],
       timing: this._fb.group({
         repeat: this._fb.group({
+          boundsMode: ['duration'],
           boundsDuration: this._fb.group({
             value: [dosage?.timing?.repeat?.boundsDuration?.value],
-            unit: [boundsDurationUnit],
+            unit: [this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code)],
           }),
           boundsPeriod: this._fb.group({
             start: [dosage?.timing?.repeat?.boundsPeriod?.start],
             end: [dosage?.timing?.repeat?.boundsPeriod?.end]
           }),
           duration: [dosage?.timing?.repeat?.duration], // How long when it happens
-          durationUnit: [durationUnit],
+          durationUnit: [this.durationUnit(dosage?.timing?.repeat?.durationUnit)],
           timeOfDay: this._fb.array([]) // Time of day for action
         })
       }),
@@ -269,18 +284,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     routeString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        tap(() => dosageInstructionGroup.get('route').setValue(null, {emitEvent: false}))
+        tap(() => dosageInstructionGroup.get('route').reset(null, {emitEvent: false}))
       )
       .subscribe({
         next: () => {
-          const medication = this._viewModel.medicationRequest.contained[0] as Medication;
-          const medicationKnowledge = this.medicationKnowledgeMap(medication);
+          const medication = this._viewModel.medication;
           this._viewModel.dispatchIntent(
             new MedicationFormIntentValueChangesDosageInstructionRoute(
               this._viewModel.medicationRequest,
               nDosage,
               null,
-              medicationKnowledge,
               medication
             )
           );
@@ -290,18 +303,17 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     routeObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
+        distinctUntilChanged<CodeableConcept>((prev, cur) => prev.text === cur.text),
         tap(value => dosageInstructionGroup.get('route').setValue(value, {emitEvent: false}))
       )
       .subscribe({
         next: value => {
-          const medication = this._viewModel.medicationRequest.contained[0] as Medication;
-          const medicationKnowledge = this.medicationKnowledgeMap(medication);
+          const medication = this._viewModel.medication;
           this._viewModel.dispatchIntent(
             new MedicationFormIntentValueChangesDosageInstructionRoute(
               this._viewModel.medicationRequest,
               nDosage,
               value,
-              medicationKnowledge,
               medication
             )
           );
@@ -466,6 +478,21 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         ),
         error: err => console.error('error', err)
       });
+
+    const loadedList$ = this.isLoadingList$
+      .pipe(
+        filter(value => !value)
+      );
+
+    loadedList$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: () => this.onLoadedList(),
+        error: err => console.error('error', err)
+      });
+
     return dosageInstructionGroup;
   }
 
@@ -563,6 +590,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   private updateDosageInstruction(dosage: Dosage, dosageInstructionGroup: FormGroup): void {
+    if (dosage?.route) {
+      dosageInstructionGroup.get('route').setValue(dosage.route, {emitEvent: false});
+    }
+    else {
+      dosageInstructionGroup.get('route').reset(undefined, {emitEvent: false});
+    }
+
     if (dosage.timing.repeat.boundsDuration) {
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value'])
         .setValue(dosage.timing.repeat.boundsDuration?.value, {emitEvent: false});
@@ -583,16 +617,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     }
   }
 
-  private medicationKnowledgeMap(medication: Medication): MedicationKnowledge {
-    if (this._viewModel.medicationKnowledgeMap.has(medication.id)) {
-      return this._viewModel.medicationKnowledgeMap.get(medication.id);
-    }
-    const medicationId = medication.ingredient[0].itemReference.reference.substring(1);
-    return this._viewModel.medicationKnowledgeMap.get(medicationId);
-  }
-
   private formArrayMinLength = (min: number) => {
-    return (c: AbstractControl): {[key: string]: any} => {
+    return (c: AbstractControl): {[key: string]: boolean} => {
       if (c.value.length >= min) { return null; }
       return {formArrayMinLength: true};
     };
@@ -616,5 +642,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       return  this.durationUnitArray[durationUnitIndex];
     }
     return undefined;
+  }
+
+  private onLoadedList(): void {
+    if (this._dosageInstruction$.value) {
+      const dosageInstruction = this._dosageInstruction$.value as FormArray;
+      dosageInstruction.controls.forEach((dosageInstructionGroup, nDosage) => {
+        if (this.routeArray(nDosage).length === 1) {
+          dosageInstructionGroup.get('route').setValue(this.routeArray(nDosage)[0]);
+        }
+      });
+    }
   }
 }

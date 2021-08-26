@@ -19,17 +19,21 @@ import {
   MedicationFormStateRemoveTimeOfDay,
   MedicationFormStateAddDoseAndRate,
   MedicationFormStateRemoveDoseAndRate,
-  MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication, MedicationFormStateCdsHelp
+  MedicationFormStateRemoveMedication,
+  MedicationFormStateValueChangesMedication,
+  MedicationFormStateCdsHelp,
+  MedicationFormStateValueChangesTreatmentIntent
 } from './medication-request-form.state';
 import {
+  CodeableConceptBuilder, CodingBuilder,
   DosageBuilder,
   DoseAndRateBuilder, DurationBuilder,
   MedicationBuilder, MedicationIngredientBuilder,
-  MedicationRequestBuilder, PeriodBuilder, QuantityBuilder, RatioBuilder,
+  MedicationRequestBuilder, MedicationRequestDispenseRequestBuilder, PeriodBuilder, QuantityBuilder, RatioBuilder,
   ReferenceBuilder, TimingBuilder, TimingRepeatBuilder
 } from '../../common/fhir/builders/fhir.resource.builder';
 import {
-  CodeableConcept, Coding, dateTime, decimal, Dosage, DosageDoseAndRate,
+  CodeableConcept, Coding, dateTime, decimal, Dosage, DosageDoseAndRate, Extension,
   id,
   Medication,
   MedicationKnowledge,
@@ -42,7 +46,8 @@ import * as moment from 'moment';
 export class MedicationFormActionAddMedicationRequest implements IAction {
   readonly type = 'AddMedicationRequest';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
 
   public execute(): IPartialState {
     return new MedicationFormStateAddMedicationRequest();
@@ -52,7 +57,8 @@ export class MedicationFormActionAddMedicationRequest implements IAction {
 export class MedicationFormActionCdsHelp implements IAction {
   readonly type = 'CdsHelp';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
 
   public execute(): IPartialState {
     return new MedicationFormStateCdsHelp();
@@ -66,7 +72,8 @@ export class MedicationFormActionAddMedication implements IAction {
               private _medicationKnowledge: MedicationKnowledge,
               private _medicationId: id,
               private _patient: Patient,
-              private _practitioner: Practitioner) { }
+              private _practitioner: Practitioner) {
+  }
 
   public execute(): IPartialState {
     let medicationRequest = lodash.cloneDeep(this._medicationRequest);
@@ -75,9 +82,8 @@ export class MedicationFormActionAddMedication implements IAction {
       .form(this._medicationKnowledge.doseForm)
       .ingredient(lodash.cloneDeep(this._medicationKnowledge.ingredient))
       .build();
-    if (!medicationRequest) {
-      if (this._patient) {
-        medicationRequest = new MedicationRequestBuilder(
+    if (!medicationRequest && this._patient) {
+      medicationRequest = new MedicationRequestBuilder(
           'active',
           'order',
           new ReferenceBuilder(this._patient.id)
@@ -86,13 +92,37 @@ export class MedicationFormActionAddMedication implements IAction {
         )
           .build();
 
-        medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+      medicationRequest.dosageInstruction = new Array<Dosage>(
+        new DosageBuilder(1)
+          .timing(new TimingBuilder()
+            .timingRepeat(new TimingRepeatBuilder()
+              .boundsPeriod(new PeriodBuilder()
+                .start(Utils.now())
+                .build()
+              )
+              .boundsDuration(new DurationBuilder()
+                .default()
+                .build()
+              )
+              .build()
+            )
+            .build()
+          )
+          .build()
+      );
+      medicationRequest.dispenseRequest = new MedicationRequestDispenseRequestBuilder()
+        .validityPeriod(new PeriodBuilder()
+          .start(Utils.now())
+          .build())
+        .build();
+
+      medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+        .build();
+
+      if (this._practitioner) {
+        medicationRequest.requester = new ReferenceBuilder(this._practitioner.id)
+          .resourceType(this._practitioner.resourceType)
           .build();
-        if (this._practitioner) {
-          medicationRequest.requester = new ReferenceBuilder(this._practitioner.id)
-            .resourceType(this._practitioner.resourceType)
-            .build();
-        }
       }
     }
     else if (medicationRequest.contained.length === 0) {
@@ -107,14 +137,14 @@ export class MedicationFormActionAddMedication implements IAction {
           text: medicationOld.code.text + '&' + medication.code.text
         })
         .ingredient([new MedicationIngredientBuilder()
-          .itemReference(new ReferenceBuilder('#' + medicationOld.id)
+          .itemReference(new ReferenceBuilder(medicationOld.id)
             .display(medicationOld.code.text)
             .build()
           )
           .strength(medicationOld.ingredient[0]?.strength)
           .build(),
           new MedicationIngredientBuilder()
-            .itemReference(new ReferenceBuilder('#' + medication.id)
+            .itemReference(new ReferenceBuilder(medication.id)
               .display(medication.code.text)
               .build())
             .build()
@@ -135,11 +165,9 @@ export class MedicationFormActionAddMedication implements IAction {
         .build());
     }
 
-    if (medicationRequest) {
-      medicationRequest.contained.push(medication);
-    }
+    medicationRequest.contained.push(medication);
 
-    return new MedicationFormStateAddMedication(medicationRequest, this._medicationKnowledge, medication);
+    return new MedicationFormStateAddMedication(medicationRequest, this._medicationKnowledge);
   }
 }
 
@@ -147,16 +175,17 @@ export class MedicationFormActionRemoveMedication implements IAction {
   readonly type = 'RemoveMedication';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _nMedication: number) { }
+              private _nMedication: number) {
+  }
 
   public execute(): IPartialState {
+    if (this._nMedication === 0) {
+      return new MedicationFormStateRemoveMedication(null, this._nMedication);
+    }
+
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const contained = medicationRequest.contained;
-    if (this._nMedication === 0) {
-      contained.length = 0;
-      delete medicationRequest.medicationReference;
-    }
-    else if (this._nMedication !== 0 && contained.length === 3) {
+    if (this._nMedication !== 0 && contained.length === 3) {
       contained.splice(this._nMedication, 1);
       contained.splice(0, 1);
       const medication = contained[0];
@@ -177,9 +206,7 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _formValue: CodeableConcept,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _intendedRoute: CodeableConcept) {
+              private _formValue: CodeableConcept) {
   }
 
   public execute(): IPartialState {
@@ -190,24 +217,25 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
       }
     );
 
+    const medication = medicationRequest.contained[nMedication];
     if (this._formValue) {
-      this._medication.form = this._formValue;
+      medication.form = this._formValue;
     }
     else {
-      delete this._medication.form;
+      delete medication.form;
+
+      for (const item of medication.ingredient) {
+        if (item?.itemCodeableConcept) {
+          delete item?.strength;
+        }
+      }
     }
 
-    medicationRequest.contained[nMedication] = this._medication;
+    if (medicationRequest.dosageInstruction && !this._formValue) {
+      medicationRequest.dosageInstruction.forEach((dosage) => delete dosage.route);
+    }
 
-    const ingredient = (medicationRequest.contained.length > 1) ?
-      this._medicationKnowledge.ingredient : this._medication.ingredient;
-
-    const medication = (medicationRequest.contained.length > 1) ?
-      medicationRequest.contained[1] as Medication : this._medication;
-
-    return new MedicationFormStateValueChangesMedication(
-      medicationRequest, this._medicationKnowledge, medication, ingredient, this._intendedRoute
-    );
+    return new MedicationFormStateValueChangesMedication(medicationRequest);
   }
 }
 
@@ -217,10 +245,7 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemCodeableConcept: CodeableConcept,
-              private _strengthValue: Ratio,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _form: CodeableConcept,
-              private _intendedRoute: CodeableConcept) {
+              private _strengthValue: Ratio) {
   }
 
   public execute(): IPartialState {
@@ -230,22 +255,27 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
         return value.id === this._medication.id;
       }
     );
-    const nIngredient = this._medication.ingredient.findIndex(
-      value => value.itemCodeableConcept === this._itemCodeableConcept
+    const medication = medicationRequest.contained[nMedication];
+
+    const nIngredient = medication.ingredient.findIndex(
+      value => value.itemCodeableConcept.text === this._itemCodeableConcept.text
     );
+    const ingredient = medication.ingredient[nIngredient];
 
     if (this._strengthValue) {
-      this._medication.ingredient[nIngredient].strength = this._strengthValue;
+      ingredient.strength = this._strengthValue;
     }
     else {
-      delete this._medication.ingredient[nIngredient].strength;
+      delete ingredient.strength;
+      delete medication.form;
     }
 
-    medicationRequest.contained[nMedication] = this._medication;
+    if (medicationRequest.dosageInstruction
+      && !this._strengthValue) {
+      medicationRequest.dosageInstruction.forEach((dosage) => dosage.route);
+    }
 
-    return new MedicationFormStateValueChangesMedication(
-      medicationRequest, this._medicationKnowledge, this._medication, this._medication.ingredient, this._intendedRoute
-    );
+    return new MedicationFormStateValueChangesMedication(medicationRequest);
   }
 }
 
@@ -345,7 +375,8 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthUnit im
 export class MedicationFormActionAddDosageInstruction implements IAction {
   readonly type = 'AddDosageInstruction';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
 
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
@@ -378,9 +409,8 @@ export class MedicationFormActionRemoveDosageInstruction implements IAction {
   readonly type = 'RemoveDosageInstruction';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _nDosage: number,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _medication: Medication) { }
+              private _nDosage: number) {
+  }
 
   execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
@@ -390,15 +420,8 @@ export class MedicationFormActionRemoveDosageInstruction implements IAction {
     if (medicationRequest.dosageInstruction.length === 0) {
       delete medicationRequest.dosageInstruction;
     }
-    const ingredient = (this._medicationRequest.contained.length > 1) ?
-      this._medicationKnowledge.ingredient : this._medication.ingredient;
 
-    const medication = (this._medicationRequest.contained.length > 1) ?
-      this._medicationRequest.contained[1] as Medication : this._medication;
-
-    return new MedicationFormStateRemoveDosageInstruction(
-      medicationRequest, this._nDosage, this._medicationKnowledge, medication, ingredient
-    );
+    return new MedicationFormStateRemoveDosageInstruction(medicationRequest, this._nDosage);
   }
 }
 
@@ -408,8 +431,8 @@ export class MedicationFormActionValueChangesDosageInstructionRoute implements I
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _routeValue: CodeableConcept,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _medication: Medication) { }
+              private _medication: Medication) {
+  }
 
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
@@ -422,15 +445,22 @@ export class MedicationFormActionValueChangesDosageInstructionRoute implements I
       delete dosage.route;
     }
 
-    const ingredient = (this._medicationRequest.contained.length > 1) ?
-      this._medicationKnowledge.ingredient : this._medication.ingredient;
-
-    const medication = (this._medicationRequest.contained.length > 1) ?
-      this._medicationRequest.contained[1] as Medication : this._medication;
-
-    return new MedicationFormStateValueChangesDosageInstruction(
-      medicationRequest, this._nDosage, this._medicationKnowledge, medication, ingredient, this._routeValue
+    const nMedication = medicationRequest.contained.findIndex(
+      (value) => {
+        return value.id === this._medication.id;
+      }
     );
+    const medication = medicationRequest.contained[nMedication];
+    if (!this._routeValue) {
+      delete medication.form;
+      for (const item of medication.ingredient) {
+        if (item?.itemCodeableConcept) {
+          delete item?.strength;
+        }
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
 }
 
@@ -513,7 +543,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
       );
       const end = start.add(duration);
 
-      dosage.timing.repeat.boundsPeriod.end = end.toISOString();
+      dosage.timing.repeat.boundsPeriod.end = end.format('YYYY-MM-DD');
     }
   }
 }
@@ -598,7 +628,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit
       );
       const end = start.add(duration);
 
-      dosage.timing.repeat.boundsPeriod.end = end.toISOString();
+      dosage.timing.repeat.boundsPeriod.end = end.format('YYYY-MM-DD');
     }
   }
 }
@@ -680,7 +710,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
       );
       const end = start.add(duration);
 
-      dosage.timing.repeat.boundsPeriod.end = end.toISOString();
+      dosage.timing.repeat.boundsPeriod.end = end.format('YYYY-MM-DD');
     }
     else if (dosage.timing.repeat?.boundsPeriod?.start
       && dosage.timing.repeat?.boundsPeriod?.end) {
@@ -938,7 +968,7 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue 
       }
     }
 
-    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
 }
 
@@ -996,7 +1026,7 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
       }
     }
 
-    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
 }
 
@@ -1083,7 +1113,7 @@ export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue imp
       }
     }
 
-    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage, dosage);
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
 }
 
@@ -1122,5 +1152,86 @@ export class MedicationFormActionValueChangesDispenseRequest implements IAction 
     medicationRequest.dispenseRequest = medicationDispense;
 
     return new MedicationFormStateValueChangesDispenseRequest(medicationRequest);
+  }
+}
+
+export class MedicationFormActionValueChangesTreatmentIntent implements IAction {
+  readonly type = 'ValueChangesTreatmentIntent';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _treatmentIntent: ValueSetContains) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+
+    if (this._treatmentIntent) {
+      if (!medicationRequest.extension) {
+        medicationRequest.extension = new Array<Extension>();
+        medicationRequest.extension.push(
+          {
+            url: 'http://interopsante.org/fhir/StructureDefinition/FrTreatmentIntent',
+            valueCodeableConcept: new CodeableConceptBuilder()
+              .text(this._treatmentIntent.display)
+              .addCoding(new CodingBuilder()
+                .code(this._treatmentIntent.code)
+                .system(this._treatmentIntent.system)
+                .display(this._treatmentIntent.display)
+                .build())
+              .build()
+          } as Extension
+        );
+      }
+      else {
+        const nExtension = medicationRequest.extension.findIndex((extension) => {
+          return extension.url === 'http://interopsante.org/fhir/StructureDefinition/FrTreatmentIntent';
+        });
+        if (nExtension > -1) {
+          medicationRequest.extension.forEach((extension) => {
+            if (extension.url === 'http://interopsante.org/fhir/StructureDefinition/FrTreatmentIntent') {
+              extension.valueCodeableConcept = new CodeableConceptBuilder()
+                .text(this._treatmentIntent.display)
+                .addCoding(new CodingBuilder()
+                  .code(this._treatmentIntent.code)
+                  .system(this._treatmentIntent.system)
+                  .display(this._treatmentIntent.display)
+                  .build())
+                .build();
+            }
+          });
+        }
+        else {
+          medicationRequest.extension.push(
+            {
+              url: 'http://interopsante.org/fhir/StructureDefinition/FrTreatmentIntent',
+              valueCodeableConcept: new CodeableConceptBuilder()
+                .text(this._treatmentIntent.display)
+                .addCoding(new CodingBuilder()
+                  .code(this._treatmentIntent.code)
+                  .system(this._treatmentIntent.system)
+                  .display(this._treatmentIntent.display)
+                  .build())
+                .build()
+            } as Extension
+          );
+        }
+      }
+
+    }
+    else {
+      if (medicationRequest.extension) {
+        const nExtension = medicationRequest.extension.findIndex((extension) => {
+          return extension.url === 'http://interopsante.org/fhir/StructureDefinition/FrTreatmentIntent';
+        });
+        if (nExtension > -1) {
+          medicationRequest.extension.splice(nExtension);
+        }
+        if (medicationRequest.extension.length === 0) {
+          delete medicationRequest.extension;
+        }
+      }
+    }
+
+    return new MedicationFormStateValueChangesTreatmentIntent(medicationRequest);
   }
 }

@@ -101,9 +101,7 @@ export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _formValue: CodeableConcept,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _intendedRoute: CodeableConcept) {
+              private _formValue: CodeableConcept) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -117,14 +115,6 @@ export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
   public get formValue(): CodeableConcept {
     return this._formValue;
   }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
-  }
-
-  public get intendedRoute(): CodeableConcept {
-    return this._intendedRoute;
-  }
 }
 
 export class MedicationFormIntentValueChangesMedicationIngredientStrength implements IIntent {
@@ -133,10 +123,7 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrength implem
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemCodeableConcept: CodeableConcept,
-              private _strengthValue: Ratio,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _form: CodeableConcept,
-              private _intendedRoute: CodeableConcept) {
+              private _strengthValue: Ratio) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -153,18 +140,6 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrength implem
 
   public get strengthValue(): Ratio {
     return this._strengthValue;
-  }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
-  }
-
-  public get form(): CodeableConcept {
-    return this._form;
-  }
-
-  public get intendedRoute(): CodeableConcept {
-    return this._intendedRoute;
   }
 }
 
@@ -234,9 +209,7 @@ export class MedicationFormIntentRemoveDosageInstruction implements IIntent {
   readonly type = 'RemoveDosageInstruction';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _nDosage: number,
-              private _medicationKnowledge: MedicationKnowledge,
-              private _medication: Medication) {
+              private _nDosage: number) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -246,14 +219,6 @@ export class MedicationFormIntentRemoveDosageInstruction implements IIntent {
   public get nDosage(): number {
     return this._nDosage;
   }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
-  }
-
-  public get medication(): Medication {
-    return this._medication;
-  }
 }
 
 export class MedicationFormIntentValueChangesDosageInstructionRoute implements IIntent {
@@ -262,7 +227,6 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _routeValue: CodeableConcept,
-              private _medicationKnowledge: MedicationKnowledge,
               private _medication: Medication) {
   }
 
@@ -276,10 +240,6 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
 
   public get routeValue(): CodeableConcept {
     return this._routeValue;
-  }
-
-  public get medicationKnowledge(): MedicationKnowledge {
-    return this._medicationKnowledge;
   }
 
   public get medication(): Medication {
@@ -557,7 +517,8 @@ export class MedicationFormIntentValueChangesDispenseRequest implements IIntent 
   readonly type = 'ValueChangesDispenseRequest';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _medicationDispense: MedicationRequestDispenseRequest) { }
+              private _medicationDispense: MedicationRequestDispenseRequest) {
+  }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
@@ -565,5 +526,21 @@ export class MedicationFormIntentValueChangesDispenseRequest implements IIntent 
 
   public get medicationDispense(): MedicationRequestDispenseRequest {
     return this._medicationDispense;
+  }
+}
+
+export class MedicationFormIntentValueChangesTreatmentIntent implements IIntent {
+  readonly type = 'ValueChangesTreatmentIntent';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _treatmentIntent: ValueSetContains) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get treatmentIntent(): ValueSetContains {
+    return this._treatmentIntent;
   }
 }

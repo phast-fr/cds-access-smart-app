@@ -6,28 +6,41 @@
               matTooltipPosition="below"
               aria-label="Ajouter le produit selectionné"
               (click)="onAddMedication()"
-              [disabled]="!isMedicationAddable"> + </button>
+              [disabled]="!(isMedicationRequestAddable$ | async)"> + </button>
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-icon svgIcon="medicines" aria-hidden="false" aria-label="chercher un produit" matPrefix
                   matTooltip="Chercher un produit"></mat-icon>
-        <mat-label> Dénomination commune </mat-label>
-        <input type="text" placeholder="Ex. PARACETAMOL"
-               aria-label="Dénomination commune"
+        <mat-label>
+          {{(medicationRequestMode$ | async) | i18nSelect: {'dc': 'Dénomination commune', 'sp': 'Spécialité'} }}
+        </mat-label>
+        <input type="text"
+               placeholder="{{(medicationRequestMode$ | async) | i18nSelect: {'dc': 'Ex. PARACETAMOL', 'sp': 'Ex. DOLIPRANE'} }}"
+               aria-label="saisir le nom d'un produit"
                matInput
                [formControl]="toControl(medicationRequestGroup.get('medicationKnowledge'))"
                [matAutocomplete]="autoMedicationKnowledge"/>
       </mat-form-field>
+      <mat-radio-group matTooltip="Sélectionner le mode de recherche"
+                       matTooltipPosition="below"
+                       aria-label="sélectionner le mode de recherche"
+                       [formControl]="toControl(medicationRequestGroup.get('requestMode'))">
+        <mat-radio-button value="dc">
+          <span> DC </span>
+        </mat-radio-button>
+        <mat-radio-button value="sp">
+          <span> Spécialité </span>
+        </mat-radio-button>
+      </mat-radio-group>
     </div>
   </div>
   <app-medication-form></app-medication-form>
+  <app-metadata-form></app-metadata-form>
   <app-dosage-instruction-form></app-dosage-instruction-form>
   <app-dispense-request-form></app-dispense-request-form>
-  <div class="form-field-row form-control">
+  <div class="form-field-row form-control" *ngIf="medicationRequest != null">
     <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
-            *ngIf="medicationRequest != null" [disabled]="!(isMedicationRequestAddable$ | async)"> Ajouter </button>
-    <mat-divider></mat-divider>
-    <button mat-raised-button color="secondary" (click)="onCDSHelp()"
-            *ngIf="medicationRequest != null"> Aide (CDS) </button>
+             [disabled]="!(isMedicationRequestAddable$ | async)"> Ajouter </button>
+    <button mat-raised-button color="secondary" (click)="onCDSHelp()"> Aide (CDS) </button>
   </div>
   <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
                     [displayWith]="displayFn.bind(this)">

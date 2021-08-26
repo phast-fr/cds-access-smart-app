@@ -87,7 +87,7 @@ export class PhastCioDcService {
     mkCode: CodeableConcept,
     doseForm: CodeableConcept | undefined,
     ingredient: MedicationIngredient[] | undefined,
-    intendedRoute: CodeableConcept | undefined
+    intendedRoute?: CodeableConcept
   ): Observable<Parameters> {
     const input = new MedicationKnowledgeDetailsBuilder(mkId, mkCode)
       .doseForm(doseForm)
