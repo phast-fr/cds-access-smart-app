@@ -63,6 +63,19 @@ export class Utils {
     return unit;
   }
 
+  public static intersect<T>(firstArray: Array<T>, arrays: Array<Array<T>>,
+                             comparator: (previousValue: T, currentValue: T, currentIndex: number, array: T[]) => boolean): Array<T> {
+    const intersect = (a, b) => {
+      return [...a].filter((x, index, array) => b.some(y => comparator(x, y, index, array)));
+    };
+
+    // iterate all sets comparing the first set to each.
+    arrays.forEach(sItem => firstArray = intersect(firstArray, sItem));
+
+    // return the result.
+    return firstArray;
+  }
+
   private static pad(num: number): string {
     if (num < 10) {
       return '0' + num;
