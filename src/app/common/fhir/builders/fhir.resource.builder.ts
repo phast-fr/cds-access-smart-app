@@ -23,12 +23,7 @@ export class MedicationRequestBuilder {
       contained: new Array<Resource>(),
       status,
       intent,
-      subject,
-      dispenseRequest: new MedicationRequestDispenseRequestBuilder()
-        .validityPeriod(new PeriodBuilder()
-          .start(Utils.now())
-          .build())
-        .build()
+      subject
     };
   }
 
