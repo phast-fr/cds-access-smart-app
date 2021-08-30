@@ -257,7 +257,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           boundsMode: ['duration'],
           boundsDuration: this._fb.group({
             value: [dosage?.timing?.repeat?.boundsDuration?.value, Validators.pattern( /\d/ )],
-            unit: [this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code)],
+            unit: [undefined],
           }),
           boundsPeriod: this._fb.group({
             start: [(dosage?.timing?.repeat?.boundsPeriod?.start) ?
@@ -472,19 +472,26 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         error: err => console.error('error', err)
       });
 
-    const loadedList$ = this.isLoadingList$
+    this.isLoadingList$
       .pipe(
+        takeUntil(this._unsubscribeTrigger$),
         filter(value => !value)
-      );
-
-    loadedList$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: () => this.onLoadedList(),
         error: err => console.error('error', err)
       });
+
+    this._viewModel.isLoadingTIOList$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        filter(value => !value)
+      )
+      .subscribe({
+          next: () => this.onLoadedTIOList(dosageInstructionGroup, dosage),
+          error: err => console.error('error', err)
+        }
+      );
 
     return dosageInstructionGroup;
   }
@@ -593,12 +600,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     if (dosage.timing.repeat.boundsDuration) {
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value'])
         .setValue(dosage.timing.repeat.boundsDuration?.value, options);
-
-      const index = this.durationUnitArray.findIndex(
-        value => value.code === dosage.timing.repeat.boundsDuration?.code
-      );
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
-        .setValue(this.durationUnitArray[index], options);
+        .setValue(this.boundsDurationUnit(dosage.timing.repeat.boundsDuration?.code), options);
     }
 
     if (dosage.timing.repeat.boundsPeriod) {
@@ -647,5 +650,10 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         }
       });
     }
+  }
+
+  private onLoadedTIOList(dosageInstructionGroup: FormGroup, dosage: Dosage): void {
+    dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
+      .setValue(this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code), {emitEvent: false});
   }
 }
