@@ -76,6 +76,14 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
           this.addMedication(state.medicationRequest)
         );
         break;
+      case 'RemoveMedication':
+        if (state.medicationRequest) {
+          this._metadataGroup$.next(this.metadataGroup);
+        }
+        else {
+          this._metadataGroup$.next(false);
+        }
+        break;
       case 'AddMedicationRequest':
         this._metadataGroup$.next(false);
         break;
