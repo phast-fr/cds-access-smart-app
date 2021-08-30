@@ -57,6 +57,7 @@
             </mat-label>
             <input type="text"
                    aria-label="Date de début de validité de la dose"
+                   placeholder="DD/MM/YYYY"
                    matInput
                    [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start']))"/>
@@ -68,6 +69,7 @@
             </mat-label>
             <input type="text"
                    aria-label="Date de fin de validité de la dose"
+                   placeholder="DD/MM/YYYY"
                    matInput
                    [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end']))"/>
@@ -117,6 +119,7 @@
               <mat-form-field fxFlex="100%" appearance="fill">
                 <mat-label> Heure {{i + 1}}</mat-label>
                 <input type="text"
+                       placeholder="hh:mm"
                        aria-label="heure"
                        matInput
                        [formControl]="toFormControl(timeOfDay)"/>

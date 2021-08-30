@@ -6,6 +6,7 @@
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
 import * as lodash from 'lodash';
+import {DateTime} from 'luxon';
 import {Utils} from '../../common/cds-access/utils/utils';
 import {IAction, IPartialState} from '../../common/cds-access/models/state.model';
 import {
@@ -33,7 +34,7 @@ import {
   ReferenceBuilder, TimingBuilder, TimingRepeatBuilder
 } from '../../common/fhir/builders/fhir.resource.builder';
 import {
-  CodeableConcept, Coding, dateTime, decimal, Dosage, DosageDoseAndRate, Extension,
+  CodeableConcept, Coding, decimal, Dosage, DosageDoseAndRate, Extension,
   id,
   Medication,
   MedicationKnowledge,
@@ -41,7 +42,6 @@ import {
   Ratio,
   Reference, time, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
-import * as moment from 'moment';
 
 export class MedicationFormActionAddMedicationRequest implements IAction {
   readonly type = 'AddMedicationRequest';
@@ -97,7 +97,7 @@ export class MedicationFormActionAddMedication implements IAction {
           .timing(new TimingBuilder()
             .timingRepeat(new TimingRepeatBuilder()
               .boundsPeriod(new PeriodBuilder()
-                .start(Utils.now())
+                .start(DateTime.now().toFormat('yyyy-MM-dd'))
                 .build()
               )
               .boundsDuration(new DurationBuilder()
@@ -112,7 +112,7 @@ export class MedicationFormActionAddMedication implements IAction {
       );
       medicationRequest.dispenseRequest = new MedicationRequestDispenseRequestBuilder()
         .validityPeriod(new PeriodBuilder()
-          .start(Utils.now())
+          .start(DateTime.now().toFormat('yyyy-MM-dd'))
           .build())
         .build();
 
@@ -388,7 +388,7 @@ export class MedicationFormActionAddDosageInstruction implements IAction {
         .timing(new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
               .boundsPeriod(new PeriodBuilder()
-                  .start(Utils.now())
+                  .start(DateTime.now().toFormat('yyyy-MM-dd'))
                   .build()
                 )
                 .boundsDuration(new DurationBuilder()
@@ -476,7 +476,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
     if (this._boundsDurationValue) {
-      if (dosage.timing === undefined) {
+      if (!dosage.timing) {
         dosage.timing = new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
               .boundsDuration(new DurationBuilder()
@@ -487,7 +487,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
           )
           .build();
       }
-      else if (dosage.timing.repeat === undefined) {
+      else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
           .boundsDuration(new DurationBuilder()
             .value(this._boundsDurationValue)
@@ -495,7 +495,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
           )
           .build();
       }
-      else if (dosage.timing.repeat.boundsDuration === undefined) {
+      else if (!dosage.timing.repeat.boundsDuration) {
         dosage.timing.repeat.boundsDuration = new DurationBuilder()
           .value(this._boundsDurationValue)
           .build();
@@ -503,32 +503,35 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
       else {
         dosage.timing.repeat.boundsDuration.value = this._boundsDurationValue;
       }
+      this.synchronizeBounds(dosage);
     }
     else {
-      if (dosage.timing !== undefined
-        && dosage.timing.repeat !== undefined
-        && dosage.timing.repeat.boundsDuration !== undefined) {
-        if (!dosage.timing.repeat.boundsDuration.code) {
+      if (dosage?.timing?.repeat?.boundsDuration) {
+        if (dosage.timing.repeat.boundsDuration.code) {
           delete dosage.timing.repeat.boundsDuration;
         }
         else {
-          dosage.timing.repeat.boundsDuration.value = null;
+          dosage.timing.repeat.boundsDuration.value = undefined;
+        }
+      }
+      if (dosage?.timing?.repeat?.boundsPeriod?.end) {
+        delete dosage?.timing?.repeat?.boundsPeriod?.end;
+        if (!dosage?.timing?.repeat?.boundsPeriod?.start) {
+          delete dosage?.timing?.repeat?.boundsPeriod;
         }
       }
     }
-
-    this.synchronizeBounds(dosage);
 
     return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
 
   private synchronizeBounds(dosage): void {
     if (dosage.timing.repeat?.boundsPeriod?.start) {
-      const start = moment(dosage.timing.repeat.boundsPeriod.start);
+      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
 
       let unit;
       if (dosage.timing.repeat.boundsDuration.code) {
-        unit = Utils.adaptUnitsOfTime(dosage.timing.repeat.boundsDuration.code);
+        unit = dosage.timing.repeat.boundsDuration.code;
       }
       else {
         unit = 'd';
@@ -537,13 +540,10 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
         dosage.timing.repeat.boundsDuration.system = 'http://unitsofmeasure.org';
       }
 
-      const duration = moment.duration(
-        dosage.timing.repeat.boundsDuration.value,
-        unit as any
-      );
-      const end = start.add(duration);
+      const duration = Utils.duration(dosage.timing.repeat.boundsDuration.value, unit);
+      const end = start.plus(duration);
 
-      dosage.timing.repeat.boundsPeriod.end = end.format('YYYY-MM-DD');
+      dosage.timing.repeat.boundsPeriod.end = end.toFormat('yyyy-MM-dd');
     }
   }
 }
@@ -559,58 +559,42 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
-    if (this._boundsDurationUnit) {
-      if (dosage.timing === undefined) {
-        dosage.timing = new TimingBuilder()
-          .timingRepeat(new TimingRepeatBuilder()
-            .boundsDuration(new DurationBuilder()
-                .unit(this._boundsDurationUnit.display)
-                .code(this._boundsDurationUnit.code)
-                .system(this._boundsDurationUnit.system)
-                .build()
-            )
-            .build()
-          )
-          .build();
-      }
-      else if (dosage.timing.repeat === undefined) {
-        dosage.timing.repeat = new TimingRepeatBuilder()
+
+    if (!dosage?.timing) {
+      dosage.timing = new TimingBuilder()
+        .timingRepeat(new TimingRepeatBuilder()
           .boundsDuration(new DurationBuilder()
-            .unit(this._boundsDurationUnit.display)
-            .code(this._boundsDurationUnit.code)
-            .system(this._boundsDurationUnit.system)
-            .build()
+              .unit(this._boundsDurationUnit.display)
+              .code(this._boundsDurationUnit.code)
+              .system(this._boundsDurationUnit.system)
+              .build()
           )
-          .build();
-      }
-      else if (dosage.timing.repeat.boundsDuration === undefined) {
-        dosage.timing.repeat.boundsDuration = new DurationBuilder()
+          .build()
+        )
+        .build();
+    }
+    else if (!dosage?.timing?.repeat) {
+      dosage.timing.repeat = new TimingRepeatBuilder()
+        .boundsDuration(new DurationBuilder()
           .unit(this._boundsDurationUnit.display)
           .code(this._boundsDurationUnit.code)
           .system(this._boundsDurationUnit.system)
-          .build();
-      }
-      else {
-        dosage.timing.repeat.boundsDuration.unit = this._boundsDurationUnit.display;
-        dosage.timing.repeat.boundsDuration.code = this._boundsDurationUnit.code;
-        dosage.timing.repeat.boundsDuration.system = this._boundsDurationUnit.system;
-      }
+          .build()
+        )
+        .build();
+    }
+    else if (!dosage?.timing?.repeat?.boundsDuration) {
+      dosage.timing.repeat.boundsDuration = new DurationBuilder()
+        .unit(this._boundsDurationUnit.display)
+        .code(this._boundsDurationUnit.code)
+        .system(this._boundsDurationUnit.system)
+        .build();
     }
     else {
-      if (dosage.timing !== undefined
-        && dosage.timing.repeat !== undefined
-        && dosage.timing.repeat.boundsDuration !== undefined) {
-        if (!dosage.timing.repeat.boundsDuration.value) {
-          delete dosage.timing.repeat.boundsDuration;
-        }
-        else {
-          dosage.timing.repeat.boundsDuration.unit = null;
-          dosage.timing.repeat.boundsDuration.code = null;
-          dosage.timing.repeat.boundsDuration.system = null;
-        }
-      }
+      dosage.timing.repeat.boundsDuration.unit = this._boundsDurationUnit.display;
+      dosage.timing.repeat.boundsDuration.code = this._boundsDurationUnit.code;
+      dosage.timing.repeat.boundsDuration.system = this._boundsDurationUnit.system;
     }
-
     this.synchronizeBounds(dosage);
 
     return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
@@ -620,15 +604,14 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit
     if (dosage.timing.repeat?.boundsPeriod?.start
       && dosage.timing.repeat?.boundsDuration?.value
       && dosage.timing.repeat?.boundsDuration?.code) {
-      const start = moment(dosage.timing.repeat.boundsPeriod.start);
-      const unit = Utils.adaptUnitsOfTime(dosage.timing.repeat.boundsDuration.code);
-      const duration = moment.duration(
+      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const duration = Utils.duration(
         dosage.timing.repeat.boundsDuration.value,
-        unit as any
+        dosage.timing.repeat.boundsDuration.code
       );
-      const end = start.add(duration);
+      const end = start.plus(duration);
 
-      dosage.timing.repeat.boundsPeriod.end = end.format('YYYY-MM-DD');
+      dosage.timing.repeat.boundsPeriod.end = end.toFormat('yyyy-MM-dd');
     }
   }
 }
@@ -638,7 +621,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _boundsPeriodStart: dateTime) {
+              private _boundsPeriodStart: string) {
   }
 
   public execute(): IPartialState {
@@ -646,45 +629,45 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
     if (this._boundsPeriodStart) {
-      if (dosage.timing === undefined) {
+      const boundsPeriodStart = DateTime.fromFormat(this._boundsPeriodStart, 'dd/MM/yyyy').toFormat('yyyy-MM-dd');
+      if (!dosage.timing) {
         dosage.timing = new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
             .boundsPeriod(new PeriodBuilder()
-              .start(this._boundsPeriodStart)
+              .start(boundsPeriodStart)
               .build()
             )
             .build()
           )
           .build();
       }
-      else if (dosage.timing.repeat === undefined) {
+      else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
           .boundsPeriod(new PeriodBuilder()
-            .start(this._boundsPeriodStart)
+            .start(boundsPeriodStart)
             .build())
           .build();
       }
-      else if (dosage.timing.repeat.boundsPeriod === undefined) {
+      else if (!dosage.timing.repeat.boundsPeriod) {
         dosage.timing.repeat.boundsPeriod = new PeriodBuilder()
-          .start(this._boundsPeriodStart)
+          .start(boundsPeriodStart)
           .build();
       }
       else {
-        dosage.timing.repeat.boundsPeriod.start = this._boundsPeriodStart;
+        dosage.timing.repeat.boundsPeriod.start = boundsPeriodStart;
       }
+      this.synchronizeBounds(dosage);
     }
     else {
-      if (dosage.timing && dosage.timing.repeat && dosage.timing.repeat.boundsPeriod) {
+      if (dosage?.timing?.repeat?.boundsPeriod) {
         if (!dosage.timing.repeat.boundsPeriod.end) {
           delete dosage.timing.repeat.boundsPeriod;
         }
         else {
-          dosage.timing.repeat.boundsPeriod.start = null;
+          delete dosage.timing.repeat.boundsPeriod.start;
         }
       }
     }
-
-    this.synchronizeBounds(dosage);
 
     return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
@@ -692,11 +675,11 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
   private synchronizeBounds(dosage: Dosage): void {
     if (dosage.timing.repeat?.boundsPeriod?.start
       && dosage.timing.repeat?.boundsDuration?.value) {
-      const start = moment(dosage.timing.repeat.boundsPeriod.start);
+      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
 
       let unit;
       if (dosage.timing.repeat.boundsDuration.code) {
-        unit = Utils.adaptUnitsOfTime(dosage.timing.repeat.boundsDuration.code);
+        unit = dosage.timing.repeat.boundsDuration.code;
       }
       else {
         unit = 'd';
@@ -704,27 +687,24 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
         dosage.timing.repeat.boundsDuration.unit = 'j';
         dosage.timing.repeat.boundsDuration.system = 'http://unitsofmeasure.org';
       }
-      const duration = moment.duration(
-        dosage.timing.repeat.boundsDuration.value,
-        unit
-      );
-      const end = start.add(duration);
+      const duration = Utils.duration(dosage.timing.repeat.boundsDuration.value, unit);
+      const end = start.plus(duration);
 
-      dosage.timing.repeat.boundsPeriod.end = end.format('YYYY-MM-DD');
+      dosage.timing.repeat.boundsPeriod.end = end.toFormat('yyyy-MM-dd');
     }
     else if (dosage.timing.repeat?.boundsPeriod?.start
       && dosage.timing.repeat?.boundsPeriod?.end) {
-      const start = moment(dosage.timing.repeat.boundsPeriod.start);
-      const end = moment(dosage.timing.repeat.boundsPeriod.end);
-      const duration = moment.duration(end.diff(start));
+      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const end = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.end);
+      const duration = end.diff(start, 'days').as('days');
       if (dosage.timing.repeat.boundsDuration === undefined) {
         dosage.timing.repeat.boundsDuration = new DurationBuilder()
-          .value(duration.days())
+          .value(duration)
           .default()
           .build();
       }
       else {
-        dosage.timing.repeat.boundsDuration.value = duration.days();
+        dosage.timing.repeat.boundsDuration.value = duration;
         dosage.timing.repeat.boundsDuration.code = 'd';
         dosage.timing.repeat.boundsDuration.unit = 'j';
         dosage.timing.repeat.boundsDuration.system = 'http://unitsofmeasure.org';
@@ -738,7 +718,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd im
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _boundsPeriodEnd: dateTime) {
+              private _boundsPeriodEnd: string) {
   }
 
   public execute(): IPartialState {
@@ -746,45 +726,53 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd im
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
     if (this._boundsPeriodEnd) {
-      if (dosage.timing === undefined) {
+      const boundsPeriodEnd = DateTime.fromFormat(this._boundsPeriodEnd, 'dd/MM/yyyy').toFormat('yyyy-MM-dd');
+      if (!dosage.timing) {
         dosage.timing = new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
             .boundsPeriod(new PeriodBuilder()
-              .end(this._boundsPeriodEnd)
+              .end(boundsPeriodEnd)
               .build()
             )
             .build())
           .build();
       }
-      else if (dosage.timing.repeat === undefined) {
+      else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
           .boundsPeriod(new PeriodBuilder()
-            .end(this._boundsPeriodEnd)
+            .end(boundsPeriodEnd)
             .build()
           )
           .build();
       }
-      else if (dosage.timing.repeat.boundsPeriod === undefined) {
+      else if (!dosage.timing.repeat.boundsPeriod) {
         dosage.timing.repeat.boundsPeriod = new PeriodBuilder()
-          .end(this._boundsPeriodEnd)
+          .end(boundsPeriodEnd)
           .build();
       }
       else {
-        dosage.timing.repeat.boundsPeriod.end = this._boundsPeriodEnd;
+        dosage.timing.repeat.boundsPeriod.end = boundsPeriodEnd;
       }
+      this.synchronizedBounds(dosage);
     }
     else {
-      if (dosage.timing && dosage.timing.repeat && dosage.timing.repeat.boundsPeriod) {
+      if (dosage?.timing?.repeat?.boundsPeriod) {
         if (!dosage.timing.repeat.boundsPeriod.start) {
           delete dosage.timing.repeat.boundsPeriod;
         }
         else {
-          dosage.timing.repeat.boundsPeriod.end = null;
+          delete dosage.timing.repeat.boundsPeriod.end;
+        }
+      }
+      if (dosage?.timing?.repeat?.boundsDuration) {
+        if (!dosage.timing.repeat.boundsDuration.value) {
+          delete dosage.timing.repeat.boundsDuration;
+        }
+        else {
+          delete dosage.timing.repeat.boundsDuration.value;
         }
       }
     }
-
-    this.synchronizedBounds(dosage);
 
     return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
   }
@@ -792,17 +780,17 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd im
   private synchronizedBounds(dosage): void {
     if (dosage.timing.repeat?.boundsPeriod?.start
       && dosage.timing.repeat?.boundsPeriod?.end) {
-      const start = moment(dosage.timing.repeat.boundsPeriod.start);
-      const end = moment(dosage.timing.repeat.boundsPeriod.end);
-      const duration = moment.duration(end.diff(start));
-      if (dosage.timing.repeat.boundsDuration === undefined) {
+      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const end = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.end);
+      const duration = end.diff(start, 'days').as('days');
+      if (!dosage.timing.repeat.boundsDuration) {
         dosage.timing.repeat.boundsDuration = new DurationBuilder()
-          .value(duration.days())
+          .value(duration)
           .default()
           .build();
       }
       else {
-        dosage.timing.repeat.boundsDuration.value = duration.days();
+        dosage.timing.repeat.boundsDuration.value = duration;
         dosage.timing.repeat.boundsDuration.code = 'd';
         dosage.timing.repeat.boundsDuration.unit = 'j';
         dosage.timing.repeat.boundsDuration.system = 'http://unitsofmeasure.org';
@@ -1084,32 +1072,35 @@ export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue imp
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
     if (this._timeOfDayValue) {
-      if (dosage.timing === undefined) {
+      const timeOfDayValue = DateTime.fromFormat(this._timeOfDayValue, 'hh:mm').toFormat('hh:mm:ss');
+      if (!dosage.timing) {
         dosage.timing = new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
-            .addTimeOfDay(this._timeOfDayValue)
+            .addTimeOfDay(timeOfDayValue)
             .build()
           )
           .build();
       }
-      else if (dosage.timing.repeat === undefined) {
+      else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
-          .addTimeOfDay(this._timeOfDayValue)
+          .addTimeOfDay(timeOfDayValue)
           .build();
       }
-      else if (dosage.timing.repeat.timeOfDay === undefined) {
-        dosage.timing.repeat.timeOfDay = new Array<time>(this._timeOfDayValue);
+      else if (!dosage.timing.repeat.timeOfDay) {
+        dosage.timing.repeat.timeOfDay = new Array<time>(timeOfDayValue);
       }
       else {
-        dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = this._timeOfDayValue;
+        dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = timeOfDayValue;
       }
     }
     else {
-      if (dosage.timing.repeat.timeOfDay[this._nTimeOfDay]) {
-        dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
-      }
-      if (dosage.timing.repeat.timeOfDay.length === 0) {
-        delete dosage.timing.repeat.timeOfDay;
+      if (dosage?.timing?.repeat?.timeOfDay) {
+        if (dosage?.timing?.repeat?.timeOfDay[this._nTimeOfDay]) {
+          dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
+        }
+        if (dosage?.timing?.repeat?.timeOfDay.length === 0) {
+          delete dosage.timing.repeat.timeOfDay;
+        }
       }
     }
 

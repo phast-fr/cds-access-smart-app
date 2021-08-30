@@ -5,6 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
+import {DateTime} from 'luxon';
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
@@ -142,7 +143,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         break;
       case 'AddTimeOfDay':
         const addTimeOfDay = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
-        this.addTimeOfDay(state.nDosage, addTimeOfDay);
+        addTimeOfDay.push(this.addTimeOfDay(state.nDosage, addTimeOfDay.length));
         this._dosageInstruction$.next(this.dosageInstruction);
         break;
       case 'RemoveTimeOfDay':
@@ -183,9 +184,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         break;
       case 'AddMedicationRequest':
         this._dosageInstruction$.next(false);
-        break;
-      default:
-        this._dosageInstruction$.next(this.dosageInstruction);
         break;
     }
   }
@@ -258,12 +256,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         repeat: this._fb.group({
           boundsMode: ['duration'],
           boundsDuration: this._fb.group({
-            value: [dosage?.timing?.repeat?.boundsDuration?.value],
+            value: [dosage?.timing?.repeat?.boundsDuration?.value, Validators.pattern( /\d/ )],
             unit: [this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code)],
           }),
           boundsPeriod: this._fb.group({
-            start: [dosage?.timing?.repeat?.boundsPeriod?.start],
-            end: [dosage?.timing?.repeat?.boundsPeriod?.end]
+            start: [(dosage?.timing?.repeat?.boundsPeriod?.start) ?
+              DateTime.fromISO(dosage?.timing?.repeat?.boundsPeriod?.start).toFormat('dd/MM/yyyy') : undefined,
+              Validators.pattern( /\d{2}\/\d{2}\/\d{4}/ )],
+            end: [(dosage?.timing?.repeat?.boundsPeriod?.end) ?
+              DateTime.fromISO(dosage?.timing?.repeat?.boundsPeriod?.end).toFormat('dd/MM/yyyy') : undefined,
+              Validators.pattern( /\d{2}\/\d{2}\/\d{4}/ )]
           }),
           duration: [dosage?.timing?.repeat?.duration], // How long when it happens
           durationUnit: [this.durationUnit(dosage?.timing?.repeat?.durationUnit)],
@@ -303,29 +305,25 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     routeObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        distinctUntilChanged<CodeableConcept>((prev, cur) => prev.text === cur.text),
-        tap(value => dosageInstructionGroup.get('route').setValue(value, {emitEvent: false}))
+        distinctUntilChanged<CodeableConcept>((prev, cur) => prev.text === cur.text)
       )
       .subscribe({
-        next: value => {
-          const medication = this._viewModel.medication;
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesDosageInstructionRoute(
-              this._viewModel.medicationRequest,
-              nDosage,
-              value,
-              medication
-            )
-          );
-        },
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionRoute(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value,
+            this._viewModel.medication
+          )
+        ),
         error: err => console.error('error', err)
       });
 
     dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value']).valueChanges
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged()
+        distinctUntilChanged(),
+        filter(() => dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value']).valid)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -353,9 +351,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
     boundsDurationUnitValid$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(value => dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
-          .setValue(value, {emitEvent: false}))
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -369,9 +365,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       });
     boundsDurationUnitNotValid$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(() => dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
-          .setValue(null, {emitEvent: false}))
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: () => this._viewModel.dispatchIntent(
@@ -388,7 +382,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged()
+        distinctUntilChanged(),
+        filter(() => dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start']).valid)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -405,7 +400,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged()
+        distinctUntilChanged(),
+        filter(() => dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end']).valid)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -420,8 +416,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
     dosageInstructionGroup.get(['timing', 'repeat', 'duration']).valueChanges
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(value => dosageInstructionGroup.get(['timing', 'repeat', 'duration']).setValue(value, {emitEvent: false}))
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -448,9 +443,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
     durationUnitValid$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(value => dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit'])
-          .setValue(value, {emitEvent: false}))
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -466,7 +459,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         tap(() => dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit'])
-          .setValue(null, {emitEvent: false}))
+          .reset(null, {emitEvent: false}))
       )
       .subscribe({
         next: () => this._viewModel.dispatchIntent(
@@ -496,16 +489,15 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return dosageInstructionGroup;
   }
 
-  private addTimeOfDay(nDosage: number, timeOfDay: FormArray): void {
-    const nTimeOfDay = timeOfDay.length;
-    const timeOfDayControl = this._fb.control(undefined);
-    timeOfDay.push(timeOfDayControl);
+  private addTimeOfDay(nDosage: number, nTimeOfDay: number): FormControl {
+    const timeOfDayControl = this._fb.control(undefined, Validators.pattern( /\d{2}:\d{2}/ ));
     timeOfDayControl.valueChanges
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
         distinctUntilChanged(),
-        tap(value => timeOfDayControl.setValue(value, {emitEvent: false}))
+        tap(value => timeOfDayControl.setValue(value, {emitEvent: false})),
+        filter(() => timeOfDayControl.valid)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -518,9 +510,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         ),
         error: err => console.error('error', err)
       });
+    return timeOfDayControl;
   }
 
   private addDoseAndRate(nDosage: number, doseAndRate: FormArray): void {
+    const options = {emitEvent: false};
     const doseAndRateGroup = this._fb.group({
       doseQuantity: this._fb.group({
         value: [null],
@@ -533,8 +527,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged(),
-        tap(value => doseAndRateGroup.get(['doseQuantity', 'value']).setValue(value, {emitEvent: false}))
+        distinctUntilChanged()
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -558,7 +551,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     doseQuantityUnitString$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        tap(() => doseAndRateGroup.get(['doseQuantity', 'unit']).setValue(null, {emitEvent: false}))
+        tap(() => doseAndRateGroup.get(['doseQuantity', 'unit']).reset(null, options))
       )
       .subscribe({
         next: () => this._viewModel.dispatchIntent(
@@ -573,8 +566,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       });
     doseQuantityUnitObj$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(value => doseAndRateGroup.get(['doseQuantity', 'unit']).setValue(value, {emitEvent: false}))
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
@@ -590,30 +582,32 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   private updateDosageInstruction(dosage: Dosage, dosageInstructionGroup: FormGroup): void {
+    const options = {emitEvent: false};
     if (dosage?.route) {
-      dosageInstructionGroup.get('route').setValue(dosage.route, {emitEvent: false});
+      dosageInstructionGroup.get('route').setValue(dosage.route, options);
     }
     else {
-      dosageInstructionGroup.get('route').reset(undefined, {emitEvent: false});
+      dosageInstructionGroup.get('route').reset(undefined, options);
     }
 
     if (dosage.timing.repeat.boundsDuration) {
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value'])
-        .setValue(dosage.timing.repeat.boundsDuration?.value, {emitEvent: false});
+        .setValue(dosage.timing.repeat.boundsDuration?.value, options);
 
       const index = this.durationUnitArray.findIndex(
         value => value.code === dosage.timing.repeat.boundsDuration?.code
       );
-
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
-        .setValue(this.durationUnitArray[index], {emitEvent: false});
+        .setValue(this.durationUnitArray[index], options);
     }
 
     if (dosage.timing.repeat.boundsPeriod) {
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start'])
-        .setValue(dosage.timing.repeat.boundsPeriod?.start, {emitEvent: false});
+        .setValue((dosage.timing.repeat.boundsPeriod?.start) ?
+          DateTime.fromISO(dosage.timing.repeat.boundsPeriod?.start).toFormat('dd/MM/yyyy') : undefined, options);
       dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end'])
-        .setValue(dosage.timing.repeat.boundsPeriod?.end, {emitEvent: false});
+        .setValue((dosage.timing.repeat.boundsPeriod?.end) ?
+          DateTime.fromISO(dosage.timing.repeat.boundsPeriod?.end).toFormat('dd/MM/yyyy') : undefined, options);
     }
   }
 
@@ -629,7 +623,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       value => value.code === boundsDurationUnitCode
     );
     if (boundsDurationUnitIndex > -1) {
-      return  this.durationUnitArray[boundsDurationUnitIndex];
+      return this.durationUnitArray[boundsDurationUnitIndex];
     }
     return undefined;
   }
@@ -639,7 +633,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       value => value.code === durationUnitCode
     );
     if (durationUnitIndex > -1) {
-      return  this.durationUnitArray[durationUnitIndex];
+      return this.durationUnitArray[durationUnitIndex];
     }
     return undefined;
   }

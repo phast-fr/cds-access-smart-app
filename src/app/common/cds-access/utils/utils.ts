@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
-
+import {Duration} from 'luxon';
 /**
  * @ngModule CdsAccessModule
  * @description
@@ -34,33 +34,24 @@ export class Utils {
     return result.join('');
   }
 
-  public static now(): string {
-    const now = new Date();
-    return now.getUTCFullYear() +
-      '-' + Utils.pad( now.getUTCMonth() + 1 ) +
-      '-' + Utils.pad( now.getUTCDate() );
-  }
-
-  public static adaptUnitsOfTime(code: string): string {
-    let unit;
-    switch (code) {
+  public static duration(value: number, unitCode: string): Duration | undefined {
+    switch (unitCode) {
       case 'a':
-        unit = 'y';
-        break;
-      case 'wk':
-        unit = 'w';
-        break;
+        return Duration.fromObject({years: value});
       case 'mo':
-        unit = 'M';
-        break;
+        return Duration.fromObject({months: value});
+      case 'wk':
+        return Duration.fromObject({weeks: value});
+      case 'd':
+        return Duration.fromObject({days: value});
+      case 'h':
+        return Duration.fromObject({hours: value});
       case 'min':
-        unit = 'm';
-        break;
-      default:
-        unit = code;
-        break;
+        return Duration.fromObject({minutes: value});
+      case 's':
+        return Duration.fromObject({seconds: value});
     }
-    return unit;
+    return undefined;
   }
 
   public static intersect<T>(firstArray: Array<T>, arrays: Array<Array<T>>,
@@ -74,12 +65,5 @@ export class Utils {
 
     // return the result.
     return firstArray;
-  }
-
-  private static pad(num: number): string {
-    if (num < 10) {
-      return '0' + num;
-    }
-    return num.toString();
   }
 }
