@@ -82,7 +82,7 @@ export class PhastCioDcService {
       'type:text', filter, sortActive, sortDirection, page);
   }
 
-  postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+  postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
     mkId: id,
     mkCode: CodeableConcept,
     doseForm: CodeableConcept | undefined,
@@ -96,7 +96,7 @@ export class PhastCioDcService {
       .build();
 
     return this._fhirClient.operation<Parameters>(environment.cio_dc_url, {
-      name: '$phast-medication-knowledge-details?with-related-medication-knowledge=true',
+      name: '$lookup?with-related-medication-knowledge=true',
       resourceType: 'MedicationKnowledge',
       id: mkId,
       method: 'post',

@@ -396,7 +396,7 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
     const forme = medication.form;
 
     from(
-      this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
+      this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
         medication.code,
         forme, medication.ingredient,
         route )
