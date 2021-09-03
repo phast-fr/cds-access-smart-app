@@ -218,8 +218,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     formObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        distinctUntilChanged<CodeableConcept>((prev, curr) => prev.text === curr.text),
-        tap(value => medicationGroup.get('form').setValue(value, {emitEvent: false}))
+        distinctUntilChanged<CodeableConcept>((prev, curr) => prev.text === curr.text)
       )
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
