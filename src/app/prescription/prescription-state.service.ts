@@ -44,11 +44,13 @@ export class PrescriptionStateService {
   }
 
   public addMedicationRequest(medicationRequest: MedicationRequest): void {
-    medicationRequest.dosageInstruction.forEach((dosage) => {
-      if (dosage?.timing?.repeat?.boundsDuration) {
-        delete dosage.timing.repeat.boundsDuration;
-      }
-    });
+    if (medicationRequest.dosageInstruction) {
+      medicationRequest.dosageInstruction.forEach((dosage) => {
+        if (dosage?.timing?.repeat?.boundsDuration) {
+          delete dosage.timing.repeat.boundsDuration;
+        }
+      });
+    }
 
     console.log('Medication Request: ', medicationRequest);
     this._cards$.next(false);

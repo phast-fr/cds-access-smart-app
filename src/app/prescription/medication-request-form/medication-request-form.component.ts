@@ -5,6 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
+import * as lodash from 'lodash';
 import {AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {AbstractControl, FormBuilder, FormControl, FormGroup} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
@@ -202,10 +203,11 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   }
 
   public onAddMedicationRequest(): void {
+    const medicationRequest = lodash.cloneDeep(this._viewModel.medicationRequest);
     this._viewModel.dispatchIntent(
-      new MedicationFormIntentAddMedicationRequest(this._viewModel.medicationRequest)
+      new MedicationFormIntentAddMedicationRequest(medicationRequest)
     );
-    this._prescriptionState.addMedicationRequest(this._viewModel.medicationRequest);
+    this._prescriptionState.addMedicationRequest(medicationRequest);
   }
 
   public onCDSHelp(): void {
