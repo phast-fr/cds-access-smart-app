@@ -202,19 +202,17 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   }
 
   public onAddMedicationRequest(): void {
-    const medicationRequest = this._viewModel.medicationRequest;
     this._viewModel.dispatchIntent(
-      new MedicationFormIntentAddMedicationRequest(medicationRequest)
+      new MedicationFormIntentAddMedicationRequest(this._viewModel.medicationRequest)
     );
-    this._prescriptionState.addMedicationRequest(medicationRequest);
+    this._prescriptionState.addMedicationRequest(this._viewModel.medicationRequest);
   }
 
   public onCDSHelp(): void {
-    const medicationRequest = this._viewModel.medicationRequest;
     this._viewModel.dispatchIntent(
-      new MedicationFormIntentCdsHelp(medicationRequest)
+      new MedicationFormIntentCdsHelp(this._viewModel.medicationRequest)
     );
-    this._prescriptionState.callCdsHooks(medicationRequest);
+    this._prescriptionState.callCdsHooks(this._viewModel.medicationRequest);
   }
 
   private setUpOnChange(): void {
@@ -246,21 +244,21 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
           this._medicationKnowledgeArray.length = 0;
           this._loading$.next(true);
         }),
-        switchMap(value => this._viewModel.searchMedicationKnowledge(value, this.medicationRequestGroup.get('requestMode').value)),
-        filter(bundle => FhirTypeGuard.isBundle(bundle)),
+        switchMap(value => this._viewModel.searchMedicationKnowledge(value, this.medicationRequestGroup.get('requestMode').value)
+          .pipe(
+            tap(() => this._loading$.next(false))
+          )),
+        filter(value => FhirTypeGuard.isBundle(value)),
         map(bundle => bundle as Bundle),
         filter(bundle => bundle.total > 0)
       )
       .subscribe({
-        next: bundle => {
-          bundle.entry.forEach(entry => {
-            if (FhirTypeGuard.isMedicationKnowledge(entry.resource)) {
-              this._medicationKnowledgeArray.push(entry.resource);
-            }
-          });
-          this._loading$.next(false);
-        },
-        error: err => console.error('error', err)
+        next: bundle => bundle.entry.forEach(entry => {
+          if (FhirTypeGuard.isMedicationKnowledge(entry.resource)) {
+            this._medicationKnowledgeArray.push(entry.resource);
+          }
+        }),
+        error: err => console.error('error', err),
       });
 
     const medicationKnowledgeControlFhir$ = this.medicationRequestGroup.get('medicationKnowledge').valueChanges

@@ -110,20 +110,21 @@ export class FormularyComponent extends SmartComponent implements OnDestroy, Aft
             this._compositionArray.length = 0;
             this._searching$.next(true);
           }),
-        switchMap(value => this._cioDcSource.searchComposition(value)),
+        switchMap(value => this._cioDcSource.searchComposition(value)
+          .pipe(
+            tap(() => this._searching$.next(false))
+          )
+        ),
         filter(result => FhirTypeGuard.isBundle(result)),
         map(result => result as Bundle),
         filter(bundle => bundle.total > 0)
       )
       .subscribe({
-        next: bundle => {
-          bundle.entry.forEach(entry => {
-            if (FhirTypeGuard.isComposition(entry.resource)) {
-              this._compositionArray.push(entry.resource);
-            }
-          });
-          this._searching$.next(false);
-        },
+        next: bundle => bundle.entry.forEach(entry => {
+          if (FhirTypeGuard.isComposition(entry.resource)) {
+            this._compositionArray.push(entry.resource);
+          }
+        }),
         error: err => console.error('error', err)
       });
     compositionObj$
