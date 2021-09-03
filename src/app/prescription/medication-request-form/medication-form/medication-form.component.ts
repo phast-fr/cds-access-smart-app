@@ -28,7 +28,6 @@ import {
   Coding, id,
   Medication,
   MedicationIngredient,
-  MedicationKnowledge,
   Ratio,
   Reference
 } from 'phast-fhir-ts';
@@ -234,14 +233,14 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       });
 
     const ingredientArray = medicationGroup.get('ingredient') as FormArray;
-    for (const ingredient of medication.ingredient) {
+    medication.ingredient.forEach(ingredient => {
       if (ingredient.itemCodeableConcept) {
         ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
       }
       else if (ingredient.itemReference) {
         ingredientArray.push(this.addIngredientReference(medication, ingredient));
       }
-    }
+    });
 
     const loadedList$ = this.isLoadingList$
       .pipe(
@@ -271,30 +270,20 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       }
 
       const ingredientArray = medicationGroup.get('ingredient') as FormArray;
-      let nIngredient = 0;
-      for (const item of medication.ingredient) {
-        if (item.itemCodeableConcept) {
-          if (item?.strength) {
-            ingredientArray.at(nIngredient).get('strength').setValue(item.strength, {emitEvent: false});
+      medication.ingredient.forEach((ingredient, nIngredient) => {
+        if (ingredient.itemCodeableConcept) {
+          if (ingredient?.strength) {
+            ingredientArray.at(nIngredient).get('strength').setValue(ingredient.strength, {emitEvent: false});
           }
           else {
             ingredientArray.at(nIngredient).get('strength').reset(undefined, {emitEvent: false});
           }
         }
-        nIngredient++;
-      }
+      });
 
       return medicationGroup;
     }
     return false;
-  }
-
-  private medicationKnowledgeMap(medication: Medication): MedicationKnowledge {
-    if (this._viewModel.medicationKnowledgeMap.has(medication.id)) {
-      return this._viewModel.medicationKnowledgeMap.get(medication.id);
-    }
-    const medicationId = medication.ingredient[0].itemReference.reference.substring(1);
-    return this._viewModel.medicationKnowledgeMap.get(medicationId);
   }
 
   private addIngredientCodeableConcept(nMedication: number, medication: Medication,
@@ -319,41 +308,30 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         tap(() => ingredientGroup.get('strength').reset(null, {emitEvent: false}))
       )
       .subscribe({
-        next: () => {
-          const itemCodeableConcept = ingredientGroup.get('itemCodeableConcept').value;
-          const form = this.form(nMedication);
-
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesMedicationIngredientStrength(
-              this._viewModel.medicationRequest,
-              medication,
-              itemCodeableConcept,
-              null
-            )
-          );
-        },
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationIngredientStrength(
+            this._viewModel.medicationRequest,
+            medication,
+            ingredientGroup.get('itemCodeableConcept').value,
+            null
+          )
+        ),
         error: err => console.error('error', err)
       });
     strengthObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        distinctUntilChanged<Ratio>((prev, curr) => prev.numerator.value === curr.numerator.value),
-        tap(value => ingredientGroup.get('strength').setValue(value, {emitEvent: false}))
+        distinctUntilChanged<Ratio>((prev, curr) => prev.numerator.value === curr.numerator.value)
       )
       .subscribe({
-        next: value => {
-          const itemCodeableConcept = ingredientGroup.get('itemCodeableConcept').value;
-          const form = this.form(nMedication);
-
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesMedicationIngredientStrength(
-              this._viewModel.medicationRequest,
-              medication,
-              itemCodeableConcept,
-              value
-            )
-          );
-        },
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationIngredientStrength(
+            this._viewModel.medicationRequest,
+            medication,
+            ingredientGroup.get('itemCodeableConcept').value,
+            value
+          )
+        ),
         error: err => console.error('error', err)
       });
     return ingredientGroup;
@@ -379,21 +357,17 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
-        distinctUntilChanged(),
-        tap(value => ingredientGroup.get(['strength', 'numerator', 'value']).setValue(value, {emitEvent: false}))
+        distinctUntilChanged()
       )
       .subscribe({
-        next: strengthValue => {
-          const itemReference = ingredientGroup.get('itemReference').value;
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesMedicationIngredientStrengthValue(
-              this._viewModel.medicationRequest,
-              medication,
-              itemReference,
-              strengthValue
-            )
-          );
-        },
+        next: strengthValue => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationIngredientStrengthValue(
+            this._viewModel.medicationRequest,
+            medication,
+            ingredientGroup.get('itemReference').value,
+            strengthValue
+          )
+        ),
         error: err => console.error('error', err)
       });
     const strengthNumeratorUnitString$ = ingredientGroup.get(['strength', 'numerator', 'unit']).valueChanges
@@ -410,48 +384,33 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         tap(() => ingredientGroup.get(['strength', 'numerator', 'unit']).reset(null, {emitEvent: false}))
       )
       .subscribe({
-        next: () => {
-          const itemReference = ingredientGroup.get('itemReference').value;
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
-              this._viewModel.medicationRequest,
-              medication,
-              itemReference,
-              null
-            )
-          );
-        },
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
+            this._viewModel.medicationRequest,
+            medication,
+            ingredientGroup.get('itemReference').value,
+            null
+          )
+        ),
         error: err => console.error('error', err)
       });
     strengthNumeratorUnitObj$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
-        distinctUntilChanged<Coding>((prev, cur) => prev.code === cur.code),
-        tap(value => ingredientGroup.get(['strength', 'numerator', 'unit']).setValue(value, {emitEvent: false}))
+        distinctUntilChanged<Coding>((prev, cur) => prev.code === cur.code)
       )
       .subscribe({
-        next: strengthUnit => {
-          const itemReference = ingredientGroup.get('itemReference').value;
-          this._viewModel.dispatchIntent(
-            new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
-              this._viewModel.medicationRequest,
-              medication,
-              itemReference,
-              strengthUnit
-            )
-          );
-        },
+        next: strengthUnit => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
+            this._viewModel.medicationRequest,
+            medication,
+            ingredientGroup.get('itemReference').value,
+            strengthUnit
+          )
+        ),
         error: err => console.error('error', err)
       });
     return ingredientGroup;
-  }
-
-  private form(nMedication: number): CodeableConcept | undefined {
-    if (this._viewModel.medicationRequest) {
-      const medication = this._viewModel.medicationRequest.contained[nMedication] as Medication;
-      return medication?.form;
-    }
-    return undefined;
   }
 
   private onLoadedList(): void {
