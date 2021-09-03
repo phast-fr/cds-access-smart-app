@@ -19,7 +19,8 @@ import {
 export class MedicationFormIntentAddMedicationRequest implements IIntent {
   readonly type = 'AddMedicationRequest';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
@@ -29,7 +30,8 @@ export class MedicationFormIntentAddMedicationRequest implements IIntent {
 export class MedicationFormIntentCdsHelp implements IIntent {
   readonly type = 'CdsHelp';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _medicationRequest: MedicationRequest) {
+  }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
