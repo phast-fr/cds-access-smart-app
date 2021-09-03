@@ -10,17 +10,12 @@ import { Bundle, Composition, id, OperationOutcome, Patient, Practitioner, Resou
 @Injectable()
 export class FhirDataSourceService {
 
-  private readonly _options: Options;
+  private _options: Options;
 
   private _baseUrl: string;
 
   constructor(private _smartService: FhirSmartService,
               private _fhirClient: FhirClientService) {
-    this._options = {
-      headers: new HttpHeaders()
-        .set('Accept', 'application/json; charset=utf-8; q=1')
-        .set('Content-type', 'application/fhir+json')
-    } as Options;
     this._smartService.baseUrl$
       .pipe(
         filter(value => value !== false),
@@ -36,7 +31,14 @@ export class FhirDataSourceService {
         map(value => value as string)
       )
       .subscribe({
-        next: accessToken => this._options.headers.set('Authorization', `Bearer ${accessToken}`),
+        next: accessToken => {
+          this._options = {
+            headers: new HttpHeaders()
+              .set('Accept', 'application/json; charset=utf-8; q=1')
+              .set('Content-type', 'application/fhir+json')
+              .set('Authorization', `Bearer ${accessToken}`)
+          } as Options;
+        },
         error: err => console.error('error', err)
       });
   }
@@ -73,7 +75,6 @@ export class FhirDataSourceService {
       const key = keyValue[0];
       searchParams[key] = keyValue[1];
     }
-
     return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
       resourceType,
       searchParams

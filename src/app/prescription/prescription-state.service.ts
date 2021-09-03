@@ -8,14 +8,14 @@ import { FhirDataSourceService } from '../common/fhir/services/fhir.data-source.
 import {StateModel} from '../common/cds-access/models/core.model';
 import { Hook, OrderSelectContext, OrderSelectHook } from '../common/fhir/cds-hooks/models/fhir.cdshooks.model';
 import { CardReadable } from './prescription.model';
-import {Bundle, Medication, MedicationRequest, OperationOutcome, Patient, Resource} from 'phast-fhir-ts';
+import {Bundle, Medication, MedicationRequest, OperationOutcome, Patient, Practitioner, Resource} from 'phast-fhir-ts';
 
 @Injectable()
 export class PrescriptionStateService {
 
   private readonly _medicationRequest$: BehaviorSubject<MedicationRequest | boolean>;
 
-  private readonly _cards: Array<CardReadable>;
+  private readonly _cards$: BehaviorSubject<Array<CardReadable> | boolean>;
 
   private readonly _medicationRequestMode$: BehaviorSubject<string>;
 
@@ -23,12 +23,12 @@ export class PrescriptionStateService {
               private _dataSource: FhirDataSourceService,
               private _cdsHooksService: FhirCdsHooksService) {
     this._medicationRequest$ = new BehaviorSubject<MedicationRequest | boolean>(false);
-    this._cards = new Array<CardReadable>();
+    this._cards$ = new BehaviorSubject<Array<CardReadable> | boolean>(false);
     this._medicationRequestMode$ = new BehaviorSubject<string>('dc');
   }
 
-  public get cards(): Array<CardReadable> {
-    return this._cards;
+  public get cards$(): Observable<Array<CardReadable> | boolean> {
+    return this._cards$.asObservable();
   }
 
   public get medicationRequest$(): Observable<MedicationRequest | boolean> {
@@ -51,7 +51,7 @@ export class PrescriptionStateService {
     });
 
     console.log('Medication Request: ', medicationRequest);
-    this._cards.length = 0;
+    this._cards$.next(false);
     this._medicationRequest$.next(medicationRequest);
   }
 
@@ -67,15 +67,15 @@ export class PrescriptionStateService {
         {
           next: services => {
             const service = services.services[0];
-            let practitioner = null;
-            let patient = null;
+            let practitioner: Practitioner = null;
+            let patient: Patient = null;
             if (this._stateService.state) {
               const state = this._stateService.state as StateModel;
               if (state.practitioner) {
-                practitioner = state.practitioner.id;
+                practitioner = state.practitioner;
               }
               if (state.patient) {
-                patient = state.patient.id;
+                patient = state.patient;
               }
             }
             let hook: Hook;
@@ -105,14 +105,12 @@ export class PrescriptionStateService {
               item1: patient,
               item2: lMedicationRequest
             };
-
             const observables: Array<Observable<object>> = [];
             for (const item of Object.keys(service.prefetch)) {
               if ('Patient?_id={{context.patientId}}' !== service.prefetch[item]) {
                 observables.push(this.buildPrefetch(patient, service.prefetch[item]));
               }
             }
-
             forkJoin(observables)
               .subscribe({
                 next: values => {
@@ -127,9 +125,11 @@ export class PrescriptionStateService {
                   this._cdsHooksService.postHook(service, hook)
                     .subscribe({
                       next: (cdsCards) => {
+                        const cards = Array<CardReadable>();
                         for (const card of cdsCards.cards) {
-                          this.cards.push(new CardReadable(card));
+                          cards.push(new CardReadable(card));
                         }
+                        this._cards$.next(cards);
                       },
                       error: err => console.error('error', err)
                     });

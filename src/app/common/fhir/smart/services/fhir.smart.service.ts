@@ -77,7 +77,7 @@ export class FhirSmartService {
         .set('Content-type', 'application/fhir+json')
     } as Options;
 
-    this._fhirClient.smartAuthMetadata(sessionStorage.getItem('iss'), options)
+    this._fhirClient.smartAuthMetadata(this.baseUrl, options)
       .subscribe({
         next: metadata => {
           const context = sessionStorage.getItem('context');
@@ -105,7 +105,7 @@ export class FhirSmartService {
         .set('Content-type', 'application/fhir+json')
     } as Options;
 
-    this._fhirClient.smartAuthMetadata(sessionStorage.getItem('iss'), options)
+    this._fhirClient.smartAuthMetadata(this.baseUrl, options)
       .subscribe({
         next: metadata => {
           const body = new HttpParams()
@@ -120,9 +120,8 @@ export class FhirSmartService {
   }
 
   public saveToken(token: SmartToken): void {
-    const expireDate = new Date().getTime() + (1000 * token.expires_in);
-    sessionStorage.setItem('access_token', token.access_token);
-    sessionStorage.setItem('expire_date', String(expireDate));
+    this.accessToken = token.access_token;
+    sessionStorage.setItem('expire_date', String(new Date().getTime() + (1000 * token.expires_in)));
     sessionStorage.setItem('id_token', token.id_token);
     sessionStorage.setItem('patient_id', token.patient);
     sessionStorage.setItem('need_patient_banner', String(token.need_patient_banner));
@@ -140,11 +139,11 @@ export class FhirSmartService {
       headers: new HttpHeaders()
         .set('Accept', 'application/fhir+json,application/json')
         .set('Content-type', 'application/fhir+json')
-        .set('Authorization', `Bearer ${sessionStorage.getItem('access_token')}`)
+        .set('Authorization', `Bearer ${this.accessToken}`)
     } as Options;
 
     if (token.patient) {
-      this._fhirClient.read<Patient>(sessionStorage.getItem('iss'), {
+      this._fhirClient.read<Patient>(this.baseUrl, {
         resourceType: 'Patient',
         id: token.patient
       }, options)
@@ -163,7 +162,7 @@ export class FhirSmartService {
         });
     }
 
-    this._fhirClient.read(sessionStorage.getItem('iss'), {
+    this._fhirClient.read(this.baseUrl, {
         resourceType: 'Practitioner',
         id: state.userId()
       }, options)
@@ -204,11 +203,11 @@ export class FhirSmartService {
         headers: new HttpHeaders()
           .set('Accept', 'application/fhir+json,application/json')
           .set('Content-type', 'application/fhir+json')
-          .set('Authorization', `Bearer ${sessionStorage.getItem('access_token')}`)
+          .set('Authorization', `Bearer ${this.accessToken}`)
       } as Options;
 
       if (idPatient !== 'undefined') {
-        this._fhirClient.read(sessionStorage.getItem('iss'), {
+        this._fhirClient.read(this.baseUrl, {
           resourceType: 'Patient',
           id: idPatient
         }, options)
@@ -227,7 +226,7 @@ export class FhirSmartService {
           });
       }
 
-      this._fhirClient.read(sessionStorage.getItem('iss'), {
+      this._fhirClient.read(this.baseUrl, {
         resourceType: 'Practitioner',
         id: state.userId()
       }, options)
@@ -266,6 +265,33 @@ export class FhirSmartService {
   private set baseUrl(value: string) {
     sessionStorage.setItem('iss', value);
     this._baseUrl.next(value);
+  }
+
+  private get baseUrl(): string | undefined  {
+    if (this._baseUrl.value) {
+      return this._baseUrl.value as string;
+    }
+    else if (sessionStorage.getItem('iss')) {
+      this._baseUrl.next(sessionStorage.getItem('iss'));
+      return this._baseUrl.value as string;
+    }
+    return undefined;
+  }
+
+  private set accessToken(value: string) {
+    sessionStorage.setItem('access_token', value);
+    this._accessToken.next(value);
+  }
+
+  private get accessToken(): string | undefined {
+    if (this._accessToken.value) {
+      return this._accessToken.value as string;
+    }
+    else if (sessionStorage.getItem('access_token')) {
+      this._accessToken.next(sessionStorage.getItem('access_token'));
+      return this._accessToken.value as string;
+    }
+    return undefined;
   }
 
   private doPostToken(url: string, body: string): void {

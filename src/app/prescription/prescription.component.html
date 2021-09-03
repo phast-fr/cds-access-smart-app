@@ -7,15 +7,17 @@
     <mat-drawer-content>
       <div class="view-medication-prescription">
         <div class="card-notify">
-          <button *ngIf="cards.length == 0 && !drawer.opened" mat-fab disabled>
+          <button *ngIf="!(cards$ | async) && !drawer.opened" mat-fab disabled>
             <mat-icon>email</mat-icon>
           </button>
-          <button *ngIf="cards.length == 0 && drawer.opened" mat-fab color="primary" (click)="drawer.toggle()">
+          <button *ngIf="(cards$ | async) && cards.length === 0 && drawer.opened"
+                  mat-fab color="primary" (click)="drawer.toggle()">
             <mat-icon>email</mat-icon>
           </button>
-          <button *ngIf="cards.length > 0" mat-fab color="primary" (click)="drawer.toggle();onReadCards();">
-            <mat-icon *ngIf="getBadge() > 0" matBadge="{{getBadge()}}" matBadgeColor="warn">email</mat-icon>
-            <mat-icon *ngIf="getBadge() == 0">email</mat-icon>
+          <button *ngIf="(cards$ | async) && cards.length > 0"
+                  mat-fab color="primary" (click)="drawer.toggle(); onReadCards();">
+            <mat-icon *ngIf="(badges$ | async) > 0" matBadge="{{ badges$ | async }}" matBadgeColor="warn">email</mat-icon>
+            <mat-icon *ngIf="(badges$ | async) === 0">email</mat-icon>
           </button>
         </div>
         <mat-card class="mat-elevation-z1">
