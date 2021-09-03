@@ -33,6 +33,12 @@ import {
   MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit,
   MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart,
   MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd,
+  MedicationFormIntentValueChangesDosageInstructionDayOfWeek,
+  MedicationFormIntentValueChangesDosageInstructionFrequencyValue,
+  MedicationFormIntentValueChangesDosageInstructionPeriodUnit,
+  MedicationFormIntentValueChangesDosageInstructionPeriodValue,
+  MedicationFormIntentValueChangesDosageInstructionWhenValue,
+  MedicationFormIntentAddWhen, MedicationFormIntentRemoveWhen, MedicationFormIntentValueChangesDosageInstructionOffsetValue,
 } from '../medication-request-form.intent';
 import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
 
@@ -84,6 +90,10 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
   public get durationUnitArray(): Array<ValueSetContains> {
     return this._viewModel.durationUnitArray;
+  }
+
+  public get whenArray(): Array<ValueSetContains> {
+    return this._viewModel.whenArray;
   }
 
   public doseAndRateUnitArray(nDosage: number): Array<Coding> {
@@ -151,6 +161,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         removeTimeOfDay.removeAt(state.index);
         this._dosageInstruction$.next(this.dosageInstruction);
         break;
+      case 'AddWhen':
+        const addWhen = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'when']) as FormArray;
+        addWhen.push(this.addWhen(state.nDosage, addWhen.length));
+        this._dosageInstruction$.next(this.dosageInstruction);
+        break;
+      case 'RemoveWhen':
+        const removeWhen = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'when']) as FormArray;
+        removeWhen.removeAt(state.index);
+        this._dosageInstruction$.next(this.dosageInstruction);
+        break;
       case 'AddDoseAndRate':
         const addDoseAndRate = this.dosageInstruction?.at(state.nDosage).get('doseAndRate') as FormArray;
         this.addDoseAndRate(
@@ -210,6 +230,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     );
   }
 
+  public onAddWhen(nDosage: number): void {
+    this._viewModel.dispatchIntent(new MedicationFormIntentAddWhen(nDosage));
+  }
+
+  public onRemoveWhen(nDosage: number, nWhen: number): void {
+    this._viewModel.dispatchIntent(
+      new MedicationFormIntentRemoveWhen(this._viewModel.medicationRequest, nDosage, nWhen)
+    );
+  }
+
   public onAddDoseAndRate(nDosage: number): void {
     this._viewModel.dispatchIntent(new MedicationFormIntentAddDoseAndRate(nDosage));
   }
@@ -248,6 +278,25 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return index;
   }
 
+  public dayOfWeekLabel(dayOfWeek: code): string {
+    switch (dayOfWeek) {
+      case 'mon':
+        return 'lundi';
+      case 'tue':
+        return 'mardi';
+      case 'wed':
+        return 'mercredi';
+      case 'thu':
+        return 'jeudi';
+      case 'fri':
+        return 'vendredi';
+      case 'sat':
+        return 'samedi';
+      case 'sun':
+        return 'dimanche';
+    }
+  }
+
   private addDosageInstruction(dosage: Dosage, nDosage: number): FormGroup {
     const dosageInstructionGroup = this._fb.group({
       'track-id': Utils.randomString(16),
@@ -268,8 +317,43 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
               Validators.pattern( /\d{2}\/\d{2}\/\d{4}/ )]
           }),
           duration: [dosage?.timing?.repeat?.duration], // How long when it happens
-          durationUnit: [this.durationUnit(dosage?.timing?.repeat?.durationUnit)],
-          timeOfDay: this._fb.array([]) // Time of day for action
+          durationUnit: [undefined],
+          frequency: [dosage?.timing?.repeat?.frequency, Validators.pattern( /\d/ )],
+          period: [dosage?.timing?.repeat?.period],
+          periodUnit: [undefined],
+          timeOfDay: this._fb.array([]), // Time of day for action
+          dayOfWeek: this._fb.array([
+            this._fb.group({
+              name: ['mon'],
+              checked: [false]
+            }),
+            this._fb.group({
+              name: ['tue'],
+              checked: [false]
+            }),
+            this._fb.group({
+              name: ['wed'],
+              checked: [false]
+            }),
+            this._fb.group({
+              name: ['thu'],
+              checked: [false]
+            }),
+            this._fb.group({
+              name: ['fri'],
+              checked: [false]
+            }),
+            this._fb.group({
+              name: ['sat'],
+              checked: [false]
+            }),
+            this._fb.group({
+              name: ['sun'],
+              checked: [false]
+            })
+          ]),
+          when: this._fb.array([]),
+          offset: [dosage?.timing?.repeat?.offset, Validators.pattern( /\d/ )]
         })
       }),
       doseAndRate: this._fb.array([])
@@ -472,6 +556,109 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         error: err => console.error('error', err)
       });
 
+    dosageInstructionGroup.get(['timing', 'repeat', 'frequency']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionFrequencyValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
+    dosageInstructionGroup.get(['timing', 'repeat', 'period']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionPeriodValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+    const periodUnitValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'periodUnit']).valueChanges
+      .pipe(
+        filter(predicate => this._viewModel.durationUnitArray.findIndex(
+          value => value.code === predicate.code
+        ) > -1)
+      );
+    const periodUnitNotValid$ = dosageInstructionGroup.get(['timing', 'repeat', 'periodUnit']).valueChanges
+      .pipe(
+        filter(predicate => this._viewModel.durationUnitArray.findIndex(
+          value => value.code === predicate.code
+        ) === -1)
+      );
+
+    periodUnitValid$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionPeriodUnit(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+    periodUnitNotValid$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        tap(() => dosageInstructionGroup.get(['timing', 'repeat', 'periodUnit'])
+          .reset(null, {emitEvent: false}))
+      )
+      .subscribe({
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionPeriodUnit(
+            this._viewModel.medicationRequest,
+            nDosage,
+            null
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
+    dosageInstructionGroup.get(['timing', 'repeat', 'dayOfWeek']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: dayOfWeekValues => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionDayOfWeek(
+            this._viewModel.medicationRequest,
+            nDosage,
+            dayOfWeekValues
+          )
+        ),
+        error: err => console.error('error', err)
+        });
+
+    dosageInstructionGroup.get(['timing', 'repeat', 'offset']).valueChanges
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionOffsetValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
     this.isLoadingList$
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -503,7 +690,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
         distinctUntilChanged(),
-        tap(value => timeOfDayControl.setValue(value, {emitEvent: false})),
         filter(() => timeOfDayControl.valid)
       )
       .subscribe({
@@ -518,6 +704,51 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         error: err => console.error('error', err)
       });
     return timeOfDayControl;
+  }
+
+  private addWhen(nDosage: number, nWhen: number): FormControl {
+    const whenControl = this._fb.control(undefined);
+    const whenString$ = whenControl.valueChanges
+      .pipe(
+        filter(value => typeof value === 'string')
+      );
+    const whenObj$ = whenControl.valueChanges
+      .pipe(
+        filter(value => value instanceof Object)
+      );
+
+    whenString$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionWhenValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            nWhen,
+            null
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+    whenObj$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$)
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionWhenValue(
+            this._viewModel.medicationRequest,
+            nDosage,
+            nWhen,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+
+    return whenControl;
   }
 
   private addDoseAndRate(nDosage: number, doseAndRate: FormArray): void {
@@ -557,8 +788,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       );
     doseQuantityUnitString$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(() => doseAndRateGroup.get(['doseQuantity', 'unit']).reset(null, options))
+        takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
         next: () => this._viewModel.dispatchIntent(
@@ -641,6 +871,16 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return undefined;
   }
 
+  private periodUnit(periodUnitCode: UnitsOfTime): ValueSetContains | undefined {
+    const periodUnitIndex = this.durationUnitArray.findIndex(
+      value => value.code === periodUnitCode
+    );
+    if (periodUnitIndex > -1) {
+      return this.durationUnitArray[periodUnitIndex];
+    }
+    return undefined;
+  }
+
   private onLoadedList(): void {
     if (this._dosageInstruction$.value) {
       const dosageInstruction = this._dosageInstruction$.value as FormArray;
@@ -653,7 +893,12 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   private onLoadedTIOList(dosageInstructionGroup: FormGroup, dosage: Dosage): void {
+    const options = {emitEvent: false};
     dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit'])
-      .setValue(this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code), {emitEvent: false});
+      .setValue(this.boundsDurationUnit(dosage?.timing?.repeat?.boundsDuration?.code), options);
+    dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit'])
+      .setValue(this.durationUnit(dosage?.timing?.repeat?.durationUnit), options);
+    dosageInstructionGroup.get(['timing', 'repeat', 'periodUnit'])
+      .setValue(this.durationUnit(dosage?.timing?.repeat?.periodUnit), options);
   }
 }

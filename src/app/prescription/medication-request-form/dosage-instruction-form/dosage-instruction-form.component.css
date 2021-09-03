@@ -34,7 +34,11 @@ button.mat-stroked-button {
   line-height: 1.125;
 }
 
-.mat-radio-button {
+.form-field-row .mat-radio-button + .mat-radio-button {
   margin-left: 8px;
-  margin-right: 8px;
 }
+
+.form-field-row .mat-checkbox + .mat-checkbox {
+  margin-left: 8px;
+}
+

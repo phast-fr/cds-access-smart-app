@@ -373,6 +373,148 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationUnit imple
   }
 }
 
+export class MedicationFormIntentValueChangesDosageInstructionFrequencyValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionFrequencyValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _frequencyValue: decimal) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get frequencyValue(): decimal {
+    return this._frequencyValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionPeriodValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionPeriodValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _periodValue: decimal) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get periodValue(): decimal {
+    return this._periodValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionPeriodUnit implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionPeriodUnit';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _periodUnit: ValueSetContains) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get periodUnit(): ValueSetContains {
+    return this._periodUnit;
+  }
+}
+
+export class MedicationFormIntentAddWhen implements IIntent {
+  readonly type = 'AddWhen';
+
+  constructor(private _nDosage: number) {
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+}
+
+export class MedicationFormIntentRemoveWhen implements IIntent {
+  readonly type = 'RemoveWhen';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nWhen: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nWhen(): number {
+    return this._nWhen;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionWhenValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionWhenValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nWhen: number,
+              private _whenValue: ValueSetContains) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nWhen(): number {
+    return this._nWhen;
+  }
+
+  public get whenValue(): ValueSetContains {
+    return this._whenValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionOffsetValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionOffsetValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _offsetValue: decimal) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get offsetValue(): decimal {
+    return this._offsetValue;
+  }
+}
+
 export class MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue implements IIntent {
   readonly type = 'ValueChangesDosageInstructionDoseQuantityValue';
 
@@ -479,6 +621,27 @@ export class MedicationFormIntentRemoveTimeOfDay implements IIntent {
 
   public get index(): number {
     return this._index;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionDayOfWeek implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionDayOfWeekValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _dayOfWeek: Array<{ name: string, checked: boolean }>) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get dayOfWeek(): Array<{ name: string, checked: boolean }> {
+    return this._dayOfWeek;
   }
 }
 

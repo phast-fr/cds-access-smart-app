@@ -12,7 +12,10 @@ import {
   MedicationFormStateRemoveTimeOfDay,
   MedicationFormStateAddDoseAndRate,
   MedicationFormStateRemoveDoseAndRate,
-  MedicationFormStateRemoveMedication, MedicationFormStateValueChangesMedication, MedicationFormStateValueChangesTreatmentIntent
+  MedicationFormStateRemoveMedication,
+  MedicationFormStateValueChangesMedication,
+  MedicationFormStateValueChangesTreatmentIntent,
+  MedicationFormStateAddWhen, MedicationFormStateRemoveWhen
 } from './medication-request-form.state';
 import {MedicationRequestFormViewModel} from './medication-request-form-view-model';
 
@@ -59,6 +62,12 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
       case 'RemoveTimeOfDay':
         this.removeTimeOfDay(newState, partialState as MedicationFormStateRemoveTimeOfDay);
         break;
+      case 'AddWhen':
+        this.addWhen(newState, partialState as MedicationFormStateAddWhen);
+        break;
+      case 'RemoveWhen':
+        this.removeWhen(newState, partialState as MedicationFormStateRemoveWhen);
+        break;
       case 'AddDoseAndRate':
         this.addDoseAndRate(newState, partialState as MedicationFormStateAddDoseAndRate);
         break;
@@ -82,9 +91,9 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
     newState.nMedicationArray.length = 0;
     newState.nDosage = undefined;
     newState.index = undefined;
-    for (const key of Object.keys(newState.medicationKnowledgeMap)) {
+    Object.keys(newState.medicationKnowledgeMap).forEach(key => {
       delete newState.medicationKnowledgeMap[key];
-    }
+    });
   }
 
   private addMedication(newState: MedicationRequestFormState, partialState: MedicationFormStateAddMedication): void {
@@ -104,9 +113,9 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
     newState.nMedicationArray.length = 0;
     const contained = newState.medicationRequest.contained;
     if (partialState.nMedication === 0) {
-      for (let i = 0; i < contained.length; i++) {
-        newState.nMedicationArray.push(i);
-      }
+      contained.forEach((resource, index) => {
+        newState.nMedicationArray.push(index);
+      });
       newState.nMedicationArray.sort((a, b) => b - a);
       for (const key of newState.medicationKnowledgeMap.keys()) {
         newState.medicationKnowledgeMap.delete(key);
@@ -173,6 +182,16 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
     newState.medicationRequest = partialState.medicationRequest;
     newState.nDosage = partialState.nDosage;
     newState.index = partialState.index;
+  }
+
+  private addWhen(newState: MedicationRequestFormState, partialState: MedicationFormStateAddWhen): void {
+    newState.nDosage = partialState.nDosage;
+  }
+
+  private removeWhen(newState: MedicationRequestFormState, partialState: MedicationFormStateRemoveWhen): void {
+    newState.medicationRequest = partialState.medicationRequest;
+    newState.nDosage = partialState.nDosage;
+    newState.index = partialState.nWhen;
   }
 
   private addDoseAndRate(newState: MedicationRequestFormState,

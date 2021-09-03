@@ -5,10 +5,11 @@ import {
   Medication, MedicationIngredient,
   MedicationRequest, MedicationRequestDispenseRequest,
   MedicationRequestIntent,
-  MedicationRequestStatus, Period, Quantity, Ratio,
+  MedicationRequestStatus, Period, positiveInt, Quantity, Ratio,
   Reference,
-  Resource, time, Timing, TimingRepeat, UnitsOfTime, uri, ValueSetContains
+  Resource, time, Timing, TimingRepeat, UnitsOfTime, unsignedInt, uri, ValueSetContains
 } from 'phast-fhir-ts';
+import {EventTiming} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 export class MedicationRequestBuilder {
 
@@ -330,6 +331,28 @@ export class TimingRepeatBuilder {
     return this;
   }
 
+  public frequency(frequency: positiveInt): this {
+    if (frequency) {
+      this._timingRepeat.frequency = frequency;
+    }
+    return this;
+  }
+
+  public period(period: decimal): this {
+    if (period) {
+      this._timingRepeat.period = period;
+      this._timingRepeat.durationUnit = 'h';
+    }
+    return this;
+  }
+
+  public periodUnit(periodUnit: UnitsOfTime): this {
+    if (periodUnit) {
+      this._timingRepeat.periodUnit = periodUnit;
+    }
+    return this;
+  }
+
   public timeOfDay(timeOfDay: time[]): this {
     if (timeOfDay) {
       this._timingRepeat.timeOfDay = timeOfDay;
@@ -345,6 +368,39 @@ export class TimingRepeatBuilder {
       else {
         this._timingRepeat.timeOfDay.push(timeOfDay);
       }
+    }
+    return this;
+  }
+
+  public dayOfWeek(dayOfWeek: code[]): this {
+    if (dayOfWeek) {
+      this._timingRepeat.dayOfWeek = dayOfWeek;
+    }
+    return this;
+  }
+
+  public when(when: EventTiming[]): this {
+    if (when) {
+      this._timingRepeat.when = when;
+    }
+    return this;
+  }
+
+  public addWhen(when: EventTiming): this {
+    if (when) {
+      if (!this._timingRepeat.when) {
+        this._timingRepeat.when = new Array<EventTiming>(when);
+      }
+      else {
+        this._timingRepeat.when.push(when);
+      }
+    }
+    return this;
+  }
+
+  public offset(offset: unsignedInt): this {
+    if (offset) {
+      this._timingRepeat.offset = offset;
     }
     return this;
   }

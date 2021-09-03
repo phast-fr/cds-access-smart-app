@@ -23,7 +23,7 @@ import {
   MedicationFormStateRemoveMedication,
   MedicationFormStateValueChangesMedication,
   MedicationFormStateCdsHelp,
-  MedicationFormStateValueChangesTreatmentIntent
+  MedicationFormStateValueChangesTreatmentIntent, MedicationFormStateRemoveWhen, MedicationFormStateAddWhen
 } from './medication-request-form.state';
 import {
   CodeableConceptBuilder, CodingBuilder,
@@ -34,6 +34,7 @@ import {
   ReferenceBuilder, TimingBuilder, TimingRepeatBuilder
 } from '../../common/fhir/builders/fhir.resource.builder';
 import {
+  code,
   CodeableConcept, Coding, decimal, Dosage, DosageDoseAndRate, Extension,
   id,
   Medication,
@@ -42,6 +43,7 @@ import {
   Ratio,
   Reference, time, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
+import {EventTiming} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 export class MedicationFormActionAddMedicationRequest implements IAction {
   readonly type = 'AddMedicationRequest';
@@ -224,15 +226,13 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
     else {
       delete medication.form;
 
-      for (const item of medication.ingredient) {
-        if (item?.itemCodeableConcept) {
-          delete item?.strength;
-        }
+      if (medication.ingredient) {
+        medication.ingredient.forEach(ingredient => {
+          if (ingredient?.itemCodeableConcept) {
+            delete ingredient?.strength;
+          }
+        });
       }
-    }
-
-    if (medicationRequest.dosageInstruction && !this._formValue) {
-      medicationRequest.dosageInstruction.forEach((dosage) => delete dosage.route);
     }
 
     return new MedicationFormStateValueChangesMedication(medicationRequest);
@@ -268,11 +268,6 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
     else {
       delete ingredient.strength;
       delete medication.form;
-    }
-
-    if (medicationRequest.dosageInstruction
-      && !this._strengthValue) {
-      medicationRequest.dosageInstruction.forEach((dosage) => dosage.route);
     }
 
     return new MedicationFormStateValueChangesMedication(medicationRequest);
@@ -453,10 +448,12 @@ export class MedicationFormActionValueChangesDosageInstructionRoute implements I
     const medication = medicationRequest.contained[nMedication];
     if (!this._routeValue) {
       delete medication.form;
-      for (const item of medication.ingredient) {
-        if (item?.itemCodeableConcept) {
-          delete item?.strength;
-        }
+      if (medication.ingredient) {
+        medication.ingredient.forEach(ingredient => {
+          if (ingredient?.itemCodeableConcept) {
+            delete ingredient?.strength;
+          }
+        });
       }
     }
 
@@ -527,9 +524,9 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
 
   private synchronizeBounds(dosage): void {
     if (dosage.timing.repeat?.boundsPeriod?.start) {
-      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const start: DateTime = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
 
-      let unit;
+      let unit: string;
       if (dosage.timing.repeat.boundsDuration.code) {
         unit = dosage.timing.repeat.boundsDuration.code;
       }
@@ -604,7 +601,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit
     if (dosage.timing.repeat?.boundsPeriod?.start
       && dosage.timing.repeat?.boundsDuration?.value
       && dosage.timing.repeat?.boundsDuration?.code) {
-      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const start: DateTime = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
       const duration = Utils.duration(
         dosage.timing.repeat.boundsDuration.value,
         dosage.timing.repeat.boundsDuration.code
@@ -804,14 +801,15 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _durationValue: decimal) { }
+              private _durationValue: decimal) {
+  }
 
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
     if (this._durationValue) {
-      if (dosage.timing === undefined) {
+      if (!dosage.timing) {
         dosage.timing = new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
             .duration(this._durationValue)
@@ -819,7 +817,7 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
           )
           .build();
       }
-      else if (dosage.timing.repeat === undefined) {
+      else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
           .duration(this._durationValue)
           .build();
@@ -839,18 +837,19 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
 }
 
 export class MedicationFormActionValueChangesDosageInstructionDurationUnit implements IAction {
-  readonly type = 'ValueChangesDosageInstructionDurationValue';
+  readonly type = 'ValueChangesDosageInstructionDurationUnit';
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _durationUnit: ValueSetContains) { }
+              private _durationUnit: ValueSetContains) {
+  }
 
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
     if (this._durationUnit) {
-      if (dosage.timing === undefined) {
+      if (!dosage.timing) {
         dosage.timing = new TimingBuilder()
           .timingRepeat(
             new TimingRepeatBuilder()
@@ -859,7 +858,7 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
           )
           .build();
       }
-      else if (dosage.timing.repeat) {
+      else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
           .durationUnit(this._durationUnit.code as UnitsOfTime)
           .build();
@@ -871,6 +870,395 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
     else {
       if (dosage.timing && dosage.timing.repeat) {
         delete dosage.timing.repeat.durationUnit;
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionFrequencyValue implements IAction {
+  readonly type = 'ValueChangesDosageInstructionFrequencyValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _frequencyValue: decimal) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (this._frequencyValue) {
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(new TimingRepeatBuilder()
+            .frequency(this._frequencyValue)
+            .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .frequency(this._frequencyValue)
+          .build();
+      }
+      else {
+        dosage.timing.repeat.frequency = this._frequencyValue;
+      }
+    }
+    else {
+      if (dosage.timing && dosage.timing.repeat) {
+        delete dosage.timing.repeat.frequency;
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionPeriodValue implements IAction {
+  readonly type = 'ValueChangesDosageInstructionPeriodValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _periodValue: decimal) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (this._periodValue) {
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(new TimingRepeatBuilder()
+            .period(this._periodValue)
+            .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .period(this._periodValue)
+          .build();
+      }
+      else {
+        dosage.timing.repeat.period = this._periodValue;
+      }
+    }
+    else {
+      if (dosage.timing && dosage.timing.repeat) {
+        delete dosage.timing.repeat.period;
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionPeriodUnit implements IAction {
+  readonly type = 'ValueChangesDosageInstructionPeriodUnit';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _periodUnit: ValueSetContains) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (this._periodUnit) {
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(
+            new TimingRepeatBuilder()
+              .periodUnit(this._periodUnit.code as UnitsOfTime)
+              .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .periodUnit(this._periodUnit.code as UnitsOfTime)
+          .build();
+      }
+      else {
+        dosage.timing.repeat.periodUnit = this._periodUnit.code as UnitsOfTime;
+      }
+    }
+    else {
+      if (dosage.timing && dosage.timing.repeat) {
+        delete dosage.timing.repeat.periodUnit;
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionAddTimeOfDay implements IAction {
+  readonly type = 'AddTimeOfDay';
+
+  constructor(private _nDosage: number) {
+  }
+
+  public execute(): IPartialState {
+    return new MedicationFormStateAddTimeOfDay(this._nDosage);
+  }
+}
+
+export class MedicationFormActionRemoveTimeOfDay implements IAction {
+  readonly type = 'RemoveTimeOfDay';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nTimeOfDay: number) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (dosage.timing) {
+      if (dosage.repeat) {
+        if (dosage.timing.repeat.timeOfDay) {
+          if (dosage.timing.repeat.timeOfDay[this._nTimeOfDay]) {
+            dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
+          }
+          if (dosage.timing.repeat.timeOfDay.length === 0) {
+            delete dosage.timing.repeat.timeOfDay;
+          }
+        }
+      }
+    }
+
+    return new MedicationFormStateRemoveTimeOfDay(medicationRequest, this._nDosage, this._nTimeOfDay);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue implements IAction {
+  readonly type = 'ValueChangesDosageInstructionTimeOfDay';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nTimeOfDay: number,
+              private _timeOfDayValue: time) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (this._timeOfDayValue) {
+      const timeOfDayValue = DateTime.fromFormat(this._timeOfDayValue, 'hh:mm').toFormat('hh:mm:ss');
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(new TimingRepeatBuilder()
+            .addTimeOfDay(timeOfDayValue)
+            .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .addTimeOfDay(timeOfDayValue)
+          .build();
+      }
+      else if (!dosage.timing.repeat.timeOfDay) {
+        dosage.timing.repeat.timeOfDay = new Array<time>(timeOfDayValue);
+      }
+      else {
+        dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = timeOfDayValue;
+      }
+    }
+    else {
+      if (dosage?.timing?.repeat?.timeOfDay) {
+        if (dosage?.timing?.repeat?.timeOfDay[this._nTimeOfDay]) {
+          dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
+        }
+        if (dosage?.timing?.repeat?.timeOfDay.length === 0) {
+          delete dosage.timing.repeat.timeOfDay;
+        }
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionDayOfWeek implements IAction {
+  readonly type = 'ValueChangesDosageInstructionDayOfWeekValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _dayOfWeek: Array<{ name: string, checked: boolean }>) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    const dayOfWeekValues = (dosage.timing.repeat.dayOfWeek) ? dosage.timing.repeat.dayOfWeek : Array<code>();
+    this._dayOfWeek.forEach(dayOfWeek => {
+      if (dayOfWeek.checked && dayOfWeekValues.indexOf(dayOfWeek.name) === -1) {
+        dayOfWeekValues.push(dayOfWeek.name);
+      }
+      else if (!dayOfWeek.checked && dayOfWeekValues.indexOf(dayOfWeek.name) > -1) {
+        dayOfWeekValues.splice(dayOfWeekValues.indexOf(dayOfWeek.name), 1);
+      }
+    });
+    if (dayOfWeekValues.length > 0) {
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(new TimingRepeatBuilder()
+            .dayOfWeek(dayOfWeekValues)
+            .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .dayOfWeek(dayOfWeekValues)
+          .build();
+      }
+      else if (!dosage.timing.repeat.dayOfWeek) {
+        dosage.timing.repeat.dayOfWeek = dayOfWeekValues;
+      }
+    }
+    else {
+      if (dosage?.timing?.repeat?.dayOfWeek) {
+        delete dosage.timing.repeat.dayOfWeek;
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionAddWhen implements IAction {
+  readonly type = 'AddWhen';
+
+  constructor(private _nDosage: number) {
+  }
+
+  public execute(): IPartialState {
+    return new MedicationFormStateAddWhen(this._nDosage);
+  }
+}
+
+export class MedicationFormActionRemoveWhen implements IAction {
+  readonly type = 'RemoveWhen';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nWhen: number) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (dosage.timing) {
+      if (dosage.repeat) {
+        if (dosage.timing.repeat.when) {
+          if (dosage.timing.repeat.when[this._nWhen]) {
+            dosage.timing.repeat.when.splice(this._nWhen, 1);
+          }
+          if (dosage.timing.repeat.when.length === 0) {
+            delete dosage.timing.repeat.when;
+          }
+        }
+      }
+    }
+
+    return new MedicationFormStateRemoveWhen(medicationRequest, this._nDosage, this._nWhen);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionWhenValue implements IAction {
+  readonly type = 'ValueChangesDosageInstructionWhen';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nWhen: number,
+              private _whenValue: ValueSetContains) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (this._whenValue) {
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(new TimingRepeatBuilder()
+            .addWhen(this._whenValue.code as EventTiming)
+            .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .addWhen(this._whenValue.code as EventTiming)
+          .build();
+      }
+      else if (!dosage.timing.repeat.when) {
+        dosage.timing.repeat.when = new Array<EventTiming>(this._whenValue.code as EventTiming);
+      }
+      else {
+        dosage.timing.repeat.when[this._nWhen] = this._whenValue.code as EventTiming;
+      }
+    }
+    else {
+      if (dosage?.timing?.repeat?.when) {
+        if (dosage?.timing?.repeat?.when[this._nWhen]) {
+          dosage.timing.repeat.when.splice(this._nWhen, 1);
+        }
+        if (dosage?.timing?.repeat?.when.length === 0) {
+          delete dosage.timing.repeat.when;
+        }
+      }
+    }
+
+    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
+  }
+}
+
+export class MedicationFormActionValueChangesDosageInstructionOffsetValue implements IAction {
+  readonly type = 'ValueChangesDosageInstructionOffsetValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _offsetValue: decimal) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const dosage = medicationRequest.dosageInstruction[this._nDosage];
+
+    if (this._offsetValue) {
+      if (!dosage.timing) {
+        dosage.timing = new TimingBuilder()
+          .timingRepeat(new TimingRepeatBuilder()
+            .offset(this._offsetValue)
+            .build()
+          )
+          .build();
+      }
+      else if (!dosage.timing.repeat) {
+        dosage.timing.repeat = new TimingRepeatBuilder()
+          .offset(this._offsetValue)
+          .build();
+      }
+      else {
+        dosage.timing.repeat.offset = this._offsetValue;
+      }
+    }
+    else {
+      if (dosage.timing && dosage.timing.repeat) {
+        delete dosage.timing.repeat.offset;
       }
     }
 
@@ -918,7 +1306,8 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nDoseAndRate: number,
-              private _doseQuantityValue: number) { }
+              private _doseQuantityValue: number) {
+  }
 
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
@@ -1018,101 +1407,12 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
   }
 }
 
-export class MedicationFormActionAddTimeOfDay implements IAction {
-  readonly type = 'AddTimeOfDay';
-
-  constructor(private _nDosage: number) {
-  }
-
-  public execute(): IPartialState {
-    return new MedicationFormStateAddTimeOfDay(this._nDosage);
-  }
-}
-
-export class MedicationFormActionRemoveTimeOfDay implements IAction {
-  readonly type = 'RemoveTimeOfDay';
-
-  constructor(private _medicationRequest: MedicationRequest,
-              private _nDosage: number,
-              private _nTimeOfDay: number) {
-  }
-
-  public execute(): IPartialState {
-    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
-    const dosage = medicationRequest.dosageInstruction[this._nDosage];
-
-    if (dosage.timing) {
-      if (dosage.repeat) {
-        if (dosage.timing.repeat.timeOfDay) {
-          if (dosage.timing.repeat.timeOfDay[this._nTimeOfDay]) {
-            dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
-          }
-          if (dosage.timing.repeat.timeOfDay.length === 0) {
-            delete dosage.timing.repeat.timeOfDay;
-          }
-        }
-      }
-    }
-
-    return new MedicationFormStateRemoveTimeOfDay(medicationRequest, this._nDosage, this._nTimeOfDay);
-  }
-}
-
-export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue implements IAction {
-  readonly type = 'ValueChangesDosageInstructionTimeOfDay';
-
-  constructor(private _medicationRequest: MedicationRequest,
-              private _nDosage: number,
-              private _nTimeOfDay: number,
-              private _timeOfDayValue: time) {
-  }
-
-  public execute(): IPartialState {
-    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
-    const dosage = medicationRequest.dosageInstruction[this._nDosage];
-
-    if (this._timeOfDayValue) {
-      const timeOfDayValue = DateTime.fromFormat(this._timeOfDayValue, 'hh:mm').toFormat('hh:mm:ss');
-      if (!dosage.timing) {
-        dosage.timing = new TimingBuilder()
-          .timingRepeat(new TimingRepeatBuilder()
-            .addTimeOfDay(timeOfDayValue)
-            .build()
-          )
-          .build();
-      }
-      else if (!dosage.timing.repeat) {
-        dosage.timing.repeat = new TimingRepeatBuilder()
-          .addTimeOfDay(timeOfDayValue)
-          .build();
-      }
-      else if (!dosage.timing.repeat.timeOfDay) {
-        dosage.timing.repeat.timeOfDay = new Array<time>(timeOfDayValue);
-      }
-      else {
-        dosage.timing.repeat.timeOfDay[this._nTimeOfDay] = timeOfDayValue;
-      }
-    }
-    else {
-      if (dosage?.timing?.repeat?.timeOfDay) {
-        if (dosage?.timing?.repeat?.timeOfDay[this._nTimeOfDay]) {
-          dosage.timing.repeat.timeOfDay.splice(this._nTimeOfDay, 1);
-        }
-        if (dosage?.timing?.repeat?.timeOfDay.length === 0) {
-          delete dosage.timing.repeat.timeOfDay;
-        }
-      }
-    }
-
-    return new MedicationFormStateValueChangesDosageInstruction(medicationRequest, this._nDosage);
-  }
-}
-
 export class MedicationFormActionValueChangesDispenseRequest implements IAction {
   readonly type = 'ValueChangesDispenseRequest';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _medicationDispense: MedicationRequestDispenseRequest) { }
+              private _medicationDispense: MedicationRequestDispenseRequest) {
+  }
 
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);

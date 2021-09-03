@@ -41,7 +41,13 @@ import {
   MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit,
   MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart,
   MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd,
-  MedicationFormIntentValueChangesTreatmentIntent
+  MedicationFormIntentValueChangesTreatmentIntent,
+  MedicationFormIntentValueChangesDosageInstructionDayOfWeek,
+  MedicationFormIntentValueChangesDosageInstructionPeriodUnit,
+  MedicationFormIntentValueChangesDosageInstructionPeriodValue,
+  MedicationFormIntentValueChangesDosageInstructionFrequencyValue,
+  MedicationFormIntentValueChangesDosageInstructionWhenValue,
+  MedicationFormIntentAddWhen, MedicationFormIntentRemoveWhen, MedicationFormIntentValueChangesDosageInstructionOffsetValue
 } from './medication-request-form.intent';
 import {
   MedicationFormActionAddDosageInstruction,
@@ -69,13 +75,20 @@ import {
   MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit,
   MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd,
   MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart,
-  MedicationFormActionValueChangesTreatmentIntent
+  MedicationFormActionValueChangesTreatmentIntent,
+  MedicationFormActionValueChangesDosageInstructionDayOfWeek,
+  MedicationFormActionValueChangesDosageInstructionPeriodValue,
+  MedicationFormActionValueChangesDosageInstructionPeriodUnit,
+  MedicationFormActionValueChangesDosageInstructionFrequencyValue,
+  MedicationFormActionValueChangesDosageInstructionWhenValue,
+  MedicationFormActionAddWhen, MedicationFormActionRemoveWhen, MedicationFormActionValueChangesDosageInstructionOffsetValue
 } from './medication-request-form.action';
 import {
+  Bundle,
   CodeableConcept, Coding,
   id,
   Medication,
-  MedicationKnowledge, MedicationRequest,
+  MedicationKnowledge, MedicationRequest, OperationOutcome,
   Parameters, ParametersParameter,
   Ratio,
   ValueSet, ValueSetContains
@@ -186,6 +199,14 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
+  public get whenArray(): Array<ValueSetContains> | undefined {
+    if (this._state$.value) {
+      const state = this._state$.value;
+      return state.whenArray;
+    }
+    return undefined;
+  }
+
   public get medicationKnowledgeMap(): Map<id, MedicationKnowledge> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
@@ -203,10 +224,14 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
   public updateList(state: MedicationRequestFormState): void {
     if (state.durationUnitArray.length === 0
-      && state.treatmentIntent.length === 0) {
+      || state.treatmentIntent.length === 0
+      || state.whenArray.length === 0) {
       state.loadingTIOList = true;
-      const tioObservable = [this._tioSource.valueSet$expand('http://hl7.org/fhir/ValueSet/units-of-time'),
-        this._tioSource.valueSet$expand('http://interopsante.org/fhir/ValueSet/fr-treatment-intent')];
+      const tioObservable = [
+        this._tioSource.valueSet$expand('http://hl7.org/fhir/ValueSet/units-of-time'),
+        this._tioSource.valueSet$expand('http://interopsante.org/fhir/ValueSet/fr-treatment-intent'),
+        this._tioSource.valueSet$expand('http://hl7.org/fhir/ValueSet/event-timing')
+      ];
 
       forkJoin(tioObservable)
         .subscribe({
@@ -218,6 +243,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
             else if (valueSet.name === 'FrTreatmentIntent') {
               valueSet.expansion.contains.forEach(
                 (valueSetContains) => state.treatmentIntent.push(valueSetContains));
+            }
+            else if (valueSet.name === 'EventTiming') {
+              valueSet.expansion.contains.forEach(
+                (valueSetContains) => state.whenArray.push(valueSetContains));
             }
           }),
           error: err => console.error('error', err),
@@ -233,7 +262,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         const observables = new Array<Observable<Parameters>>();
         state.medicationRequest.dosageInstruction.forEach((dosage) => {
           observables.push(
-            this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+            this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
               medicationKnowledge.id, medicationKnowledge.code, medication.form, medication.ingredient, dosage?.route
             )
               .pipe(
@@ -250,7 +279,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           });
       }
       else {
-        this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient(
+        this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
           medicationKnowledge.id, medicationKnowledge.code, medication.form, medication.ingredient
         )
           .pipe(
@@ -273,10 +302,12 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           state.formMap.get(medication.id).get(nDosage).length = 0;
         }
 
-        for (const ingredient of medication.ingredient) {
-          if (ingredient.itemCodeableConcept) {
-            state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage).length = 0;
-          }
+        if (medication.ingredient) {
+          medication.ingredient.forEach(ingredient => {
+            if (ingredient.itemCodeableConcept) {
+              state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage).length = 0;
+            }
+          });
         }
 
         if (state.doseAndRateUnitMap.get(medication.id).get(nDosage)) {
@@ -293,10 +324,12 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         state.formMap.get(medication.id).get(0).length = 0;
       }
 
-      for (const ingredient of medication.ingredient) {
-        if (ingredient.itemCodeableConcept) {
-          state.strengthMap.get(ingredient.itemCodeableConcept.text).get(0).length = 0;
-        }
+      if (medication.ingredient) {
+        medication.ingredient.forEach(ingredient => {
+          if (ingredient.itemCodeableConcept) {
+            state.strengthMap.get(ingredient.itemCodeableConcept.text).get(0).length = 0;
+          }
+        });
       }
 
       if (state.doseAndRateUnitMap.get(medication.id).get(0)) {
@@ -311,7 +344,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
   public buildList(state: MedicationRequestFormState, medicationId: id, nDosage: number, parameters: Parameters): void {
     if (parameters.parameter) {
-      for (const parameter of parameters.parameter) {
+      parameters.parameter.forEach(parameter => {
         switch (parameter.name) {
           case 'intendedRoute':
             this.addUniqueCodeableConcept(state.routeMap.get(nDosage), parameter);
@@ -319,9 +352,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           case 'doseForm':
             this.addUniqueCodeableConcept(state.formMap.get(medicationId).get(nDosage), parameter);
             break;
-          case 'ingredient':
-            const ingredientCode = parameter.part[1].valueCodeableConcept;
-            this.addUniqueRatio(state.strengthMap.get(ingredientCode.text).get(nDosage), parameter);
+          case 'Composition':
+            const ingredient = parameter.part[1];
+            const ingredientCode = ingredient.part[1].valueCodeableConcept;
+            this.addUniqueRatio(state.strengthMap.get(ingredientCode.text).get(nDosage), ingredient);
             break;
           case 'unite':
             this.addUniqueCoding(state.doseAndRateUnitMap.get(medicationId).get(nDosage), parameter);
@@ -330,7 +364,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
             // relatedMedicationKnowledge
             break;
         }
-      }
+      });
     }
   }
 
@@ -349,18 +383,20 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       state.formMap.get(medication.id).get(nDosage).length = 0;
     }
 
-    medicationKnowledge.ingredient.forEach(ingredient => {
-      if (!state.strengthMap.get(ingredient.itemCodeableConcept.text)) {
-        state.strengthMap.set(ingredient.itemCodeableConcept.text, new Map<number, Array<Ratio>>());
-      }
+    if (medicationKnowledge.ingredient) {
+      medicationKnowledge.ingredient.forEach(ingredient => {
+        if (!state.strengthMap.get(ingredient.itemCodeableConcept.text)) {
+          state.strengthMap.set(ingredient.itemCodeableConcept.text, new Map<number, Array<Ratio>>());
+        }
 
-      if (!state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage)) {
-        state.strengthMap.get(ingredient.itemCodeableConcept.text).set(nDosage, new Array<Ratio>());
-      }
-      else {
-        state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage).length = 0;
-      }
-    });
+        if (!state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage)) {
+          state.strengthMap.get(ingredient.itemCodeableConcept.text).set(nDosage, new Array<Ratio>());
+        }
+        else {
+          state.strengthMap.get(ingredient.itemCodeableConcept.text).get(nDosage).length = 0;
+        }
+      });
+    }
 
     if (!state.doseAndRateUnitMap.get(medication.id)) {
       state.doseAndRateUnitMap.set(medication.id, new Map<number, Array<Coding>>());
@@ -388,10 +424,12 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       state.formMap.get(medication.id).delete(nDosage);
     }
 
-    for (const ingredient of medication.ingredient) {
-      if (ingredient.itemCodeableConcept) {
-        state.strengthMap.get(ingredient.itemCodeableConcept.text).delete(nDosage);
-      }
+    if (medication.ingredient) {
+      medication.ingredient.forEach(ingredient => {
+        if (ingredient.itemCodeableConcept) {
+          state.strengthMap.get(ingredient.itemCodeableConcept.text).delete(nDosage);
+        }
+      });
     }
 
     if (state.doseAndRateUnitMap.get(medication.id).get(nDosage)) {
@@ -403,7 +441,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     }
   }
 
-  public searchMedicationKnowledge(value: string, option: string): Observable<any> {
+  public searchMedicationKnowledge(value: string, option: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
     if (option === 'sp') {
       return this._cioDcSource.searchMedicationKnowledgeUCD(value);
     }
@@ -533,6 +571,27 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).durationUnit
         );
         break;
+      case 'ValueChangesDosageInstructionFrequencyValue':
+        action = new MedicationFormActionValueChangesDosageInstructionFrequencyValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).frequencyValue
+        );
+        break;
+      case 'ValueChangesDosageInstructionPeriodValue':
+        action = new MedicationFormActionValueChangesDosageInstructionPeriodValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).periodValue
+        );
+        break;
+      case 'ValueChangesDosageInstructionPeriodUnit':
+        action = new MedicationFormActionValueChangesDosageInstructionPeriodUnit(
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).periodUnit
+        );
+        break;
       case 'ValueChangesDosageInstructionDoseQuantityValue':
         action = new MedicationFormActionValueChangesDosageInstructionDoseQuantityValue(
           (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).medicationRequest,
@@ -567,6 +626,40 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           (intent as MedicationFormIntentRemoveTimeOfDay).medicationRequest,
           (intent as MedicationFormIntentRemoveTimeOfDay).nDosage,
           (intent as MedicationFormIntentRemoveTimeOfDay).index
+        );
+        break;
+      case 'ValueChangesDosageInstructionDayOfWeekValue':
+        action = new MedicationFormActionValueChangesDosageInstructionDayOfWeek(
+          (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).dayOfWeek
+        );
+        break;
+      case 'ValueChangesDosageInstructionWhenValue':
+        action = new MedicationFormActionValueChangesDosageInstructionWhenValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).nWhen,
+          (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).whenValue
+        );
+        break;
+      case 'AddWhen':
+        action = new MedicationFormActionAddWhen(
+          (intent as MedicationFormIntentAddWhen).nDosage
+        );
+        break;
+      case 'RemoveWhen':
+        action = new MedicationFormActionRemoveWhen(
+          (intent as MedicationFormIntentRemoveWhen).medicationRequest,
+          (intent as MedicationFormIntentRemoveWhen).nDosage,
+          (intent as MedicationFormIntentRemoveWhen).nWhen
+        );
+        break;
+      case 'ValueChangesDosageInstructionOffsetValue':
+        action = new MedicationFormActionValueChangesDosageInstructionOffsetValue(
+          (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).nDosage,
+          (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).offsetValue
         );
         break;
       case 'AddDoseAndRate':
@@ -635,10 +728,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       }
     });
     if (!isExist) {
-      if (parameter.valueCodeableConcept !== undefined) {
+      if (parameter.valueCodeableConcept) {
         uniqueCodeableConceptArray.push(parameter.valueCodeableConcept);
       }
-      else if (parameter.valueCoding !== undefined) {
+      else if (parameter.valueCoding) {
         uniqueCodeableConceptArray.push({
           text: parameter?.valueCoding?.display,
           coding: new Array<Coding>(parameter?.valueCoding)

@@ -2,115 +2,162 @@
   <div fxLayout="row" class="form-group-header">
     <div class="form-group-title"> Posologie(s) </div>
   </div>
-  <div class="form-group-body" *ngFor="let dosageInstructionGroup of dosageInstruction.controls; index as nDosage">
-    <div fxLayout="row" class="form-group-body-header">
-      <button mat-stroked-button color="primary"
-              matTooltip="Supprimer l'instruction de posologie"
-              matTooltipPosition="right"
-              aria-label="Supprimer l'instruction de posologie"
-              (click)="onRemoveDosageInstruction(nDosage)"> - </button>
-      <div class="form-group-body-title"> Posologie {{nDosage + 1}} </div>
-    </div>
-    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-route">
-      <mat-form-field appearance="fill">
-        <mat-label>
-          Voie
-        </mat-label>
-        <input type="text"
-               aria-label="Voie"
-               matInput
-               [formControl]="toFormControl(dosageInstructionGroup.get('route'))"
-               [matAutocomplete]="autoRoute"/>
-      </mat-form-field>
-
-      <mat-autocomplete #autoRoute="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
-        <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
-        <ng-container *ngIf="!(isLoadingList$ | async)">
-          <mat-option *ngFor="let routeCode of routeArray(nDosage); trackBy: trackByCodeableConcept" [value]="routeCode">
-            {{routeCode | codeableConcept}}
-          </mat-option>
-        </ng-container>
-      </mat-autocomplete>
-
-    </div>
-    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-timing-repeat-bounds">
-      <mat-card fxFlex="100%">
-        <mat-card-header>
-          <mat-card-title class="form-group-title"> Limites de validité de la dose </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <mat-radio-group matTooltip="Sélectionner le mode"
-                           matTooltipPosition="below"
-                           aria-label="sélectionner le mode"
-                           [formControl]="toFormControl(
+  <div class="form-group-body">
+    <div [class]="'form-field-dosage-instruction-' + nDosage"
+         *ngFor="let dosageInstructionGroup of dosageInstruction.controls; index as nDosage">
+      <div fxLayout="row" [class]="'form-field-dosage-instruction-' + nDosage + '-header'">
+        <button mat-stroked-button color="primary"
+                matTooltip="Supprimer l'instruction de posologie"
+                matTooltipPosition="right"
+                aria-label="Supprimer l'instruction de posologie"
+                (click)="onRemoveDosageInstruction(nDosage)"> - </button>
+        <div class="form-group-body-title"> Posologie {{nDosage + 1}} </div>
+      </div>
+      <div fxLayout="row" [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-route'">
+        <mat-form-field appearance="fill">
+          <mat-label>
+            Voie
+          </mat-label>
+          <input type="text"
+                 aria-label="Voie"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get('route'))"
+                 [matAutocomplete]="autoRoute"/>
+        </mat-form-field>
+        <mat-autocomplete #autoRoute="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
+          <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
+          <ng-container *ngIf="!(isLoadingList$ | async)">
+            <mat-option *ngFor="let routeCode of routeArray(nDosage); trackBy: trackByCodeableConcept" [value]="routeCode">
+              {{routeCode | codeableConcept}}
+            </mat-option>
+          </ng-container>
+        </mat-autocomplete>
+      </div>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-bounds'">
+        <mat-card fxFlex="100%">
+          <mat-card-header>
+            <mat-card-title class="form-group-title"> Limites de validité de la dose </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-radio-group matTooltip="Sélectionner le mode"
+                             matTooltipPosition="below"
+                             aria-label="sélectionner le mode"
+                             [formControl]="toFormControl(
                            dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode']))">
-            <mat-radio-button value="duration">
-              <span> Durée </span>
-            </mat-radio-button>
-            <mat-radio-button value="period">
-              <span> Période </span>
-            </mat-radio-button>
-          </mat-radio-group>
-          <mat-form-field appearance="fill">
-            <mat-label>
-              Début
-            </mat-label>
-            <input type="text"
-                   aria-label="Date de début de validité de la dose"
-                   placeholder="DD/MM/YYYY"
-                   matInput
-                   [formControl]="toFormControl(
+              <mat-radio-button value="duration">
+                <span> Durée </span>
+              </mat-radio-button>
+              <mat-radio-button value="period">
+                <span> Période </span>
+              </mat-radio-button>
+            </mat-radio-group>
+            <mat-form-field appearance="fill">
+              <mat-label>
+                Début
+              </mat-label>
+              <input type="text"
+                     aria-label="Date de début de validité de la dose"
+                     placeholder="DD/MM/YYYY"
+                     matInput
+                     [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'start']))"/>
-          </mat-form-field>
-          <mat-form-field appearance="fill" *ngIf="toFormControl(
+            </mat-form-field>
+            <mat-form-field appearance="fill" *ngIf="toFormControl(
                            dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'period'">
-            <mat-label>
-              Fin
-            </mat-label>
-            <input type="text"
-                   aria-label="Date de fin de validité de la dose"
-                   placeholder="DD/MM/YYYY"
-                   matInput
-                   [formControl]="toFormControl(
+              <mat-label>
+                Fin
+              </mat-label>
+              <input type="text"
+                     aria-label="Date de fin de validité de la dose"
+                     placeholder="DD/MM/YYYY"
+                     matInput
+                     [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsPeriod', 'end']))"/>
-          </mat-form-field>
-          <mat-form-field appearance="fill" *ngIf="toFormControl(
+            </mat-form-field>
+            <mat-form-field appearance="fill" *ngIf="toFormControl(
                            dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'">
-            <mat-label>
-              Durée
-            </mat-label>
-            <input type="text"
-                   aria-label="Durée de validité de la dose"
-                   matInput
-                   [formControl]="toFormControl(
+              <mat-label>
+                Durée
+              </mat-label>
+              <input type="text"
+                     aria-label="Durée de validité de la dose"
+                     matInput
+                     [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'value']))"/>
-          </mat-form-field>
-          <mat-form-field appearance="fill" *ngIf="toFormControl(
+            </mat-form-field>
+            <mat-form-field appearance="fill" *ngIf="toFormControl(
                            dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'">
-            <mat-label>
-              Unité de la durée
-            </mat-label>
-            <input type="text"
-                   aria-label="Unité de la durée de validité de la dose"
-                   matInput
-                   [formControl]="toFormControl(
+              <mat-label>
+                Unité de la durée
+              </mat-label>
+              <input type="text"
+                     aria-label="Unité de la durée de validité de la dose"
+                     matInput
+                     [formControl]="toFormControl(
                    dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit']))"
-                   [matAutocomplete]="autoDurationUnit"/>
-          </mat-form-field>
-        </mat-card-content>
-      </mat-card>
-    </div>
-    <div fxLayout="row" class="form-group-row">
-      <div fxFlex="50%" class="form-field-dosage-instruction-timing-repeat-time-of-day">
-        <mat-card>
+                     [matAutocomplete]="autoDurationUnit"/>
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-duration'">
+        <mat-form-field fxFlex="75%" appearance="fill">
+          <mat-label> Durée d'administration </mat-label>
+          <input type="text"
+                 aria-label="durée d'administration"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'duration']))"/>
+        </mat-form-field>
+        <mat-form-field fxFlex="25%" appearance="fill">
+          <mat-label> Unité de durée </mat-label>
+          <input type="text"
+                 aria-label="unité de durée"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']))"
+                 [matAutocomplete]="autoDurationUnit"/>
+        </mat-form-field>
+      </div>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-frequency'">
+        <mat-form-field fxFlex="100%" appearance="fill">
+          <mat-label> Fréquence d'administration </mat-label>
+          <input type="text"
+                 aria-label="fréquence d'administration"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'frequency']))"/>
+        </mat-form-field>
+      </div>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-period'">
+        <mat-form-field fxFlex="75%" appearance="fill">
+          <mat-label> Période d'administration </mat-label>
+          <input type="text"
+                 aria-label="période d'administration"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'period']))"/>
+        </mat-form-field>
+        <mat-form-field fxFlex="25%" appearance="fill">
+          <mat-label> Unité de période </mat-label>
+          <input type="text"
+                 aria-label="unité de période"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'periodUnit']))"
+                 [matAutocomplete]="autoDurationUnit"/>
+        </mat-form-field>
+      </div>
+      <div fxLayout="row" class="form-group-row">
+        <mat-card fxFlex="50%"
+                  [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-time-of-day'">
           <mat-card-header>
             <mat-card-title class="form-group-title"> Heure(s) de prise </mat-card-title>
           </mat-card-header>
-          <mat-card-content
-            *ngFor="let timeOfDay of toFormArray(
-            dosageInstructionGroup.get(['timing', 'repeat', 'timeOfDay'])).controls;
-            index as i; trackBy: trackByIndex">
-            <div fxLayout="row" [class]="'form-field-row form-field-timing-repeat-time-of-day-' + i">
+          <mat-card-content>
+            <div fxLayout="row" [class]="'form-field-timing-repeat-time-of-day-' + i"
+                 *ngFor="let timeOfDay of toFormArray(
+          dosageInstructionGroup.get(['timing', 'repeat', 'timeOfDay'])).controls;
+          index as i; trackBy: trackByIndex">
               <button mat-stroked-button color="primary"
                       matTooltip="Supprimer l'heure de prise"
                       matTooltipPosition="right"
@@ -134,17 +181,83 @@
                     (click)="onAddTimeOfDay(nDosage)"> + </button>
           </mat-card-footer>
         </mat-card>
+        <mat-divider [vertical]="true" [inset]="true"></mat-divider>
+        <mat-card fxFlex="50%"
+                  [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-day-of-week'">
+          <mat-card-header>
+            <mat-card-title class="form-group-title"> Jour(s) de prise </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-checkbox [class]="'form-field-timing-repeat-day-of-week-' + i"
+                          [formControl]="toFormControl(dayOfWeek.get('checked'))"
+                          *ngFor="let dayOfWeek of toFormArray(
+          dosageInstructionGroup.get(['timing', 'repeat', 'dayOfWeek'])).controls;
+          index as i; trackBy: trackByIndex">
+              {{ dayOfWeekLabel(dayOfWeek.get('name').value) }}
+            </mat-checkbox>
+          </mat-card-content>
+        </mat-card>
       </div>
-      <mat-divider [vertical]="true" [inset]="true"></mat-divider>
-      <div fxFlex="50%" class="form-field-dosage-instruction-dose-and-rate">
-        <mat-card>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-when'">
+        <mat-card fxFlex="100%">
+          <mat-card-header>
+            <mat-card-title class="form-group-title"> A quel moment ? </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div fxLayout="row" [class]="'form-field-timing-repeat-when-' + i"
+                 *ngFor="let when of toFormArray(
+          dosageInstructionGroup.get(['timing', 'repeat', 'when'])).controls;
+          index as i; trackBy: trackByIndex">
+              <button mat-stroked-button color="primary"
+                      matTooltip="Supprimer le moment"
+                      matTooltipPosition="right"
+                      aria-label="supprimer le moment"
+                      (click)="onRemoveWhen(nDosage, i)"> - </button>
+              <mat-form-field fxFlex="100%" appearance="fill">
+                <mat-label> Moment {{i + 1}}</mat-label>
+                <input type="text"
+                       aria-label="moment"
+                       matInput
+                       [formControl]="toFormControl(when)"
+                       [matAutocomplete]="autoWhen"/>
+              </mat-form-field>
+            </div>
+          </mat-card-content>
+          <mat-card-footer>
+            <button mat-stroked-button color="primary"
+                    matTooltip="Ajouter un moment"
+                    matTooltipPosition="right"
+                    aria-label="ajouter un moment"
+                    (click)="onAddWhen(nDosage)"> + </button>
+          </mat-card-footer>
+        </mat-card>
+        <mat-autocomplete #autoWhen="matAutocomplete" [displayWith]="displayFnValueSetContains.bind(this)">
+          <mat-option *ngFor="let whenCode of whenArray; trackBy: trackByValueSetContains" [value]="whenCode">
+            {{ whenCode | valueSetContains }}
+          </mat-option>
+        </mat-autocomplete>
+      </div>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-offset'">
+        <mat-form-field fxFlex="100%" appearance="fill">
+          <mat-label> Minutes de l'évènement (avant ou après) </mat-label>
+          <input type="text"
+                 aria-label="minutes de l'évènement (avant ou après)"
+                 matInput
+                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'offset']))"/>
+        </mat-form-field>
+      </div>
+      <div fxLayout="row"
+           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-dose-and-rate'">
+        <mat-card fxFlex="100%">
           <mat-card-header>
             <mat-card-title class="form-group-title"> Dose(s) </mat-card-title>
           </mat-card-header>
-          <mat-card-content
-            *ngFor="let dosageAndRate of toFormArray(dosageInstructionGroup.get('doseAndRate')).controls;
+          <mat-card-content>
+            <div fxLayout="row" [class]="'form-field-row form-field-dose-and-rate-' + i"
+                 *ngFor="let dosageAndRate of toFormArray(dosageInstructionGroup.get('doseAndRate')).controls;
             index as i">
-            <div fxLayout="row" [class]="'form-field-row form-field-dose-and-rate-' + i">
               <button mat-stroked-button color="primary"
                       matTooltip="Supprimer l'instruction de dose"
                       matTooltipPosition="right"
@@ -185,23 +298,6 @@
           </mat-card-footer>
         </mat-card>
       </div>
-    </div>
-    <div fxLayout="row" class="form-field-row form-field-dosage-instruction-timing-repeat-duration">
-      <mat-form-field fxFlex="75%" appearance="fill">
-        <mat-label> Durée d'adminstration </mat-label>
-        <input type="text"
-               aria-label="durée d'adminstration"
-               matInput
-               [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'duration']))"/>
-      </mat-form-field>
-      <mat-form-field fxFlex="25%" appearance="fill">
-        <mat-label> Unité de durée </mat-label>
-        <input type="text"
-               aria-label="unité de durée"
-               matInput
-               [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']))"
-               [matAutocomplete]="autoDurationUnit"/>
-      </mat-form-field>
     </div>
   </div>
   <div class="form-group-footer">

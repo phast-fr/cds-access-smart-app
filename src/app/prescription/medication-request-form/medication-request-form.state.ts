@@ -160,6 +160,38 @@ export class MedicationFormStateRemoveTimeOfDay implements IPartialState {
   }
 }
 
+export class MedicationFormStateAddWhen implements IPartialState {
+  readonly type = 'AddWhen';
+
+  constructor(private _nDosage: number) {
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+}
+
+export class MedicationFormStateRemoveWhen implements IPartialState {
+  readonly type = 'RemoveWhen';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nWhen: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nWhen(): number {
+    return this._nWhen;
+  }
+}
+
 export class MedicationFormStateAddDoseAndRate implements IPartialState {
   readonly type = 'AddDoseAndRate';
 
@@ -232,6 +264,8 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _durationUnitArray: Array<ValueSetContains>;
 
+  private readonly _whenArray: Array<ValueSetContains>;
+
   constructor(private _type: string) {
     this._loadingCIOList$ = new BehaviorSubject<boolean>(false);
     this._loadingTIOList$ = new BehaviorSubject<boolean>(false);
@@ -244,6 +278,7 @@ export class MedicationRequestFormState implements IState {
     this._doseAndRateUnitMap = new Map<id, Map<number, Array<Coding>>>();
     this._treatmentIntentArray = new Array<ValueSetContains>();
     this._durationUnitArray = new Array<ValueSetContains>();
+    this._whenArray = new Array<ValueSetContains>();
   }
 
   public get medication(): Medication {
@@ -333,5 +368,9 @@ export class MedicationRequestFormState implements IState {
 
   public get durationUnitArray(): Array<ValueSetContains> {
     return this._durationUnitArray;
+  }
+
+  public get whenArray(): Array<ValueSetContains> {
+    return this._whenArray;
   }
 }
