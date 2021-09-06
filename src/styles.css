@@ -38,7 +38,7 @@ body { margin: 0; font-family: 'Source Sans Pro', sans-serif; }
 .mat-radio-group,
 .mat-radio-button,
 .mat-checkbox,
-.mat-paginator, .mat-paginator-page-size .mat-select-trigger
+.mat-paginator, .mat-paginator-page-size .mat-select-trigger,
 .mat-button,
 .mat-table,
 .mat-form-field,
@@ -57,7 +57,7 @@ body { margin: 0; font-family: 'Source Sans Pro', sans-serif; }
   z-index: 999;
   height: 2em;
   width: 2em;
-  overflow: show;
+  overflow: visible;
   margin: auto;
   top: 0;
   left: 0;
