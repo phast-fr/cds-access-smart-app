@@ -100,7 +100,7 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
         filter(value => value === false)
       )
       .subscribe({
-        next: cards => {
+        next: () => {
           this._cards.length = 0;
           this._badge$.next(0);
         },

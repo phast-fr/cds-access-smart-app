@@ -569,6 +569,162 @@ export class MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit i
   }
 }
 
+export class MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionRateRatioNumeratorValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number,
+              private _rateRatioNumeratorValue: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nDoseAndRate(): number {
+    return this._nDoseAndRate;
+  }
+
+  public get rateRatioNumeratorValue(): number {
+    return this._rateRatioNumeratorValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionRateRatioNumeratorUnit';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number,
+              private _rateRatioNumeratorUnit: Coding) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nDoseAndRate(): number {
+    return this._nDoseAndRate;
+  }
+
+  public get rateRatioNumeratorUnit(): Coding {
+    return this._rateRatioNumeratorUnit;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionRateRatioDenominatorValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number,
+              private _rateRatioDenominatorValue: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nDoseAndRate(): number {
+    return this._nDoseAndRate;
+  }
+
+  public get rateRatioDenominatorValue(): number {
+    return this._rateRatioDenominatorValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionRateRatioDenominatorUnit';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number,
+              private _rateRatioDenominatorUnit: Coding) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nDoseAndRate(): number {
+    return this._nDoseAndRate;
+  }
+
+  public get rateRatioDenominatorUnit(): Coding {
+    return this._rateRatioDenominatorUnit;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionRateQuantityValue implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionRateQuantityValue';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number,
+              private _rateQuantityValue: number) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nDoseAndRate(): number {
+    return this._nDoseAndRate;
+  }
+
+  public get rateQuantityValue(): number {
+    return this._rateQuantityValue;
+  }
+}
+
+export class MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit implements IIntent {
+  readonly type = 'ValueChangesDosageInstructionRateQuantityUnit';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _nDosage: number,
+              private _nDoseAndRate: number,
+              private _rateQuantityUnit: Coding) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get nDosage(): number {
+    return this._nDosage;
+  }
+
+  public get nDoseAndRate(): number {
+    return this._nDoseAndRate;
+  }
+
+  public get rateQuantityUnit(): Coding {
+    return this._rateQuantityUnit;
+  }
+}
+
 export class MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue implements IIntent {
   readonly type = 'ValueChangesDosageInstructionTimeOfDayValue';
 

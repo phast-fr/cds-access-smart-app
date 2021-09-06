@@ -219,6 +219,20 @@ export class DoseAndRateBuilder {
     return this;
   }
 
+  public rateRatio(rateRatio: Ratio): this {
+    if (rateRatio) {
+      this._dosageDoseAndRate.rateRatio = rateRatio;
+    }
+    return this;
+  }
+
+  public rateQuantity(rateQuantity: Quantity): this {
+    if (rateQuantity) {
+      this._dosageDoseAndRate.rateQuantity = rateQuantity;
+    }
+    return this;
+  }
+
   public build(): DosageDoseAndRate {
     return this._dosageDoseAndRate;
   }
@@ -425,65 +439,9 @@ export class RatioBuilder {
     return this;
   }
 
-  public numeratorValue(numeratorValue: number): this {
-    if (numeratorValue) {
-      this._ratio.numerator.value = numeratorValue;
-    }
-    return this;
-  }
-
-  public numeratorUnit(numeratorUnit: string): this {
-    if (numeratorUnit) {
-      this._ratio.numerator.unit = numeratorUnit;
-    }
-    return this;
-  }
-
-  public numeratorCode(numeratorCode: code): this {
-    if (numeratorCode) {
-      this._ratio.numerator.code = numeratorCode;
-    }
-    return this;
-  }
-
-  public numeratorSystem(numeratorSystem: uri): this {
-    if (numeratorSystem) {
-      this._ratio.numerator.system = numeratorSystem;
-    }
-    return this;
-  }
-
   public denominatorQuality(denominatorQuantity: Quantity): this {
     if (denominatorQuantity) {
       this._ratio.denominator = denominatorQuantity;
-    }
-    return this;
-  }
-
-  public denominatorValue(denominatorValue: number): this {
-    if (denominatorValue) {
-      this._ratio.denominator.value = denominatorValue;
-    }
-    return this;
-  }
-
-  public denominatorUnit(denominatorUnit: string): this {
-    if (denominatorUnit) {
-      this._ratio.denominator.unit = denominatorUnit;
-    }
-    return this;
-  }
-
-  public denominatorCode(denominatorCode: code): this {
-    if (denominatorCode) {
-      this._ratio.denominator.code = denominatorCode;
-    }
-    return this;
-  }
-
-  public denominatorSystem(denominatorSystem: uri): this {
-    if (denominatorSystem) {
-      this._ratio.denominator.system = denominatorSystem;
     }
     return this;
   }
