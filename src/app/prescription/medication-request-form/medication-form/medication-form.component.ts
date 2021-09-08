@@ -14,7 +14,7 @@ import {IRender} from '../../../common/cds-access/models/state.model';
 import {MedicationRequestFormViewModel} from '../medication-request-form-view-model';
 import {
   MedicationFormIntentRemoveIngredient,
-  MedicationFormIntentRemoveMedication,
+  MedicationFormIntentRemoveMedication, MedicationFormIntentValueChangesMedicationAmount,
   MedicationFormIntentValueChangesMedicationForm,
   MedicationFormIntentValueChangesMedicationIngredientStrength,
   MedicationFormIntentValueChangesMedicationIngredientStrengthUnit,
@@ -64,6 +64,18 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   public get isLoadingList$(): Observable<boolean> {
     return this._viewModel.isLoadingCIOList$;
+  }
+
+  public get amountList(): Array<Ratio> {
+    const map = this._viewModel.amountMap.get(this._viewModel.medication.id);
+    const input = Array.from(map.values());
+    const comparator = (a: Ratio, b: Ratio) => {
+      return a?.numerator?.value === b?.numerator?.value
+        && a?.numerator?.code === b?.numerator?.code
+        && a?.denominator?.value === b?.denominator?.value
+        && a?.denominator?.code === b?.denominator?.code;
+    };
+    return Utils.intersect<CodeableConcept>(input[0], input, comparator);
   }
 
   public get formList(): Array<CodeableConcept> {
@@ -187,8 +199,76 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       'track-id': Utils.randomString(16),
       medication: [medication],
       ingredient: this._fb.array([]),
+      amount: [medication.amount],
       form: [medication.form]
     });
+    this.setUpAmount(medication, medicationGroup);
+    this.setUpForm(medication, medicationGroup);
+    this.setUpList();
+
+    if (medication.ingredient) {
+      const ingredientArray = medicationGroup.get('ingredient') as FormArray;
+      medication.ingredient.forEach(ingredient => {
+        if (ingredient.itemCodeableConcept) {
+          ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
+        }
+        else if (ingredient.itemReference) {
+          ingredientArray.push(this.addIngredientReference(medication, ingredient));
+        }
+      });
+    }
+    return medicationGroup;
+  }
+
+  private setUpAmount(medication: Medication, medicationGroup: FormGroup): void {
+    const amountString$ = medicationGroup.get('amount').valueChanges
+      .pipe(
+        filter(value => typeof value === 'string')
+      );
+    const amountObj$ = medicationGroup.get('amount').valueChanges
+      .pipe(
+        filter(value => value instanceof Object)
+      );
+
+    amountString$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        tap(() => medicationGroup.get('amount').reset(null, {emitEvent: false}))
+      )
+      .subscribe({
+        next: () => {
+          this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesMedicationAmount(
+              this._viewModel.medicationRequest,
+              medication,
+              null
+            )
+          );
+        },
+        error: err => console.error('error', err)
+      });
+    amountObj$
+      .pipe(
+        takeUntil(this._unsubscribeTrigger$),
+        distinctUntilChanged<Ratio>((prev, curr) =>
+          prev?.numerator?.value === curr?.numerator?.value
+          && prev?.numerator?.code === curr?.numerator?.code
+          && prev?.denominator?.value === curr?.denominator?.value
+          && prev?.denominator?.code === curr?.denominator?.code)
+      )
+      .subscribe({
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesMedicationAmount(
+            this._viewModel.medicationRequest,
+            medication,
+            value
+          )
+        ),
+        error: err => console.error('error', err)
+      });
+  }
+
+  private setUpForm(medication: Medication, medicationGroup: FormGroup): void {
     const formString$ = medicationGroup.get('form').valueChanges
       .pipe(
         filter(value => typeof value === 'string')
@@ -230,17 +310,9 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         ),
         error: err => console.error('error', err)
       });
+  }
 
-    const ingredientArray = medicationGroup.get('ingredient') as FormArray;
-    medication.ingredient.forEach(ingredient => {
-      if (ingredient.itemCodeableConcept) {
-        ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
-      }
-      else if (ingredient.itemReference) {
-        ingredientArray.push(this.addIngredientReference(medication, ingredient));
-      }
-    });
-
+  private setUpList(): void {
     const loadedList$ = this.isLoadingList$
       .pipe(
         filter(value => !value)
@@ -255,7 +327,6 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         error: err => console.error('error', err)
       });
 
-    return medicationGroup;
   }
 
   private updateMedication(nMedication: number, medication: Medication): FormGroup | boolean {

@@ -74,6 +74,19 @@
         </mat-autocomplete>
       </ng-container>
     </div>
+    <div fxLayout="row" class="form-field-row form-field-medication-amount">
+      <mat-form-field fxFlex="100%" appearance="fill">
+        <mat-label>
+          {{medicationGroup.get('medication').value.code | codeableConcept}}
+          Quantité de produit
+        </mat-label>
+        <input type="text"
+               aria-label="quantité de produit"
+               matInput
+               [formControl]="toFormControl(medicationGroup.get('amount'))"
+               [matAutocomplete]="autoAmount"/>
+      </mat-form-field>
+    </div>
     <div fxLayout="row" class="form-field-row form-field-medication-form">
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-label>
@@ -89,11 +102,20 @@
     </div>
   </div>
 
+  <mat-autocomplete #autoAmount="matAutocomplete" [displayWith]="displayFnRatio.bind(this)">
+    <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
+    <ng-container *ngIf="!(isLoadingList$ | async)">
+      <mat-option *ngFor="let amount of amountList; trackBy: trackByRatio" [value]="amount">
+        {{ amount | ratio }}
+      </mat-option>
+    </ng-container>
+  </mat-autocomplete>
+
   <mat-autocomplete #autoForm="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
     <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
     <ng-container *ngIf="!(isLoadingList$ | async)">
       <mat-option *ngFor="let formCode of formList; trackBy: trackByCodeableConcept" [value]="formCode">
-        {{formCode | codeableConcept}}
+        {{ formCode | codeableConcept }}
       </mat-option>
     </ng-container>
   </mat-autocomplete>
