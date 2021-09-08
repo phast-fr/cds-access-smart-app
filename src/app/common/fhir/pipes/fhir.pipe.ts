@@ -84,13 +84,12 @@ export class CompositionPipe implements PipeTransform {
 })
 export class SnomedPipe implements PipeTransform {
 
-  private _medicationLabelProvider: MedicationLabelProvider;
-  constructor() {
-    this._medicationLabelProvider = new MedicationLabelProvider();
+  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
   public transform(medication: Medication): string | null {
-    return this._medicationLabelProvider.getTerm(medication, 'http://snomed.info/sct');
+    const medicationLabelProvider = this._labelProviderFactory.getProvider(medication) as MedicationLabelProvider;
+    return medicationLabelProvider.getTerm(medication, 'http://snomed.info/sct');
   }
 }
 

@@ -35,7 +35,7 @@ export class FhirLabelProviderFactory {
       if (this._labelProviders.hasOwnProperty('fhir.MedicationRequest')) {
         return this._labelProviders['fhir.MedicationRequest'];
       }
-      const provider = new MedicationRequestLabelProvider();
+      const provider = new MedicationRequestLabelProvider(this);
       this._labelProviders['fhir.MedicationRequest'] = provider;
       return provider;
     }
@@ -51,7 +51,7 @@ export class FhirLabelProviderFactory {
       if (this._labelProviders.hasOwnProperty('fhir.Medication')) {
         return this._labelProviders['fhir.Medication'];
       }
-      const provider = new MedicationLabelProvider();
+      const provider = new MedicationLabelProvider(this);
       this._labelProviders['fhir.Medication'] = provider;
       return provider;
     }

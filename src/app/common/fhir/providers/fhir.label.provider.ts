@@ -9,6 +9,7 @@ import {
   Patient,
   Practitioner, Quantity, Ratio, Reference, ValueSetContains
 } from 'phast-fhir-ts';
+import {FhirLabelProviderFactory} from './fhir.label.provider.factory';
 
 export class NamedResourceLabelProvider implements ILabelProvider<Patient | Practitioner> {
 
@@ -41,7 +42,8 @@ export class MedicationKnowledgeLabelProvider implements ILabelProvider<Medicati
 
 export class MedicationRequestLabelProvider implements ILabelProvider<MedicationRequest> {
 
-  constructor() {}
+  constructor(private _factory: FhirLabelProviderFactory) {
+  }
 
   getText(medicationRequest: MedicationRequest): string | null {
     let labelComposed: string;
@@ -50,7 +52,7 @@ export class MedicationRequestLabelProvider implements ILabelProvider<Medication
       const medicationIndex = medicationRequest.contained.findIndex(
         (value) => value.id === medicationId);
       const medication = medicationRequest.contained[medicationIndex] as Medication;
-      labelComposed = new MedicationLabelProvider().getText(medication);
+      labelComposed = this._factory.getProvider(medication).getText(medication);
     }
     if (medicationRequest.dosageInstruction
       && medicationRequest.dosageInstruction.length > 0
@@ -63,7 +65,8 @@ export class MedicationRequestLabelProvider implements ILabelProvider<Medication
 
 export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
 
-  constructor() {}
+  constructor(private _factory: FhirLabelProviderFactory) {
+  }
 
   getText(medication: Medication): string | null {
     let labelComposed: string;
@@ -71,21 +74,19 @@ export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
     const medicationComposed = new Array<string>();
     const strengthComposed = new Array<string>();
     for (const ingredient of medication.ingredient) {
-      if (ingredient.itemCodeableConcept != null) {
+      if (ingredient.itemCodeableConcept) {
         separator = '+';
         medicationComposed.push(ingredient.itemCodeableConcept.text);
 
-        if (ingredient.strength != null) {
-          // TODO optimize this
-          strengthComposed.push(new RatioLabelProvider().getText(ingredient.strength));
+        if (ingredient.strength) {
+          strengthComposed.push(this._factory.getProvider('fhir.Ratio').getText(ingredient.strength));
         }
       }
-      else if (ingredient.itemReference != null) {
+      else if (ingredient.itemReference) {
         separator = ' & ';
 
-        if (ingredient.strength != null) {
-          // TODO optimize this
-          strengthComposed.push(' ' + new RatioLabelProvider().getText(ingredient.strength));
+        if (ingredient.strength) {
+          strengthComposed.push(' ' + this._factory.getProvider('fhir.Ratio').getText(ingredient.strength));
         }
         else {
           strengthComposed.push('');
