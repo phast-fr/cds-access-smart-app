@@ -254,6 +254,8 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _routeMap: Map<number, Array<CodeableConcept>>;
 
+  private readonly _amountMap: Map<id, Map<number, Array<Ratio>>>;
+
   private readonly _formMap: Map<id, Map<number, Array<CodeableConcept>>>;
 
   private readonly _strengthMap: Map<string, Map<number, Array<Ratio>>>;
@@ -273,6 +275,7 @@ export class MedicationRequestFormState implements IState {
     this._autoIncrement = 1;
     this._medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
     this._routeMap = new Map<number, Array<CodeableConcept>>();
+    this._amountMap = new Map<id, Map<number, Array<Ratio>>>();
     this._formMap = new Map<id, Map<number, Array<CodeableConcept>>>();
     this._strengthMap = new Map<string, Map<number, Array<Ratio>>>();
     this._doseAndRateUnitMap = new Map<id, Map<number, Array<Coding>>>();
@@ -344,6 +347,10 @@ export class MedicationRequestFormState implements IState {
 
   public get medicationKnowledgeMap(): Map<id, MedicationKnowledge> {
     return this._medicationKnowledgeMap;
+  }
+
+  public get amountMap(): Map<id, Map<number, Array<Ratio>>> {
+    return this._amountMap;
   }
 
   public get formMap(): Map<id, Map<number, Array<CodeableConcept>>> {

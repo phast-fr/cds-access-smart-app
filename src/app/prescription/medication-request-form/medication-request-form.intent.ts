@@ -98,6 +98,27 @@ export class MedicationFormIntentRemoveIngredient implements IIntent {
   }
 }
 
+export class MedicationFormIntentValueChangesMedicationAmount implements IIntent {
+  readonly type = 'ValueChangesMedicationAmount';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _medication: Medication,
+              private _amountValue: Ratio) {
+  }
+
+  public get medicationRequest(): MedicationRequest {
+    return this._medicationRequest;
+  }
+
+  public get medication(): Medication {
+    return this._medication;
+  }
+
+  public get amountValue(): Ratio {
+    return this._amountValue;
+  }
+}
+
 export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
   readonly type = 'ValueChangesMedicationForm';
 

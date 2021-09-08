@@ -98,6 +98,9 @@ export class MedicationFormActionAddMedication implements IAction {
         new DosageBuilder(1)
           .timing(new TimingBuilder()
             .timingRepeat(new TimingRepeatBuilder()
+              .period(1)
+              .periodUnit('d')
+              .frequency(1)
               .boundsPeriod(new PeriodBuilder()
                 .start(DateTime.now().toFormat('yyyy-MM-dd'))
                 .build()
@@ -203,6 +206,34 @@ export class MedicationFormActionRemoveMedication implements IAction {
   }
 }
 
+export class MedicationFormActionValueChangesMedicationAmount implements IAction {
+  readonly type = 'ValueChangesMedicationAmount';
+
+  constructor(private _medicationRequest: MedicationRequest,
+              private _medication: Medication,
+              private _amountValue: Ratio) {
+  }
+
+  public execute(): IPartialState {
+    const medicationRequest = lodash.cloneDeep(this._medicationRequest);
+    const nMedication = medicationRequest.contained.findIndex(
+      (value) => {
+        return value.id === this._medication.id;
+      }
+    );
+
+    const medication = medicationRequest.contained[nMedication];
+    if (this._amountValue) {
+      medication.amount = this._amountValue;
+    }
+    else {
+      delete medication.amount;
+    }
+
+    return new MedicationFormStateValueChangesMedication(medicationRequest);
+  }
+}
+
 export class MedicationFormActionValueChangesMedicationForm implements IAction {
   readonly type = 'ValueChangesMedicationForm';
 
@@ -225,7 +256,7 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
     }
     else {
       delete medication.form;
-
+      delete medication.amount;
       if (medication.ingredient) {
         medication.ingredient.forEach(ingredient => {
           if (ingredient?.itemCodeableConcept) {
@@ -388,6 +419,9 @@ export class MedicationFormActionAddDosageInstruction implements IAction {
       new DosageBuilder(medicationRequest.dosageInstruction.length + 1)
         .timing(new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
+              .period(1)
+              .periodUnit('d')
+              .frequency(1)
               .boundsPeriod(new PeriodBuilder()
                   .start(DateTime.now().toFormat('yyyy-MM-dd'))
                   .build()
@@ -940,6 +974,7 @@ export class MedicationFormActionValueChangesDosageInstructionPeriodValue implem
         dosage.timing = new TimingBuilder()
           .timingRepeat(new TimingRepeatBuilder()
             .period(this._periodValue)
+            .frequency(1)
             .build()
           )
           .build();
@@ -947,15 +982,18 @@ export class MedicationFormActionValueChangesDosageInstructionPeriodValue implem
       else if (!dosage.timing.repeat) {
         dosage.timing.repeat = new TimingRepeatBuilder()
           .period(this._periodValue)
+          .frequency(1)
           .build();
       }
       else {
         dosage.timing.repeat.period = this._periodValue;
+        dosage.timing.repeat.frequency = 1;
       }
     }
     else {
       if (dosage.timing && dosage.timing.repeat) {
         delete dosage.timing.repeat.period;
+        delete dosage.timing.repeat.frequency;
       }
     }
 
@@ -1450,6 +1488,13 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioNumerator
           )
           .build();
       }
+      else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio) {
+        dosage.doseAndRate[this._nDoseAndRate].rateRatio = new RatioBuilder()
+          .numeratorQuantity(new QuantityBuilder()
+            .value(this._rateRatioNumeratorValue)
+            .build())
+          .build();
+      }
       else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio.numerator) {
         dosage.doseAndRate[this._nDoseAndRate].rateRatio.numerator = new QuantityBuilder()
           .value(this._rateRatioNumeratorValue)
@@ -1520,6 +1565,15 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioNumerator
             )
             .build()
           )
+          .build();
+      }
+      else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio) {
+        dosage.doseAndRate[this._nDoseAndRate].rateRatio = new RatioBuilder()
+          .numeratorQuantity(new QuantityBuilder()
+            .code(this._rateRatioNumeratorUnit.code)
+            .unit(this._rateRatioNumeratorUnit.display)
+            .system(this._rateRatioNumeratorUnit.system)
+            .build())
           .build();
       }
       else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio.numerator) {
@@ -1593,6 +1647,13 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioDenominat
           )
           .build();
       }
+      else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio) {
+        dosage.doseAndRate[this._nDoseAndRate].rateRatio = new RatioBuilder()
+          .denominatorQuality(new QuantityBuilder()
+            .value(this._rateRatioDenominatorValue)
+            .build())
+          .build();
+      }
       else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio.denominator) {
         dosage.doseAndRate[this._nDoseAndRate].rateRatio.denominator = new QuantityBuilder()
           .value(this._rateRatioDenominatorValue)
@@ -1663,6 +1724,15 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioDenominat
             )
             .build()
           )
+          .build();
+      }
+      else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio) {
+        dosage.doseAndRate[this._nDoseAndRate].rateRatio = new RatioBuilder()
+          .denominatorQuality(new QuantityBuilder()
+            .code(this._rateRatioDenominatorUnit.code)
+            .unit(this._rateRatioDenominatorUnit.display)
+            .system(this._rateRatioDenominatorUnit.system)
+            .build())
           .build();
       }
       else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio.denominator) {

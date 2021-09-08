@@ -41,3 +41,11 @@ button.mat-stroked-button {
 .form-field-row .mat-checkbox + .mat-checkbox {
   margin-left: 8px;
 }
+
+/deep/ .form-field-row .dose-and-rate-value .mat-form-field-infix {
+  width: 140px;
+}
+
+/deep/ .form-field-row .dose-and-rate-unit .mat-form-field-infix {
+  width: 50px;
+}

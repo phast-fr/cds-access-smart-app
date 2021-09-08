@@ -102,34 +102,6 @@
         </mat-card>
       </div>
       <div fxLayout="row"
-           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-duration'">
-        <mat-form-field fxFlex="75%" appearance="fill">
-          <mat-label> Durée d'administration </mat-label>
-          <input type="text"
-                 aria-label="durée d'administration"
-                 matInput
-                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'duration']))"/>
-        </mat-form-field>
-        <mat-form-field fxFlex="25%" appearance="fill">
-          <mat-label> Unité de durée </mat-label>
-          <input type="text"
-                 aria-label="unité de durée"
-                 matInput
-                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'durationUnit']))"
-                 [matAutocomplete]="autoDurationUnit"/>
-        </mat-form-field>
-      </div>
-      <div fxLayout="row"
-           [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-frequency'">
-        <mat-form-field fxFlex="100%" appearance="fill">
-          <mat-label> Fréquence d'administration </mat-label>
-          <input type="text"
-                 aria-label="fréquence d'administration"
-                 matInput
-                 [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'frequency']))"/>
-        </mat-form-field>
-      </div>
-      <div fxLayout="row"
            [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-period'">
         <mat-form-field fxFlex="75%" appearance="fill">
           <mat-label> Période d'administration </mat-label>
@@ -230,7 +202,8 @@
                     matTooltipPosition="right"
                     aria-label="ajouter un moment"
                     (click)="onAddWhen(nDosage)"> + </button>
-            <mat-form-field fxFlex="100%" appearance="fill">
+            <mat-form-field fxFlex="100%" appearance="fill"
+                            *ngIf="toFormArray(dosageInstructionGroup.get(['timing', 'repeat', 'when'])).length > 0">
               <mat-label> Minutes de l'évènement (avant ou après) </mat-label>
               <input type="text"
                      aria-label="minutes de l'évènement (avant ou après)"
@@ -249,120 +222,63 @@
            [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-dose-and-rate'">
         <mat-card fxFlex="100%">
           <mat-card-header>
-            <mat-card-title class="form-group-title"> Dose(s) & Taux </mat-card-title>
+            <mat-card-title class="form-group-title"> Dose(s) & Débit(s) </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div fxLayout="row" [class]="'form-field-row form-field-dose-and-rate-dose' + i"
                  *ngFor="let dosageAndRate of toFormArray(dosageInstructionGroup.get('doseAndRate')).controls;
             index as i">
-              <mat-grid-list cols="4" rowHeight="71px" fxFlex="100%">
-                <mat-grid-tile>
-                  <button mat-stroked-button color="primary"
-                          matTooltip="Supprimer l'instruction de dose"
+              <button mat-stroked-button color="primary"
+                          matTooltip="Supprimer l'instruction de dose & débit"
                           matTooltipPosition="right"
-                          aria-label="Supprimer l'instruction de dose"
+                          aria-label="Supprimer l'instruction de dose & débit"
                           (click)="onRemoveDoseAndRate(nDosage, i)"> - </button>
-                </mat-grid-tile>
-                <mat-grid-tile colspan="2">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Quantité </mat-label>
-                    <input type="text"
-                           aria-label="quantité"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['doseQuantity', 'value']))"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile>
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Unité </mat-label>
-                    <input type="text"
-                           aria-label="unité"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['doseQuantity', 'unit']))"
-                           [matAutocomplete]="autoUnit"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile>
-                  <mat-radio-group matTooltip="Sélectionner le mode pour le taux"
-                                   matTooltipPosition="below"
-                                   aria-label="sélectionner le mode pour le taux"
-                                   [formControl]="toFormControl(dosageAndRate.get('rateMode'))">
-                    <mat-radio-button value="ratio">
-                      <span> Ratio </span>
-                    </mat-radio-button>
-                    <mat-radio-button value="quantity">
-                      <span> Quantité </span>
-                    </mat-radio-button>
-                  </mat-radio-group>
-                </mat-grid-tile>
-                <mat-grid-tile colspan="2" *ngIf="(rateMode$ | async) === 'ratio'">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Taux numérateur </mat-label>
-                    <input type="text"
-                           aria-label="taux numérateur"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'numerator', 'value']))"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile *ngIf="(rateMode$ | async) === 'ratio'">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Unité </mat-label>
-                    <input type="text"
-                           aria-label="unité"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'numerator', 'unit']))"
-                           [matAutocomplete]="autoUnit"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile *ngIf="(rateMode$ | async) === 'ratio'"></mat-grid-tile>
-                <mat-grid-tile colspan="2" *ngIf="(rateMode$ | async) === 'ratio'">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Taux démoninateur </mat-label>
-                    <input type="text"
-                           aria-label="taux dénominateur"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'denominator', 'value']))"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile *ngIf="(rateMode$ | async) === 'ratio'">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Unité </mat-label>
-                    <input type="text"
-                           aria-label="unité"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'denominator', 'unit']))"
-                           [matAutocomplete]="autoUnit"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile colspan="2" *ngIf="(rateMode$ | async) === 'quantity'">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Taux </mat-label>
-                    <input type="text"
-                           aria-label="taux"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['rateQuantity', 'value']))"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-                <mat-grid-tile *ngIf="(rateMode$ | async) === 'quantity'">
-                  <mat-form-field appearance="fill" fxFlex="100%">
-                    <mat-label> Unité </mat-label>
-                    <input type="text"
-                           aria-label="unité"
-                           matInput
-                           [formControl]="toFormControl(dosageAndRate.get(['rateQuantity', 'unit']))"
-                           [matAutocomplete]="autoUnit"/>
-                  </mat-form-field>
-                </mat-grid-tile>
-              </mat-grid-list>
-              <mat-autocomplete #autoUnit="matAutocomplete" [displayWith]="displayFnCoding.bind(this)">
-                <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
-                <ng-container *ngIf="!(isLoadingList$ | async)">
-                  <mat-option *ngFor="let unitCode of doseAndRateUnitArray(nDosage); index as i trackBy: trackByCoding"
-                              [value]="unitCode">
-                    {{unitCode | coding}}
-                  </mat-option>
-                </ng-container>
-              </mat-autocomplete>
+              <mat-form-field appearance="fill" class="dose-and-rate-value">
+                <mat-label> Quantité </mat-label>
+                <input type="text"
+                       aria-label="quantité"
+                       matInput
+                       [formControl]="toFormControl(dosageAndRate.get(['doseQuantity', 'value']))"/>
+              </mat-form-field>
+              <mat-form-field appearance="fill" class="dose-and-rate-unit">
+                <mat-label> Unité </mat-label>
+                <input type="text"
+                       aria-label="unité"
+                       matInput
+                       [formControl]="toFormControl(dosageAndRate.get(['doseQuantity', 'unit']))"
+                       [matAutocomplete]="autoUnit"/>
+              </mat-form-field>
+              <mat-form-field appearance="fill" class="dose-and-rate-value">
+                <mat-label> Débit numérateur </mat-label>
+                <input type="text"
+                       aria-label="débit numérateur"
+                       matInput
+                       [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'numerator', 'value']))"/>
+              </mat-form-field>
+              <mat-form-field appearance="fill" class="dose-and-rate-unit">
+                <mat-label> Unité </mat-label>
+                <input type="text"
+                       aria-label="unité"
+                       matInput
+                       [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'numerator', 'unit']))"
+                       [matAutocomplete]="autoUnit"/>
+              </mat-form-field>
+              <span>/</span>
+              <mat-form-field appearance="fill" class="dose-and-rate-value">
+                <mat-label> Débit démoninateur </mat-label>
+                <input type="text"
+                       aria-label="débit dénominateur"
+                       matInput
+                       [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'denominator', 'value']))"/>
+              </mat-form-field>
+              <mat-form-field appearance="fill" class="dose-and-rate-unit">
+                <mat-label> Unité </mat-label>
+                <input type="text"
+                       aria-label="unité"
+                       matInput
+                       [formControl]="toFormControl(dosageAndRate.get(['rateRatio', 'denominator', 'unit']))"
+                       [matAutocomplete]="autoDurationUnit"/>
+              </mat-form-field>
             </div>
           </mat-card-content>
           <mat-card-footer>
@@ -374,6 +290,15 @@
           </mat-card-footer>
         </mat-card>
       </div>
+      <mat-autocomplete #autoUnit="matAutocomplete" [displayWith]="displayFnCoding.bind(this)">
+        <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
+        <ng-container *ngIf="!(isLoadingList$ | async)">
+          <mat-option *ngFor="let unitCode of doseAndRateUnitArray(nDosage); index as i trackBy: trackByCoding"
+                      [value]="unitCode">
+            {{unitCode | coding}}
+          </mat-option>
+        </ng-container>
+      </mat-autocomplete>
     </div>
   </div>
   <div class="form-group-footer">

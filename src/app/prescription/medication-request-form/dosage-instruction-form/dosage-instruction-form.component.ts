@@ -41,8 +41,6 @@ import {
   MedicationFormIntentAddWhen,
   MedicationFormIntentRemoveWhen,
   MedicationFormIntentValueChangesDosageInstructionOffsetValue,
-  MedicationFormIntentValueChangesDosageInstructionRateQuantityValue,
-  MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit,
   MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit,
   MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue,
   MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue,
@@ -62,14 +60,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
   private readonly _dosageInstruction$: BehaviorSubject<FormArray | boolean>;
 
-  private readonly _rateMode$: BehaviorSubject<string>;
-
   constructor(private _viewModel: MedicationRequestFormViewModel,
               private _labelProviderFactory: FhirLabelProviderFactory,
               private _fb: FormBuilder) {
     this._unsubscribeTrigger$ = new Subject<void>();
     this._dosageInstruction$ = new BehaviorSubject<FormArray | boolean>(false);
-    this._rateMode$ = new BehaviorSubject<string>('ratio');
   }
 
   public toFormControl(control: AbstractControl): FormControl {
@@ -109,10 +104,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
   public doseAndRateUnitArray(nDosage: number): Array<Coding> {
     return this._viewModel.doseAndRateUnitMap.get(this._viewModel.medication.id).get(nDosage);
-  }
-
-  public get rateMode$(): Observable<string> {
-    return this._rateMode$.asObservable();
   }
 
   public ngOnInit(): void {
@@ -775,7 +766,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         value: [undefined, Validators.pattern( /\d/ )],
         unit: [undefined]
       }),
-      rateMode: ['ratio'],
       rateRatio: this._fb.group({
         numerator: this._fb.group({
           value: [undefined, Validators.pattern( /\d/ )],
@@ -785,10 +775,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           value: [undefined, Validators.pattern( /\d/ )],
           unit: [undefined]
         })
-      }),
-      rateQuantity: this._fb.group({
-        value: [undefined, Validators.pattern( /\d/ )],
-        unit: [undefined]
       })
     });
 
@@ -846,15 +832,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
             value
           )
         ),
-        error: err => console.error('error', err)
-      });
-
-    doseAndRateGroup.get('rateMode').valueChanges
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe({
-        next: mode => this._rateMode$.next(mode),
         error: err => console.error('error', err)
       });
 
@@ -963,63 +940,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
       .subscribe({
         next: value => this._viewModel.dispatchIntent(
           new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit(
-            this._viewModel.medicationRequest,
-            nDosage,
-            nDoseAndRate,
-            value
-          )
-        ),
-        error: err => console.error('error', err)
-      });
-
-    doseAndRateGroup.get(['rateQuantity', 'value']).valueChanges
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        debounceTime(500),
-        distinctUntilChanged()
-      )
-      .subscribe({
-        next: value => this._viewModel.dispatchIntent(
-          new MedicationFormIntentValueChangesDosageInstructionRateQuantityValue(
-            this._viewModel.medicationRequest,
-            nDosage,
-            nDoseAndRate,
-            value
-          )
-        ),
-        error: err => console.error('error', err)
-      });
-    const rateQuantityUnitString$ = doseAndRateGroup.get(['rateQuantity', 'unit']).valueChanges
-      .pipe(
-        filter(value => typeof value === 'string')
-      );
-    const rateQuantityUnitObj$ = doseAndRateGroup.get(['rateQuantity', 'unit']).valueChanges
-      .pipe(
-        filter(value => value instanceof Object)
-      );
-    rateQuantityUnitString$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(() => doseAndRateGroup.get(['rateQuantity', 'unit']).reset(undefined, options))
-      )
-      .subscribe({
-        next: () => this._viewModel.dispatchIntent(
-          new MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit(
-            this._viewModel.medicationRequest,
-            nDosage,
-            nDoseAndRate,
-            null
-          )
-        ),
-        error: err => console.error('error', err)
-      });
-    rateQuantityUnitObj$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe({
-        next: value => this._viewModel.dispatchIntent(
-          new MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit(
             this._viewModel.medicationRequest,
             nDosage,
             nDoseAndRate,

@@ -55,7 +55,7 @@ import {
   MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue,
   MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit,
   MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue,
-  MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit
+  MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit, MedicationFormIntentValueChangesMedicationAmount
 } from './medication-request-form.intent';
 import {
   MedicationFormActionAddDosageInstruction,
@@ -97,7 +97,7 @@ import {
   MedicationFormActionValueChangesDosageInstructionRateRatioNumeratorValue,
   MedicationFormActionValueChangesDosageInstructionRateRatioNumeratorUnit,
   MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorValue,
-  MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorUnit
+  MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorUnit, MedicationFormActionValueChangesMedicationAmount
 } from './medication-request-form.action';
 import {
   Bundle,
@@ -163,6 +163,14 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     if (this._state$.value) {
       const state = this._state$.value;
       return state.medication;
+    }
+    return undefined;
+  }
+
+  public get amountMap(): Map<id, Map<number, Array<Ratio>>> | undefined {
+    if (this._state$.value) {
+      const state = this._state$.value;
+      return state.amountMap;
     }
     return undefined;
   }
@@ -314,6 +322,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     const medication = state.medication;
     if (medication && state.medicationRequest.dosageInstruction) {
       state.medicationRequest.dosageInstruction.forEach((dosage, nDosage) => {
+        if (state.amountMap.get(medication.id).get(nDosage)) {
+          state.amountMap.get(medication.id).get(nDosage).length = 0;
+        }
+
         if (state.formMap.get(medication.id).get(nDosage)) {
           state.formMap.get(medication.id).get(nDosage).length = 0;
         }
@@ -336,6 +348,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       });
     }
     else if (medication) {
+      if (state.amountMap.get(medication.id).get(0)) {
+        state.amountMap.get(medication.id).get(0).length = 0;
+      }
+
       if (state.formMap.get(medication.id).get(0)) {
         state.formMap.get(medication.id).get(0).length = 0;
       }
@@ -388,6 +404,17 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     const medication = state.medication;
     const medicationKnowledge = state.medicationKnowledgeMap.get(medication.id);
 
+    if (!state.amountMap.get(medication.id)) {
+      state.amountMap.set(medication.id, new Map<number, Array<Ratio>>());
+    }
+
+    if (!state.amountMap.get(medication.id).get(nDosage)) {
+      state.amountMap.get(medication.id).set(nDosage, new Array<Ratio>());
+    }
+    else {
+      state.amountMap.get(medication.id).get(nDosage).length = 0;
+    }
+
     if (!state.formMap.get(medication.id)) {
       state.formMap.set(medication.id, new Map<number, Array<CodeableConcept>>());
     }
@@ -435,6 +462,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
   public removeList(state: MedicationRequestFormState, nDosage: number): void {
     const medication = state.medication;
+
+    if (state.amountMap.get(medication.id).get(nDosage)) {
+      state.amountMap.get(medication.id).delete(nDosage);
+    }
 
     if (state.formMap.get(medication.id).get(nDosage)) {
       state.formMap.get(medication.id).delete(nDosage);
@@ -493,6 +524,13 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         action = new MedicationFormActionRemoveMedication(
           (intent as MedicationFormIntentRemoveMedication).medicationRequest,
           (intent as MedicationFormIntentRemoveMedication).nMedication
+        );
+        break;
+      case 'ValueChangesMedicationAmount':
+        action = new MedicationFormActionValueChangesMedicationAmount(
+          (intent as MedicationFormIntentValueChangesMedicationAmount).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationAmount).medication,
+          (intent as MedicationFormIntentValueChangesMedicationAmount).amountValue
         );
         break;
       case 'ValueChangesMedicationForm':
@@ -773,10 +811,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
   private addUniqueCodeableConcept(uniqueCodeableConceptArray: Array<CodeableConcept>, parameter: ParametersParameter): void {
     let valueCodeableConceptHash = null;
-    if (parameter.valueCodeableConcept !== undefined) {
+    if (parameter.valueCodeableConcept) {
       valueCodeableConceptHash = hash(parameter?.valueCodeableConcept);
     }
-    else if (parameter.valueCoding !== undefined) {
+    else if (parameter.valueCoding) {
       valueCodeableConceptHash = hash({
         text: parameter?.valueCoding?.display,
         coding: new Array<Coding>(parameter?.valueCoding)
