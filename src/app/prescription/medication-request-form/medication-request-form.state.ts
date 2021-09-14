@@ -13,7 +13,7 @@ import {
   id,
   Medication,
   MedicationKnowledge,
-  MedicationRequest,
+  MedicationRequest, Quantity,
   Ratio,
   ValueSetContains
 } from 'phast-fhir-ts';
@@ -35,11 +35,11 @@ export class MedicationFormStateCdsHelp implements IPartialState {
 export class MedicationFormStateAddMedication implements IPartialState {
   readonly type = 'AddMedication';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest | undefined,
               private _medicationKnowledge: MedicationKnowledge) {
   }
 
-  public get medicationRequest(): MedicationRequest {
+  public get medicationRequest(): MedicationRequest | undefined {
     return this._medicationRequest;
   }
 
@@ -51,10 +51,10 @@ export class MedicationFormStateAddMedication implements IPartialState {
 export class MedicationFormStateRemoveMedication implements IPartialState {
   readonly type = 'RemoveMedication';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest | null,
               private _nMedication: number) { }
 
-  public get medicationRequest(): MedicationRequest {
+  public get medicationRequest(): MedicationRequest | null {
     return this._medicationRequest;
   }
 
@@ -236,7 +236,7 @@ export class MedicationFormStateValueChangesTreatmentIntent implements IState {
 
 export class MedicationRequestFormState implements IState {
 
-  private _medicationRequest: MedicationRequest;
+  private _medicationRequest?: MedicationRequest;
 
   private readonly _loadingCIOList$: BehaviorSubject<boolean>;
 
@@ -244,9 +244,9 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _nMedicationArray: Array<number>;
 
-  private _nDosage: number;
+  private _nDosage?: number;
 
-  private _index: number;
+  private _index?: number;
 
   private _autoIncrement: number;
 
@@ -254,7 +254,7 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _routeMap: Map<number, Array<CodeableConcept>>;
 
-  private readonly _amountMap: Map<id, Map<number, Array<Ratio>>>;
+  private readonly _amountMap: Map<id, Map<number, Array<Quantity>>>;
 
   private readonly _formMap: Map<id, Map<number, Array<CodeableConcept>>>;
 
@@ -284,9 +284,14 @@ export class MedicationRequestFormState implements IState {
     this._whenArray = new Array<ValueSetContains>();
   }
 
-  public get medication(): Medication {
-    return (this._medicationRequest.contained.length > 1) ?
-      this._medicationRequest.contained[1] as Medication : this._medicationRequest.contained[0];
+  public get medication(): Medication | undefined {
+    if (this._medicationRequest?.contained && this._medicationRequest?.contained.length > 1) {
+      return this._medicationRequest.contained[1] as Medication;
+    }
+    else if (this._medicationRequest?.contained && this._medicationRequest?.contained.length === 1) {
+      return this._medicationRequest.contained[0] as Medication;
+    }
+    return undefined;
   }
 
   public get type(): string {
@@ -313,11 +318,11 @@ export class MedicationRequestFormState implements IState {
     return this._loadingTIOList$.asObservable();
   }
 
-  public set medicationRequest(medicationRequest: MedicationRequest) {
+  public set medicationRequest(medicationRequest: MedicationRequest | undefined) {
     this._medicationRequest = medicationRequest;
   }
 
-  public get medicationRequest(): MedicationRequest {
+  public get medicationRequest(): MedicationRequest | undefined {
     return this._medicationRequest;
   }
 
@@ -325,19 +330,19 @@ export class MedicationRequestFormState implements IState {
     return this._nMedicationArray;
   }
 
-  public get nDosage(): number {
+  public get nDosage(): number | undefined {
     return this._nDosage;
   }
 
-  public set nDosage(nDosage: number) {
+  public set nDosage(nDosage: number | undefined) {
     this._nDosage = nDosage;
   }
 
-  public get index(): number {
+  public get index(): number | undefined {
     return this._index;
   }
 
-  public set index(index: number) {
+  public set index(index: number | undefined) {
     this._index = index;
   }
 
@@ -349,7 +354,7 @@ export class MedicationRequestFormState implements IState {
     return this._medicationKnowledgeMap;
   }
 
-  public get amountMap(): Map<id, Map<number, Array<Ratio>>> {
+  public get amountMap(): Map<id, Map<number, Array<Quantity>>> {
     return this._amountMap;
   }
 

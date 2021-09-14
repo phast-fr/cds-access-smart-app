@@ -5,11 +5,12 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
-import * as lodash from 'lodash';
 import {AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {AbstractControl, FormBuilder, FormControl, FormGroup} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, map, switchMap, takeUntil, tap} from 'rxjs/operators';
+
+import * as lodash from 'lodash';
 
 import {
   MedicationFormIntentAddMedication,
@@ -58,13 +59,13 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   private readonly _isMedicationRequestAddable$: BehaviorSubject<boolean>;
 
   @ViewChild(MedicationFormComponent)
-  private _medicationForm: MedicationFormComponent;
+  private _medicationForm?: MedicationFormComponent;
 
   @ViewChild(DosageInstructionFormComponent)
-  private _dosageInstructionForm: DosageInstructionFormComponent;
+  private _dosageInstructionForm?: DosageInstructionFormComponent;
 
   @ViewChild(DispenseRequestFormComponent)
-  private _dispenseRequestForm: DispenseRequestFormComponent;
+  private _dispenseRequestForm?: DispenseRequestFormComponent;
 
   constructor(private _iconRegistry: MatIconRegistry,
               private _sanitizer: DomSanitizer,
@@ -96,7 +97,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     return this._prescriptionState.medicationRequestMode$;
   }
 
-  public get medicationRequest(): MedicationRequest {
+  public get medicationRequest(): MedicationRequest | undefined {
     return this._viewModel.medicationRequest;
   }
 
@@ -126,33 +127,39 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   }
 
   public ngAfterViewInit(): void {
-    this._medicationForm.medicationGroup$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(medicationForm => medicationForm !== false)
-      )
-      .subscribe({
-        next: () => this.updateIsMedicationAddable(),
-        error: err => console.error('error', err)
-      });
-    this._dosageInstructionForm.dosageInstruction$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(dosageInstruction => dosageInstruction !== false)
-      )
-      .subscribe({
-        next: () => this.updateIsMedicationAddable(),
-        error: err => console.error('error', err)
-      });
-    this._dispenseRequestForm.dispenseRequestGroup$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(dispenseRequest => dispenseRequest !== false)
-      )
-      .subscribe({
-        next: () => this.updateIsMedicationAddable(),
-        error: err => console.error('error', err)
-      });
+    if (this._medicationForm) {
+      this._medicationForm.medicationGroup$
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          filter(medicationForm => medicationForm !== false)
+        )
+        .subscribe({
+          next: () => this.updateIsMedicationAddable(),
+          error: err => console.error('error', err)
+        });
+    }
+    if (this._dosageInstructionForm) {
+      this._dosageInstructionForm.dosageInstruction$
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          filter(dosageInstruction => dosageInstruction !== false)
+        )
+        .subscribe({
+          next: () => this.updateIsMedicationAddable(),
+          error: err => console.error('error', err)
+        });
+    }
+    if (this._dispenseRequestForm) {
+      this._dispenseRequestForm.dispenseRequestGroup$
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          filter(dispenseRequest => dispenseRequest !== false)
+        )
+        .subscribe({
+          next: () => this.updateIsMedicationAddable(),
+          error: err => console.error('error', err)
+        });
+    }
   }
 
   public ngOnDestroy(): void {
@@ -165,138 +172,167 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
       case 'AddMedicationRequest':
-        this.medicationRequestGroup.get('medicationKnowledge').reset(undefined);
+        const medicationKnowledgeControl = this.medicationRequestGroup.get('medicationKnowledge');
+        if (medicationKnowledgeControl) {
+          medicationKnowledgeControl.reset(undefined);
+        }
         break;
     }
   }
 
-  public toControl(control: AbstractControl): FormControl {
-    return control as FormControl;
+  public toFormControl(control: AbstractControl | null): FormControl | null {
+    if (control) {
+      return control as FormControl;
+    }
+    return null;
   }
 
-  public trackById(_, medicationKnowledge: MedicationKnowledge): string {
-    return medicationKnowledge.id;
+  public trackById(_: number, medicationKnowledge: MedicationKnowledge): string | undefined {
+    return medicationKnowledge?.id;
   }
 
-  public displayFn(medicationKnowledge: MedicationKnowledge): string | null {
+  public displayFn(medicationKnowledge: MedicationKnowledge): string | undefined {
     return this._labelProviderFactory.getProvider(medicationKnowledge)?.getText(medicationKnowledge);
   }
 
   public onAddMedication(): void {
-    const medicationKnowledge = this.medicationRequestGroup.get('medicationKnowledge').value;
-    const medicationId = this._viewModel.nextMedicationId();
+    const medicationKnowledgeControl = this.medicationRequestGroup.get('medicationKnowledge');
+    if (medicationKnowledgeControl) {
+      const medicationKnowledge = medicationKnowledgeControl.value;
+      const medicationId = this._viewModel.nextMedicationId();
 
-    let patient: Patient;
-    let practitioner: Practitioner;
-    if (this._stateService.state) {
-      const state = this._stateService.state as StateModel;
-      patient = state.patient;
-      practitioner = state.practitioner;
+      let patient: Patient | undefined;
+      let practitioner: Practitioner | undefined;
+      if (this._stateService.state) {
+        const state = this._stateService.state as StateModel;
+        patient = state.patient;
+        practitioner = state.practitioner;
+      }
+
+      if (patient && practitioner) {
+        this._viewModel.dispatchIntent(
+          new MedicationFormIntentAddMedication(
+            this._viewModel.medicationRequest, medicationKnowledge, medicationId, patient, practitioner
+          )
+        );
+      }
+      medicationKnowledgeControl.reset(null);
     }
-
-    this._viewModel.dispatchIntent(
-      new MedicationFormIntentAddMedication(
-        this._viewModel.medicationRequest, medicationKnowledge, medicationId, patient, practitioner
-      )
-    );
-    this.medicationRequestGroup.get('medicationKnowledge').reset(null);
   }
 
   public onAddMedicationRequest(): void {
     const medicationRequest = lodash.cloneDeep(this._viewModel.medicationRequest);
-    this._viewModel.dispatchIntent(
-      new MedicationFormIntentAddMedicationRequest(medicationRequest)
-    );
-    this._prescriptionState.addMedicationRequest(medicationRequest);
+    if (medicationRequest) {
+      this._viewModel.dispatchIntent(
+        new MedicationFormIntentAddMedicationRequest(medicationRequest)
+      );
+      this._prescriptionState.addMedicationRequest(medicationRequest);
+    }
   }
 
   public onCDSHelp(): void {
-    this._viewModel.dispatchIntent(
-      new MedicationFormIntentCdsHelp(this._viewModel.medicationRequest)
-    );
-    this._prescriptionState.callCdsHooks(this._viewModel.medicationRequest);
+    if (this._viewModel.medicationRequest) {
+      this._viewModel.dispatchIntent(
+        new MedicationFormIntentCdsHelp(this._viewModel.medicationRequest)
+      );
+      this._prescriptionState.callCdsHooks(this._viewModel.medicationRequest);
+    }
   }
 
   private setUpOnChange(): void {
-    const medicationKnowledgeControlNull$ = this.medicationRequestGroup.get('medicationKnowledge').valueChanges
-      .pipe(
-        filter(value => value == null)
-      );
+    const medicationKnowledgeControl = this.medicationRequestGroup.get('medicationKnowledge');
+    if (medicationKnowledgeControl) {
+      const medicationKnowledgeControlNull$ = medicationKnowledgeControl.valueChanges
+        .pipe(
+          filter(value => value == null)
+        );
 
-    medicationKnowledgeControlNull$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-      )
-      .subscribe({
-        next: () => this.onReset(),
-        error: err => console.error('error', err)
-      });
+      medicationKnowledgeControlNull$
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+        )
+        .subscribe({
+          next: () => this.onReset(),
+          error: err => console.error('error', err)
+        });
 
-    const medicationKnowledgeControlString$ = this.medicationRequestGroup.get('medicationKnowledge').valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        filter(value => typeof value === 'string')
-      );
-    medicationKnowledgeControlString$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(
-        () => {
-          this._medicationKnowledgeArray.length = 0;
-          this._loading$.next(true);
-        }),
-        switchMap(value => this._viewModel.searchMedicationKnowledge(value, this.medicationRequestGroup.get('requestMode').value)
-          .pipe(
-            tap(() => this._loading$.next(false))
-          )),
-        filter(value => FhirTypeGuard.isBundle(value)),
-        map(bundle => bundle as Bundle),
-        filter(bundle => bundle.total > 0)
-      )
-      .subscribe({
-        next: bundle => bundle.entry.forEach(entry => {
-          if (FhirTypeGuard.isMedicationKnowledge(entry.resource)) {
-            this._medicationKnowledgeArray.push(entry.resource);
-          }
-        }),
-        error: err => console.error('error', err),
-      });
+      const medicationKnowledgeControlString$ = medicationKnowledgeControl.valueChanges
+        .pipe(
+          debounceTime(500),
+          distinctUntilChanged(),
+          filter(value => typeof value === 'string')
+        );
+      medicationKnowledgeControlString$
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          tap(
+            () => {
+              this._medicationKnowledgeArray.length = 0;
+              this._loading$.next(true);
+            }),
+          switchMap(value => this._viewModel.searchMedicationKnowledge(value, this.medicationRequestGroup.get('requestMode')?.value)
+            .pipe(
+              tap(() => this._loading$.next(false))
+            )),
+          filter(value => FhirTypeGuard.isBundle(value)),
+          map(bundle => bundle as Bundle),
+          filter(bundle => !!(bundle?.total && bundle.total > 0))
+        )
+        .subscribe({
+          next: (bundle: Bundle) => bundle.entry?.forEach(entry => {
+            if (FhirTypeGuard.isMedicationKnowledge(entry.resource)) {
+              this._medicationKnowledgeArray.push(entry.resource);
+            }
+          }),
+          error: err => console.error('error', err),
+        });
 
-    const medicationKnowledgeControlFhir$ = this.medicationRequestGroup.get('medicationKnowledge').valueChanges
-      .pipe(
-        filter(value => value instanceof Object && FhirTypeGuard.isMedicationKnowledge(value))
-      );
-    medicationKnowledgeControlFhir$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe({
-        next: () => this._isMedicationRequestAddable$.next(true),
-        error: err => console.error('error', err)
-      });
+      const medicationKnowledgeControlFhir$ = medicationKnowledgeControl.valueChanges
+        .pipe(
+          filter(value => value instanceof Object && FhirTypeGuard.isMedicationKnowledge(value))
+        );
+      medicationKnowledgeControlFhir$
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$)
+        )
+        .subscribe({
+          next: () => this._isMedicationRequestAddable$.next(true),
+          error: err => console.error('error', err)
+        });
+    }
 
-    this.medicationRequestGroup.get('requestMode').valueChanges
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$)
-      )
-      .subscribe({
-        next: mode => this.onChangeMode(mode),
-        error: err => console.error('error', err)
-      });
+    const requestModeControl = this.medicationRequestGroup.get('requestMode');
+    if (requestModeControl) {
+      requestModeControl.valueChanges
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$)
+        )
+        .subscribe({
+          next: mode => this.onChangeMode(mode),
+          error: err => console.error('error', err)
+        });
+    }
   }
 
   private updateIsMedicationAddable(): void {
+    const medicationGroupValid = (this._medicationForm?.medicationGroup) ? this._medicationForm.medicationGroup.valid : false;
+    const dosageInstructionValid = (this._dosageInstructionForm?.dosageInstruction) ?
+      this._dosageInstructionForm.dosageInstruction.value : false;
+    const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?
+      this._dispenseRequestForm.dispenseRequestGroup.value : false;
     this._isMedicationRequestAddable$.next(
-      this._medicationForm.medicationGroup?.valid
-      && this._dosageInstructionForm.dosageInstruction?.valid
-      && this._dispenseRequestForm.dispenseRequestGroup?.valid
+      medicationGroupValid
+      && dosageInstructionValid
+      && dispenseRequestGroupValid
     );
   }
 
   private onChangeMode(mode: string): void {
     this._prescriptionState.medicationRequestMode = mode;
-    this.medicationRequestGroup.get('medicationKnowledge').reset(undefined);
+    const medicationKnowledgeControl = this.medicationRequestGroup.get('medicationKnowledge');
+    if (medicationKnowledgeControl) {
+      medicationKnowledgeControl.reset(undefined);
+    }
   }
 
   private onReset(): void {

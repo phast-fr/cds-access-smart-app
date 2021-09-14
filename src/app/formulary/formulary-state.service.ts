@@ -6,18 +6,18 @@ import { Composition, Patient, Practitioner } from 'phast-fhir-ts';
 @Injectable()
 export class FormularyStateService {
 
-  private _user: Patient | Practitioner;
+  private _user?: Patient | Practitioner;
 
   private _compositionSubject$ = new Subject<Composition>();
 
   constructor() {
   }
 
-  public set user(user: Patient | Practitioner) {
+  public set user(user: Patient | Practitioner | undefined) {
     this._user = user;
   }
 
-  public get user(): Patient | Practitioner {
+  public get user(): Patient | Practitioner | undefined {
     return this._user;
   }
 

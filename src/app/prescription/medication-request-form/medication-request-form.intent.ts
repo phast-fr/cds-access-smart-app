@@ -41,13 +41,13 @@ export class MedicationFormIntentCdsHelp implements IIntent {
 export class MedicationFormIntentAddMedication implements IIntent {
   readonly type = 'AddMedication';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _medicationRequest: MedicationRequest | undefined,
               private _medicationKnowledge: MedicationKnowledge,
               private _medicationId: id,
               private _patient: Patient,
               private _practitioner: Practitioner) { }
 
-  public get medicationRequest(): MedicationRequest {
+  public get medicationRequest(): MedicationRequest | undefined {
     return this._medicationRequest;
   }
 
@@ -103,7 +103,7 @@ export class MedicationFormIntentValueChangesMedicationAmount implements IIntent
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _amountValue: Ratio) {
+              private _amountValue: Ratio | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -114,7 +114,7 @@ export class MedicationFormIntentValueChangesMedicationAmount implements IIntent
     return this._medication;
   }
 
-  public get amountValue(): Ratio {
+  public get amountValue(): Ratio | null {
     return this._amountValue;
   }
 }
@@ -124,7 +124,7 @@ export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _formValue: CodeableConcept) {
+              private _formValue: CodeableConcept | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -135,7 +135,7 @@ export class MedicationFormIntentValueChangesMedicationForm implements IIntent {
     return this._medication;
   }
 
-  public get formValue(): CodeableConcept {
+  public get formValue(): CodeableConcept | null {
     return this._formValue;
   }
 }
@@ -146,7 +146,7 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrength implem
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemCodeableConcept: CodeableConcept,
-              private _strengthValue: Ratio) {
+              private _strengthValue: Ratio | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -161,7 +161,7 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrength implem
     return this._itemCodeableConcept;
   }
 
-  public get strengthValue(): Ratio {
+  public get strengthValue(): Ratio | null {
     return this._strengthValue;
   }
 }
@@ -198,7 +198,7 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrengthUnit im
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
               private _itemReference: Reference,
-              private _strengthUnit: Coding) {
+              private _strengthUnit: Coding | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -213,7 +213,7 @@ export class MedicationFormIntentValueChangesMedicationIngredientStrengthUnit im
     return this._itemReference;
   }
 
-  public get strengthUnit(): Coding {
+  public get strengthUnit(): Coding | null {
     return this._strengthUnit;
   }
 }
@@ -249,7 +249,7 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _routeValue: CodeableConcept,
+              private _routeValue: CodeableConcept | null,
               private _medication: Medication) {
   }
 
@@ -261,7 +261,7 @@ export class MedicationFormIntentValueChangesDosageInstructionRoute implements I
     return this._nDosage;
   }
 
-  public get routeValue(): CodeableConcept {
+  public get routeValue(): CodeableConcept | null {
     return this._routeValue;
   }
 
@@ -296,7 +296,7 @@ export class MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _boundsDurationUnit: ValueSetContains) {
+              private _boundsDurationUnit: ValueSetContains | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -307,7 +307,7 @@ export class MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit
     return this._nDosage;
   }
 
-  public get boundsDurationUnit(): ValueSetContains {
+  public get boundsDurationUnit(): ValueSetContains | null {
     return this._boundsDurationUnit;
   }
 }
@@ -380,7 +380,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationUnit imple
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _durationUnit: ValueSetContains) {
+              private _durationUnit: ValueSetContains | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -391,7 +391,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDurationUnit imple
     return this._nDosage;
   }
 
-  public get durationUnit(): ValueSetContains {
+  public get durationUnit(): ValueSetContains | null {
     return this._durationUnit;
   }
 }
@@ -443,7 +443,7 @@ export class MedicationFormIntentValueChangesDosageInstructionPeriodUnit impleme
 
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
-              private _periodUnit: ValueSetContains) {
+              private _periodUnit: ValueSetContains | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -454,7 +454,7 @@ export class MedicationFormIntentValueChangesDosageInstructionPeriodUnit impleme
     return this._nDosage;
   }
 
-  public get periodUnit(): ValueSetContains {
+  public get periodUnit(): ValueSetContains | null {
     return this._periodUnit;
   }
 }
@@ -497,7 +497,7 @@ export class MedicationFormIntentValueChangesDosageInstructionWhenValue implemen
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nWhen: number,
-              private _whenValue: ValueSetContains) {
+              private _whenValue: ValueSetContains | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -512,7 +512,7 @@ export class MedicationFormIntentValueChangesDosageInstructionWhenValue implemen
     return this._nWhen;
   }
 
-  public get whenValue(): ValueSetContains {
+  public get whenValue(): ValueSetContains | null {
     return this._whenValue;
   }
 }
@@ -570,7 +570,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit i
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nDoseAndRate: number,
-              private _doseQuantityUnit: Coding) {
+              private _doseQuantityUnit: Coding | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -585,7 +585,7 @@ export class MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit i
     return this._nDoseAndRate;
   }
 
-  public get doseQuantityUnit(): Coding {
+  public get doseQuantityUnit(): Coding | null {
     return this._doseQuantityUnit;
   }
 }
@@ -622,7 +622,7 @@ export class MedicationFormIntentValueChangesDosageInstructionRateRatioNumerator
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nDoseAndRate: number,
-              private _rateRatioNumeratorUnit: Coding) {
+              private _rateRatioNumeratorUnit: Coding | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -637,7 +637,7 @@ export class MedicationFormIntentValueChangesDosageInstructionRateRatioNumerator
     return this._nDoseAndRate;
   }
 
-  public get rateRatioNumeratorUnit(): Coding {
+  public get rateRatioNumeratorUnit(): Coding | null {
     return this._rateRatioNumeratorUnit;
   }
 }
@@ -674,7 +674,7 @@ export class MedicationFormIntentValueChangesDosageInstructionRateRatioDenominat
   constructor(private _medicationRequest: MedicationRequest,
               private _nDosage: number,
               private _nDoseAndRate: number,
-              private _rateRatioDenominatorUnit: Coding) {
+              private _rateRatioDenominatorUnit: Coding | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -689,7 +689,7 @@ export class MedicationFormIntentValueChangesDosageInstructionRateRatioDenominat
     return this._nDoseAndRate;
   }
 
-  public get rateRatioDenominatorUnit(): Coding {
+  public get rateRatioDenominatorUnit(): Coding | null {
     return this._rateRatioDenominatorUnit;
   }
 }
@@ -875,14 +875,14 @@ export class MedicationFormIntentValueChangesTreatmentIntent implements IIntent 
   readonly type = 'ValueChangesTreatmentIntent';
 
   constructor(private _medicationRequest: MedicationRequest,
-              private _treatmentIntent: ValueSetContains) {
+              private _treatmentIntent: ValueSetContains | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
     return this._medicationRequest;
   }
 
-  public get treatmentIntent(): ValueSetContains {
+  public get treatmentIntent(): ValueSetContains | null {
     return this._treatmentIntent;
   }
 }

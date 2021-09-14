@@ -40,9 +40,9 @@ export class FormularyComponent extends SmartComponent implements OnDestroy, Aft
 
   private readonly _compositionArray: Array<Composition>;
 
-  private _user: Practitioner;
+  private _user?: Practitioner;
 
-  private _composition: Composition;
+  private _composition?: Composition;
 
   constructor(private _iconRegistry: MatIconRegistry,
               private _sanitizer: DomSanitizer,
@@ -117,14 +117,18 @@ export class FormularyComponent extends SmartComponent implements OnDestroy, Aft
         ),
         filter(result => FhirTypeGuard.isBundle(result)),
         map(result => result as Bundle),
-        filter(bundle => bundle.total > 0)
+        filter(bundle => !!bundle.total && bundle.total > 0)
       )
       .subscribe({
-        next: bundle => bundle.entry.forEach(entry => {
-          if (FhirTypeGuard.isComposition(entry.resource)) {
-            this._compositionArray.push(entry.resource);
+        next: bundle => {
+          if (bundle.entry) {
+            bundle.entry.forEach(entry => {
+              if (FhirTypeGuard.isComposition(entry.resource)) {
+                this._compositionArray.push(entry.resource);
+              }
+            });
           }
-        }),
+        },
         error: err => console.error('error', err)
       });
     compositionObj$
@@ -146,11 +150,11 @@ export class FormularyComponent extends SmartComponent implements OnDestroy, Aft
     this._loading$.complete();
   }
 
-  public trackBy(_, composition: Composition): string {
+  public trackBy(_: number, composition: Composition): string | undefined {
     return composition.id;
   }
 
-  public displayFn(composition: Composition): string | null {
+  public displayFn(composition: Composition): string | undefined {
     return this._labelProviderFactory.getProvider(composition)?.getText(composition);
   }
 }

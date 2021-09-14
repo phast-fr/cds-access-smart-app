@@ -5,6 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
+// @ts-ignore
 import {Duration} from 'luxon';
 /**
  * @ngModule CdsAccessModule
@@ -26,7 +27,7 @@ export class Utils {
     strLength = 8,
     charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   ): string {
-    const result = [];
+    const result = new Array<string>();
     const len = charSet.length;
     while (strLength--) {
       result.push(charSet.charAt(Math.floor(Math.random() * len)));
@@ -56,7 +57,7 @@ export class Utils {
 
   public static intersect<T>(firstArray: Array<T>, arrays: Array<Array<T>>,
                              comparator: (previousValue: T, currentValue: T, currentIndex: number, array: T[]) => boolean): Array<T> {
-    const intersect = (a, b) => {
+    const intersect = (a: Array<T>, b: Array<T>) => {
       return [...a].filter((x, index, array) => b.some(y => comparator(x, y, index, array)));
     };
 

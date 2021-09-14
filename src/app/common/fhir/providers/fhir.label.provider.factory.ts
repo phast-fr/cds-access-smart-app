@@ -23,119 +23,119 @@ import {
 })
 export class FhirLabelProviderFactory {
 
-  private readonly _labelProviders: object;
+  private readonly _labelProviders: Map<string, ILabelProvider<any>>;
 
   constructor() {
-    this._labelProviders = {};
+    this._labelProviders = new Map<string, ILabelProvider<any>>();
   }
 
-  getProvider(object: any): ILabelProvider<any> | null {
-    if (object == null) { return null; }
+  getProvider(object: any): ILabelProvider<any> | undefined {
+    if (!object) { return undefined; }
     if (FhirTypeGuard.isMedicationRequest(object)) {
-      if (this._labelProviders.hasOwnProperty('fhir.MedicationRequest')) {
-        return this._labelProviders['fhir.MedicationRequest'];
+      if (this._labelProviders.has('fhir.MedicationRequest')) {
+        return this._labelProviders.get('fhir.MedicationRequest');
       }
-      const provider = new MedicationRequestLabelProvider(this);
-      this._labelProviders['fhir.MedicationRequest'] = provider;
+      const provider = new MedicationRequestLabelProvider(this) as ILabelProvider<any>;
+      this._labelProviders.set('fhir.MedicationRequest', provider);
       return provider;
     }
     else if (FhirTypeGuard.isMedicationKnowledge(object)) {
-      if (this._labelProviders.hasOwnProperty('fhir.MedicationKnowledge')) {
-        return this._labelProviders['fhir.MedicationKnowledge'];
+      if (this._labelProviders.has('fhir.MedicationKnowledge')) {
+        return this._labelProviders.get('fhir.MedicationKnowledge');
       }
-      const provider = new MedicationKnowledgeLabelProvider();
-      this._labelProviders['fhir.MedicationKnowledge'] = provider;
+      const provider = new MedicationKnowledgeLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set('fhir.MedicationKnowledge', provider);
       return provider;
     }
     else if (FhirTypeGuard.isMedication(object)) {
-      if (this._labelProviders.hasOwnProperty('fhir.Medication')) {
-        return this._labelProviders['fhir.Medication'];
+      if (this._labelProviders.has('fhir.Medication')) {
+        return this._labelProviders.get('fhir.Medication');
       }
-      const provider = new MedicationLabelProvider(this);
-      this._labelProviders['fhir.Medication'] = provider;
+      const provider = new MedicationLabelProvider(this) as ILabelProvider<any>;
+      this._labelProviders.set('fhir.Medication', provider);
       return provider;
     }
     else if (FhirTypeGuard.isPatient(object)) {
-      if (this._labelProviders.hasOwnProperty('fhir.Patient')) {
-        return this._labelProviders['fhir.Patient'];
+      if (this._labelProviders.has('fhir.Patient')) {
+        return this._labelProviders.get('fhir.Patient');
       }
-      const provider = new NamedResourceLabelProvider();
-      this._labelProviders['fhir.Patient'] = provider;
+      const provider = new NamedResourceLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set('fhir.Patient', provider);
       return provider;
     }
     else if (FhirTypeGuard.isPractitioner(object)) {
-      if (this._labelProviders.hasOwnProperty('fhir.Practitioner')) {
-        return this._labelProviders['fhir.Practitioner'];
+      if (this._labelProviders.has('fhir.Practitioner')) {
+        return this._labelProviders.get('fhir.Practitioner');
       }
-      const provider = new NamedResourceLabelProvider();
-      this._labelProviders['fhir.Practitioner'] = provider;
+      const provider = new NamedResourceLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set('fhir.Practitioner', provider);
       return provider;
     }
     else if (FhirTypeGuard.isComposition(object)) {
-      if (this._labelProviders.hasOwnProperty('fhir.Composition')) {
-        return this._labelProviders['fhir.Composition'];
+      if (this._labelProviders.has('fhir.Composition')) {
+        return this._labelProviders.get('fhir.Composition');
       }
-      const provider = new CompositionLabelProvider();
-      this._labelProviders['fhir.Composition'] = provider;
+      const provider = new CompositionLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set('fhir.Composition', provider);
       return provider;
     }
     else if (object === 'fhir.Ratio') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new RatioLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new RatioLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     else if (object === 'fhir.Quantity') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new QuantityLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new QuantityLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     else if (object === 'fhir.CodeableConcept') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new CodeableConceptLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new CodeableConceptLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     else if (object === 'fhir.Coding') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new CodingLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new CodingLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     else if (object === 'fhir.Reference') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new ReferenceLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new ReferenceLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     else if (object === 'fhir.ParametersParameter') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new ParametersParameterLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new ParametersParameterLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     else if (object === 'fhir.ValueSetContains') {
-      if (this._labelProviders.hasOwnProperty(object)) {
-        return this._labelProviders[object];
+      if (this._labelProviders.has(object)) {
+        return this._labelProviders.get(object);
       }
-      const provider = new ValueSetContainsLabelProvider();
-      this._labelProviders[object] = provider;
+      const provider = new ValueSetContainsLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set(object, provider);
       return provider;
     }
     console.log('Error: provider not supported! ', object);
-    return null;
+    return undefined;
   }
 }

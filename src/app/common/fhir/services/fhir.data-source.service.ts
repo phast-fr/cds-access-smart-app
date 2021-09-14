@@ -10,9 +10,9 @@ import { Bundle, Composition, id, OperationOutcome, Patient, Practitioner, Resou
 @Injectable()
 export class FhirDataSourceService {
 
-  private _options: Options;
+  private _options?: Options;
 
-  private _baseUrl: string;
+  private _baseUrl?: string;
 
   constructor(private _smartService: FhirSmartService,
               private _fhirClient: FhirClientService) {
@@ -43,55 +43,69 @@ export class FhirDataSourceService {
       });
   }
 
-  public patientRead(patientId: id): Observable<OperationOutcome | Patient> {
-    return this._fhirClient.read<OperationOutcome | Patient>(this._baseUrl, {
-      resourceType: 'Patient',
-      id: patientId
-    }, this._options);
-  }
-
-  public practitionerRead(practitionerId: id): Observable<OperationOutcome | Practitioner> {
-    return this._fhirClient.read<OperationOutcome | Practitioner>(this._baseUrl, {
-      resourceType: 'Practitioner',
-      id: practitionerId
-    }, this._options);
-  }
-
-  public compositionRead(compositionId: id): Observable<OperationOutcome | Composition> {
-    return this._fhirClient.read<OperationOutcome | Composition>(this._baseUrl, {
-      resourceType: 'Composition',
-      id: compositionId
-    }, this._options);
-  }
-
-  public resourceSearch(path: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const resourceTypeSearch = path.split('?');
-    const resourceType = resourceTypeSearch[0];
-    const search = resourceTypeSearch[1];
-
-    const searchParams = {};
-    for (const part of search.split('&')) {
-      const keyValue = part.split('=');
-      const key = keyValue[0];
-      searchParams[key] = keyValue[1];
+  public patientRead(patientId: id): Observable<OperationOutcome | Patient> | undefined {
+    if (this._baseUrl) {
+      return this._fhirClient.read<OperationOutcome | Patient>(this._baseUrl, {
+        resourceType: 'Patient',
+        id: patientId
+      }, this._options);
     }
-    return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
-      resourceType,
-      searchParams
-    }, this._options);
+    return undefined;
   }
 
-  public patientSearch(name: string | undefined): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-      if (typeof name === 'string') {
-          let search = name.trim();
-          search = search.replace(/ /g, ',');
-          return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
-            resourceType: 'Patient',
-            searchParams: {
-              _count: '10',
-              name: search
-            }
-          }, this._options);
+  public practitionerRead(practitionerId: id): Observable<OperationOutcome | Practitioner> | undefined {
+    if (this._baseUrl) {
+      return this._fhirClient.read<OperationOutcome | Practitioner>(this._baseUrl, {
+        resourceType: 'Practitioner',
+        id: practitionerId
+      }, this._options);
+    }
+    return undefined;
+  }
+
+  public compositionRead(compositionId: id): Observable<OperationOutcome | Composition> | undefined {
+    if (this._baseUrl) {
+      return this._fhirClient.read<OperationOutcome | Composition>(this._baseUrl, {
+        resourceType: 'Composition',
+        id: compositionId
+      }, this._options);
+    }
+    return undefined;
+  }
+
+  public resourceSearch(path: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
+    if (this._baseUrl) {
+      const resourceTypeSearch = path.split('?');
+      const resourceType = resourceTypeSearch[0];
+      const search = resourceTypeSearch[1];
+
+      const searchParams = {};
+      for (const part of search.split('&')) {
+        const keyValue = part.split('=');
+        const key = keyValue[0];
+        // @ts-ignore
+        searchParams[key] = keyValue[1];
+      }
+      return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
+        resourceType,
+        searchParams
+      }, this._options);
+    }
+    return undefined;
+  }
+
+  public patientSearch(name?: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
+    if (this._baseUrl) {
+      if (name) {
+        let search = name.trim();
+        search = search.replace(/ /g, ',');
+        return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
+          resourceType: 'Patient',
+          searchParams: {
+            _count: '10',
+            name: search
+          }
+        }, this._options);
       }
       return this._fhirClient.resourceSearch(this._baseUrl, {
         resourceType: 'Patient',
@@ -99,33 +113,42 @@ export class FhirDataSourceService {
           _count: '10'
         }
       }, this._options);
+    }
+    return undefined;
   }
 
-  public medicationRequestSearch(patient: Patient, name?: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    if (typeof name === 'string') {
-      let search = name.trim();
-      search = search.replace(/ /g, ',');
+  public medicationRequestSearch(patient: Patient, name?: string):
+    Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
+    if (this._baseUrl) {
+      if (name) {
+        let search = name.trim();
+        search = search.replace(/ /g, ',');
+        return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
+          resourceType: 'MedicationRequest',
+          searchParams: {
+            subject: patient.id,
+            'code:text': search
+          }
+        }, this._options);
+      }
       return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
         resourceType: 'MedicationRequest',
         searchParams: {
-          subject: patient.id,
-          'code:text': search
+          subject: patient.id
         }
       }, this._options);
     }
-    return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
-      resourceType: 'MedicationRequest',
-      searchParams: {
-        subject: patient.id
-      }
-    }, this._options);
+    return undefined;
   }
 
-  public resourceSave(resource: Resource): Observable<OperationOutcome | Resource> {
-    return this._fhirClient.create<OperationOutcome | Resource>(
-      this._baseUrl, {
-        resourceType: resource.resourceType,
-        input: resource
-      }, this._options);
+  public resourceSave(resource: Resource): Observable<OperationOutcome | Resource> | undefined {
+    if (this._baseUrl) {
+      return this._fhirClient.create<OperationOutcome | Resource>(
+        this._baseUrl, {
+          resourceType: resource.resourceType,
+          input: resource
+        }, this._options);
+    }
+    return undefined;
   }
 }

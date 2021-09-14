@@ -41,11 +41,11 @@ export class HeaderComponent implements OnDestroy {
 
   private readonly _unsubscribeTrigger$;
 
-  private readonly _patient$: BehaviorSubject<Patient>;
+  private readonly _patient$: BehaviorSubject<Patient | undefined>;
 
-  private readonly _practitioner$: BehaviorSubject<Practitioner>;
+  private readonly _practitioner$: BehaviorSubject<Practitioner | undefined>;
 
-  private readonly _intent$: BehaviorSubject<string>;
+  private readonly _intent$: BehaviorSubject<string | undefined>;
 
   constructor(private _iconRegistry: MatIconRegistry,
               private _sanitizer: DomSanitizer,
@@ -53,9 +53,9 @@ export class HeaderComponent implements OnDestroy {
     this._iconRegistry.addSvgIconLiteral('health-worker-form', this._sanitizer.bypassSecurityTrustHtml(HEALTH_WORKER_FORM_ICON));
     this._iconRegistry.addSvgIconLiteral('doctor', this._sanitizer.bypassSecurityTrustHtml(DOCTOR_ICON));
     this._unsubscribeTrigger$ = new Subject<void>();
-    this._patient$ = new BehaviorSubject<Patient>(undefined);
-    this._practitioner$ = new BehaviorSubject<Practitioner>(undefined);
-    this._intent$ = new BehaviorSubject<string>(undefined);
+    this._patient$ = new BehaviorSubject<Patient | undefined>(undefined);
+    this._practitioner$ = new BehaviorSubject<Practitioner | undefined>(undefined);
+    this._intent$ = new BehaviorSubject<string | undefined>(undefined);
 
     this.update(this._stateService.state);
     this._stateService.state$
@@ -70,15 +70,15 @@ export class HeaderComponent implements OnDestroy {
       });
   }
 
-  public get patient$(): Observable<Patient> {
+  public get patient$(): Observable<Patient | undefined> {
     return this._patient$.asObservable();
   }
 
-  public get practitioner$(): Observable<Practitioner> {
+  public get practitioner$(): Observable<Practitioner | undefined> {
     return this._practitioner$.asObservable();
   }
 
-  public get intent$(): Observable<string> {
+  public get intent$(): Observable<string | undefined> {
     return this._intent$.asObservable();
   }
 

@@ -25,8 +25,6 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
 
   private readonly _cards: Array<CardReadable>;
 
-  private _mode: string;
-
   constructor(route: ActivatedRoute,
               smartService: FhirSmartService,
               private _stateService: StateService,
@@ -54,10 +52,6 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
 
   public get medicationRequestMode$(): Observable<string> {
     return this._prescriptionState.medicationRequestMode$;
-  }
-
-  public get mode(): string {
-    return this._mode;
   }
 
   public get cards(): Array<CardReadable> {
@@ -90,7 +84,7 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
       .subscribe({
         next: cards => {
           this._cards.push(...cards);
-          this._badge$.next(this._cards.filter((obj) => obj.isReaded === false).length);
+          this._badge$.next(this._cards.filter((obj) => !obj.isReaded).length);
         },
         error: err => console.error('error', err)
       });

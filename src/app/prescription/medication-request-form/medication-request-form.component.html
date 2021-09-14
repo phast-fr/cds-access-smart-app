@@ -17,13 +17,13 @@
                placeholder="{{(medicationRequestMode$ | async) | i18nSelect: {'dc': 'Ex. PARACETAMOL', 'sp': 'Ex. DOLIPRANE'} }}"
                aria-label="saisir le nom d'un produit"
                matInput
-               [formControl]="toControl(medicationRequestGroup.get('medicationKnowledge'))"
+               [formControl]="toFormControl(medicationRequestGroup.get('medicationKnowledge'))"
                [matAutocomplete]="autoMedicationKnowledge"/>
       </mat-form-field>
       <mat-radio-group matTooltip="Sélectionner le mode de recherche"
                        matTooltipPosition="below"
                        aria-label="sélectionner le mode de recherche"
-                       [formControl]="toControl(medicationRequestGroup.get('requestMode'))">
+                       [formControl]="toFormControl(medicationRequestGroup.get('requestMode'))">
         <mat-radio-button value="dc">
           <span> DC </span>
         </mat-radio-button>

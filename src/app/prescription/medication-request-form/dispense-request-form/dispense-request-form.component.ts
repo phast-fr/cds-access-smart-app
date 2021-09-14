@@ -40,23 +40,32 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
     return this._dispenseRequestGroup$.asObservable();
   }
 
-  public get dispenseRequestGroup(): FormGroup | null {
+  public get dispenseRequestGroup(): FormGroup | undefined {
     if (this._dispenseRequestGroup$.value) {
       return this._dispenseRequestGroup$.value as FormGroup;
     }
-    return null;
+    return undefined;
   }
 
-  public get dispenseRequestValidityPeriodStart(): FormControl {
-    return this.dispenseRequestGroup.get(['validityPeriod', 'start']) as FormControl;
+  public get dispenseRequestValidityPeriodStart(): FormControl | undefined {
+    if (this.dispenseRequestGroup) {
+      return this.dispenseRequestGroup.get(['validityPeriod', 'start']) as FormControl;
+    }
+    return undefined;
   }
 
-  public get dispenseRequestValidityPeriodEnd(): FormControl {
-    return this.dispenseRequestGroup.get(['validityPeriod', 'end']) as FormControl;
+  public get dispenseRequestValidityPeriodEnd(): FormControl | undefined {
+    if (this.dispenseRequestGroup) {
+      return this.dispenseRequestGroup.get(['validityPeriod', 'end']) as FormControl;
+    }
+    return undefined;
   }
 
-  public get dispenseRequestExpectedSupplyDurationValue(): FormControl {
-    return this.dispenseRequestGroup.get(['expectedSupplyDuration', 'value']) as FormControl;
+  public get dispenseRequestExpectedSupplyDurationValue(): FormControl | undefined {
+    if (this.dispenseRequestGroup) {
+      return this.dispenseRequestGroup.get(['expectedSupplyDuration', 'value']) as FormControl;
+    }
+    return undefined;
   }
 
   public ngOnInit(): void {
@@ -82,12 +91,14 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
       case 'AddMedication':
-        this._dispenseRequestGroup$.next(
-          this.addMedication(state.medicationRequest?.dispenseRequest)
-        );
+        if (state.medicationRequest?.dispenseRequest) {
+          this._dispenseRequestGroup$.next(
+            this.addMedication(state.medicationRequest.dispenseRequest)
+          );
+        }
         break;
       case 'RemoveMedication':
-        if (state.medicationRequest) {
+        if (state.medicationRequest && this.dispenseRequestGroup) {
           this._dispenseRequestGroup$.next(this.dispenseRequestGroup);
         }
         else {
@@ -96,9 +107,6 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
         break;
       case 'AddMedicationRequest':
         this._dispenseRequestGroup$.next(false);
-        break;
-      default:
-        this._dispenseRequestGroup$.next(this.dispenseRequestGroup);
         break;
     }
   }
@@ -121,18 +129,32 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
         distinctUntilChanged()
       ).subscribe({
       next: changes => {
-        this.dispenseRequestValidityPeriodStart.setValue(
-          changes.validityPeriod.start, options
-        );
-        this.dispenseRequestValidityPeriodEnd.setValue(
-          changes.validityPeriod.end, options
-        );
-        this.dispenseRequestExpectedSupplyDurationValue.setValue(
-          changes.expectedSupplyDuration.value, options
-        );
-        this._viewModel.dispatchIntent(
-          new MedicationFormIntentValueChangesDispenseRequest(this._viewModel.medicationRequest, changes)
-        );
+        if (this.dispenseRequestValidityPeriodStart) {
+          this.dispenseRequestValidityPeriodStart.setValue(
+            changes.validityPeriod.start, options
+          );
+        }
+
+        if (this.dispenseRequestValidityPeriodEnd) {
+          this.dispenseRequestValidityPeriodEnd.setValue(
+            changes.validityPeriod.end, options
+          );
+        }
+
+        if (this.dispenseRequestExpectedSupplyDurationValue) {
+          this.dispenseRequestExpectedSupplyDurationValue.setValue(
+            changes.expectedSupplyDuration.value, options
+          );
+        }
+
+        if (this._viewModel.medicationRequest) {
+          this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDispenseRequest(
+              this._viewModel.medicationRequest,
+              changes
+            )
+          );
+        }
       },
       error: err => console.error('error', err)
     });

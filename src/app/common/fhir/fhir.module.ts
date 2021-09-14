@@ -10,7 +10,7 @@ import {
   CompositionPipe,
   MedicationKnowledgePipe,
   MedicationPipe, MedicationRequestPipe,
-  PersonNamePipe,
+  PersonNamePipe, QuantityPipe,
   RatioPipe, ReferencePipe,
   SnomedPipe, ValueSetContainsPipe
 } from './pipes/fhir.pipe';
@@ -26,6 +26,7 @@ import {FhirClientService} from './services/fhir.client.service';
     MedicationKnowledgePipe,
     MedicationPipe,
     CodeableConceptPipe,
+    QuantityPipe,
     RatioPipe,
     ReferencePipe,
     CodingPipe,
@@ -48,7 +49,8 @@ import {FhirClientService} from './services/fhir.client.service';
     CodingPipe,
     CompositionPipe,
     SnomedPipe,
-    ValueSetContainsPipe
+    ValueSetContainsPipe,
+    QuantityPipe
   ],
   providers: [
     FhirClientService,

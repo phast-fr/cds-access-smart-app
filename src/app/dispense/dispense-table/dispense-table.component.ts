@@ -202,6 +202,7 @@ export class MedicationRequestDataSource implements DataSource<TableElement<Medi
             entry: []
           } as Bundle);
         }),
+        map(value => value as Bundle),
         finalize(() => this._loading$.next(false))
       )
       .subscribe((bundle: Bundle) => {

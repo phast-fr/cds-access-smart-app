@@ -21,7 +21,7 @@ import {Element, Patient, Practitioner, Resource} from 'phast-fhir-ts';
  * ui's control
  */
 export interface ILabelProvider<T> {
-  getText(T): string | null;
+  getText(source: T): string | undefined;
 }
 
 /**
@@ -31,7 +31,7 @@ export interface ILabelProvider<T> {
  * Extends ILabelProvider with the method to provide the text form a code system
  */
 export interface ITermLabelProvider<T> extends ILabelProvider<T> {
-  getTerm(T, system: string): string | null;
+  getTerm(source: T, system: string): string | undefined;
 }
 
 /**
@@ -64,7 +64,7 @@ export interface TableElement<T extends Resource | Element> {
  * // TODO
  */
 export interface IStateModel {
-  user: FhirSmartUserModel;
+  user?: FhirSmartUserModel;
   patient?: Patient;
   practitioner?: Practitioner;
   needPatientBanner: boolean;
@@ -79,7 +79,7 @@ export interface IStateModel {
  */
 export class StateModel implements IStateModel {
 
-  user: FhirSmartUserModel;
+  private _user?: FhirSmartUserModel;
 
   patient?: Patient;
 
@@ -89,20 +89,32 @@ export class StateModel implements IStateModel {
 
   intent?: string;
 
-  public userType(): string | null {
-    const profile = this.user.profile;
+  constructor() {
+    this.needPatientBanner = false;
+  }
+
+  public get user(): FhirSmartUserModel | undefined {
+    return this._user;
+  }
+
+  public set user(user: FhirSmartUserModel | undefined) {
+    this._user = user;
+  }
+
+  public userType(): string | undefined {
+    const profile = this._user?.profile;
     if (profile) {
       return profile.split('/')[0];
     }
-    return null;
+    return undefined;
   }
 
-  public userId(): string | null {
-    const profile = this.user.profile;
+  public userId(): string | undefined {
+    const profile = this._user?.profile;
     if (profile) {
       return profile.split('/')[1];
     }
-    return null;
+    return undefined;
   }
 }
 

@@ -37,9 +37,9 @@ import {
 })
 export class DispenseComponent extends SmartComponent implements OnDestroy, AfterViewInit  {
 
-  private _user: Practitioner;
+  private _user?: Practitioner;
 
-  composition: Composition;
+  composition?: Composition;
 
   medicationRequestControl = this._fb.control(null);
 
@@ -48,24 +48,24 @@ export class DispenseComponent extends SmartComponent implements OnDestroy, Afte
   ucdDataSource: ParametersParameterDataSource;
 
   @ViewChild(MatPaginator)
-  paginator: MatPaginator;
+  paginator?: MatPaginator;
   @ViewChild(MatSort)
-  sort: MatSort;
+  sort?: MatSort;
   @ViewChild('inputFilter')
-  inputFilter: ElementRef;
+  inputFilter?: ElementRef;
 
-  private  _MedicationRequestDataSource: MedicationRequestDataSource;
+  private  _MedicationRequestDataSource?: MedicationRequestDataSource;
   private _medicationRequestArray = new Array<MedicationRequest>();
   private _medicationArray = new Array<Medication>();
   private _ucdArray = new Array<ParametersParameter>();
 
-  private _selectedMedicationRequest: MedicationRequest;
-  private _selectedMedication: Medication;
+  private _selectedMedicationRequest?: MedicationRequest;
+  private _selectedMedication?: Medication;
 
-  private  _patient: Patient;
+  private  _patient?: Patient;
 
   private _needBanner$ = new BehaviorSubject<boolean>(false);
-  private  _withLivret: boolean;
+  private  _withLivret?: boolean;
 
   medicationDataSource = new MatTableDataSource<TableElement<Medication>>([]);
   displayedColumns: Array<string> = ['position', 'name'];
@@ -104,21 +104,21 @@ export class DispenseComponent extends SmartComponent implements OnDestroy, Afte
   public get ucdArray(): Array<ParametersParameter> {
     return this._ucdArray;
   }
-  public get patient(): Patient{
+  public get patient(): Patient | undefined {
     return this._patient;
   }
 
-  public get withLivret(): boolean{
+  public get withLivret(): boolean | undefined {
     return this._withLivret;
   }
-  public  set withLivret(val){
+  public set withLivret(val){
     this._withLivret = val;
   }
-  public get user(): Practitioner{
+  public get user(): Practitioner | undefined {
     return this._user;
   }
 
-  public  get selectedMedication(): Medication
+  public  get selectedMedication(): Medication | undefined
   {
     return this._selectedMedication;
   }
@@ -159,9 +159,8 @@ export class DispenseComponent extends SmartComponent implements OnDestroy, Afte
     return labelComposed;
     }
 
-  displayMedicationRequest(medicationRequest: MedicationRequest): string | null {
-    if (medicationRequest == null) { return null; }
-    return this._labelProviderFactory.getProvider(medicationRequest).getText(medicationRequest);
+  displayMedicationRequest(medicationRequest: MedicationRequest): string | undefined {
+    return this._labelProviderFactory.getProvider(medicationRequest)?.getText(medicationRequest);
   }
 
   ngAfterViewInit(): void {

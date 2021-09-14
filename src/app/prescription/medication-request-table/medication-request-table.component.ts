@@ -29,10 +29,10 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   private readonly _displayedColumns: Array<string>;
 
   @ViewChild(MatPaginator)
-  paginator: MatPaginator;
+  paginator?: MatPaginator;
 
   @ViewChild(MatSort)
-  sort: MatSort;
+  sort?: MatSort;
 
   constructor(private _labelProviderFactory: FhirLabelProviderFactory,
               private _prescriptionState: PrescriptionStateService,
@@ -69,16 +69,34 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   public ngAfterViewInit(): void {
     this._medicationRequestDataSource.sortingDataAccessor = (item: TableElement<MedicationRequest>, property: string) => {
       switch (property) {
-        case 'name': return this._labelProviderFactory.getProvider(item.resource).getText(item.resource);
-        default: return item[property];
+        case 'name':
+          const provider = this._labelProviderFactory.getProvider(item.resource);
+          if (provider) {
+            return provider.getText(item.resource);
+          }
+          break;
+        default:
+          // @ts-ignore
+          return item[property];
       }
     };
-    this._medicationRequestDataSource.sort = this.sort;
-    this._medicationRequestDataSource.paginator = this.paginator;
+    if (this.sort) {
+      this._medicationRequestDataSource.sort = this.sort;
+    }
+
+    if (this.paginator) {
+      this._medicationRequestDataSource.paginator = this.paginator;
+    }
+
     this._medicationRequestDataSource.filterPredicate = (data: TableElement<MedicationRequest>, filterValue: string) => {
-      return this._labelProviderFactory.getProvider(data.resource).getText(data.resource)
-        .trim()
-        .toUpperCase().indexOf(filterValue.trim().toUpperCase()) >= 0;
+      const provider = this._labelProviderFactory.getProvider(data.resource);
+      if (provider) {
+        const text = provider.getText(data.resource);
+        if (text) {
+          return text.trim().toUpperCase().indexOf(filterValue.trim().toUpperCase()) >= 0;
+        }
+      }
+      return false;
     };
   }
 
@@ -88,8 +106,13 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
       resource: medicationRequest
     });
     this._medicationRequestDataSource._updateChangeSubscription();
-    this._medicationRequestDataSource.sort = this.sort;
-    this._medicationRequestDataSource.paginator = this.paginator;
+    if (this.sort) {
+      this._medicationRequestDataSource.sort = this.sort;
+    }
+
+    if (this.paginator) {
+      this._medicationRequestDataSource.paginator = this.paginator;
+    }
   }
 
   public onDeleteMedicationRequest(): void {
@@ -110,8 +133,14 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
       value.position = index + 1;
     });
     this._medicationRequestDataSource._updateChangeSubscription();
-    this._medicationRequestDataSource.sort = this.sort;
-    this._medicationRequestDataSource.paginator = this.paginator;
+
+    if (this.sort) {
+      this._medicationRequestDataSource.sort = this.sort;
+    }
+
+    if (this.paginator) {
+      this._medicationRequestDataSource.paginator = this.paginator;
+    }
     this._selection.clear();
   }
 
@@ -123,7 +152,10 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
       delete resource.medicationCodeableConcept;
       const authoredOn = new Date();
       resource.authoredOn = authoredOn.toISOString();
-      observables.push(this._dataSource.resourceSave(resource));
+      const observable = this._dataSource.resourceSave(resource);
+      if (observable) {
+        observables.push(observable);
+      }
     });
     forkJoin(observables)
       .subscribe({
@@ -131,8 +163,14 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
           console.log('saved', values);
           this._medicationRequestDataSource.data.length = 0;
           this._medicationRequestDataSource._updateChangeSubscription();
-          this._medicationRequestDataSource.sort = this.sort;
-          this._medicationRequestDataSource.paginator = this.paginator;
+
+          if (this.sort) {
+            this._medicationRequestDataSource.sort = this.sort;
+          }
+
+          if (this.paginator) {
+            this._medicationRequestDataSource.paginator = this.paginator;
+          }
           this._selection.clear();
         },
         error: err => console.error('error', err)

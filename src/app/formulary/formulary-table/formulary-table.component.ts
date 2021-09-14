@@ -29,20 +29,20 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
 
   private readonly _displayedColumns: Array<string>;
 
-  private _composition: Composition;
-
   private readonly _unsubscribeTrigger$: Subject<void>;
 
   private readonly _tableDataSource: MedicationKnowledgeDataSource;
 
+  private _composition?: Composition;
+
   @ViewChild(MatPaginator)
-  paginator: MatPaginator;
+  paginator?: MatPaginator;
 
   @ViewChild(MatSort)
-  sort: MatSort;
+  sort?: MatSort;
 
   @ViewChild('inputFilter')
-  inputFilter: ElementRef;
+  inputFilter?: ElementRef;
 
   constructor(private _formularyState: FormularyStateService,
               private _dataSource: FhirDataSourceService,
@@ -65,7 +65,7 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
     return this._displayedColumns;
   }
 
-  public get composition(): Composition {
+  public get composition(): Composition | undefined {
     return this._composition;
   }
 
@@ -77,46 +77,64 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
 
           const values = new Set<id>();
           const parser = new ReferenceParser();
-          for (const reference of composition.section[0].entry) {
-            parser.parse(reference.reference);
-            values.add(parser.id);
+          if (composition.section && composition.section[0].entry) {
+            composition.section[0].entry.forEach(reference => {
+              if (reference.reference) {
+                parser.parse(reference.reference);
+                if (parser.id) {
+                  values.add(parser.id);
+                }
+              }
+            });
           }
           this._selection.select(...Array.from(values));
           this._tableDataSource.loadPage();
 
-          fromEvent(
-            this.inputFilter.nativeElement, 'keyup'
-          )
-            .pipe(
-              takeUntil(this._unsubscribeTrigger$),
-              debounceTime(500),
-              distinctUntilChanged(),
-              tap(() => {
-                this.paginator.pageIndex = 0;
-                this.loadPage();
-              })
+          if (this.inputFilter) {
+            fromEvent(
+              this.inputFilter.nativeElement, 'keyup'
             )
-            .subscribe({
-              error: err => console.error('error', err)
-            });
+              .pipe(
+                takeUntil(this._unsubscribeTrigger$),
+                debounceTime(500),
+                distinctUntilChanged(),
+                tap(() => {
+                  if (this.paginator) {
+                    this.paginator.pageIndex = 0;
+                  }
+                  this.loadPage();
+                })
+              )
+              .subscribe({
+                error: err => console.error('error', err)
+              });
+          }
 
-          this.sort.sortChange
-            .pipe(
-              takeUntil(this._unsubscribeTrigger$)
-            )
-            .subscribe({
-              next: () => this.paginator.pageIndex = 0,
-              error: err => console.error('error', err)
-            });
+          if (this.sort) {
+            this.sort.sortChange
+              .pipe(
+                takeUntil(this._unsubscribeTrigger$)
+              )
+              .subscribe({
+                next: () => {
+                  if (this.paginator) {
+                    this.paginator.pageIndex = 0;
+                  }
+                },
+                error: err => console.error('error', err)
+              });
+          }
 
-          merge(this.sort.sortChange, this.paginator.page)
-            .pipe(
-              takeUntil(this._unsubscribeTrigger$),
-              tap(() => this.loadPage())
-            )
-            .subscribe({
-              error: err => console.error('error', err)
-            });
+          if (this.sort && this.paginator) {
+            merge(this.sort.sortChange, this.paginator.page)
+              .pipe(
+                takeUntil(this._unsubscribeTrigger$),
+                tap(() => this.loadPage())
+              )
+              .subscribe({
+                error: err => console.error('error', err)
+              });
+          }
         },
         error: err => console.error('error', err)
       });
@@ -137,18 +155,22 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
         .build()
       )
     );
-    this._cioDcSource.readCompositionMedicationKnowledge(this._composition.id)
-      .pipe(
-        map((composition: Composition) => {
-          composition.section[0].entry = medicationKnowledgeReferences;
-          return composition;
-        }),
-        switchMap((composition: Composition) => this._cioDcSource.putCompositionMedicationKnowledge(composition))
-      )
-      .subscribe({
-        next: value => console.log(value),
-        error: err => console.error(err)
-      });
+    if (this._composition?.id) {
+      this._cioDcSource.readCompositionMedicationKnowledge(this._composition.id)
+        .pipe(
+          map((composition: Composition) => {
+            if (composition.section && composition.section[0].entry) {
+              composition.section[0].entry = medicationKnowledgeReferences;
+            }
+            return composition;
+          }),
+          switchMap((composition: Composition) => this._cioDcSource.putCompositionMedicationKnowledge(composition))
+        )
+        .subscribe({
+          next: value => console.log(value),
+          error: err => console.error(err)
+        });
+    }
   }
 
   /** Whether the number of selected elements matches the total number of rows. */
@@ -163,7 +185,11 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
   public masterToggle(): void {
     this.isAllSelected() ?
       this._selection.clear() : this._tableDataSource.content.forEach(
-        row => this._selection.select(row?.resource.id)
+        (row: TableElement<MedicationKnowledge>) => {
+          if (row.resource.id) {
+            this._selection.select(row?.resource.id);
+          }
+        }
       );
   }
 
@@ -172,34 +198,45 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
     if (!row) {
       return `${this.isAllSelected() ? 'select' : 'deselect'} all`;
     }
-    return `${this._selection.isSelected(row.resource.id) ? 'deselect' : 'select'} row ${row.position + 1}`;
+    else if (row.resource.id) {
+      return `${this._selection.isSelected(row.resource.id) ? 'deselect' : 'select'} row ${row.position + 1}`;
+    }
+    return '';
   }
 
   private loadPage(): void {
-    this._tableDataSource.loadPage(
-      this.inputFilter.nativeElement.value,
-      this.sort.active,
-      this.sort.direction,
-      this.paginator.pageIndex,
-      this.paginator.pageSize
-    );
+    if (this.inputFilter && this.sort && this.paginator) {
+      this._tableDataSource.loadPage(
+        this.inputFilter.nativeElement.value,
+        this.sort.active,
+        this.sort.direction,
+        this.paginator.pageIndex,
+        this.paginator.pageSize
+      );
+    }
   }
 }
 
 export class MedicationKnowledgeDataSource implements DataSource<TableElement<MedicationKnowledge>> {
 
-  private _entry$ = new BehaviorSubject<TableElement<MedicationKnowledge>[]>([]);
+  private _entry$: BehaviorSubject<TableElement<MedicationKnowledge>[]>;
 
-  private _loading$ = new BehaviorSubject<boolean>(false);
+  private _loading$: BehaviorSubject<boolean>;
 
-  private _unsubscribeTrigger$ = new Subject<void>();
+  private _unsubscribeTrigger$: Subject<void>;
 
   private _length: number;
 
   constructor(private _cioDcSource: PhastCioDcService) {
+    this._entry$ = new BehaviorSubject<TableElement<MedicationKnowledge>[]>([]);
+    this._loading$ = new BehaviorSubject<boolean>(false);
+    this._unsubscribeTrigger$ = new Subject<void>();
+    this._length = 0;
   }
 
-  public loading$ = this._loading$.asObservable();
+  public get loading$(): Observable<boolean> {
+    return this._loading$.asObservable();
+  }
 
   public get content(): TableElement<MedicationKnowledge>[] {
     return this._entry$.value;
@@ -241,16 +278,24 @@ export class MedicationKnowledgeDataSource implements DataSource<TableElement<Me
       )
       .subscribe({
         next: bundle => {
-          this._length = bundle.total;
+          if (bundle.total) {
+            this._length = bundle.total;
+          }
+          else {
+            this._length = 0;
+          }
+
           const offset = (pageIndex && pageSize) ? pageIndex * pageSize : 0;
           const tableElements = new Array<TableElement<MedicationKnowledge>>();
-          bundle.entry.forEach((value, index) => {
-            const element = {
-              position: index + offset + 1,
-              resource: value.resource as MedicationKnowledge
-            } as TableElement<MedicationKnowledge>;
-            tableElements.push(element);
-          });
+          if (bundle.entry) {
+            bundle.entry.forEach((value, index) => {
+              const element = {
+                position: index + offset + 1,
+                resource: value.resource as MedicationKnowledge
+              } as TableElement<MedicationKnowledge>;
+              tableElements.push(element);
+            });
+          }
           this._entry$.next(tableElements);
           this._loading$.next(false);
         },

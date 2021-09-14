@@ -1,6 +1,8 @@
-import * as lodash from 'lodash';
 import { Injectable } from '@angular/core';
 import {BehaviorSubject, forkJoin, Observable} from 'rxjs';
+
+import * as lodash from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
 
 import { StateService } from '../common/cds-access/services/state.service';
 import { FhirCdsHooksService } from '../common/fhir/cds-hooks/services/fhir.cdshooks.service';
@@ -35,7 +37,7 @@ export class PrescriptionStateService {
     return this._medicationRequest$.asObservable();
   }
 
-  public set medicationRequestMode(mode) {
+  public set medicationRequestMode(mode: string) {
     this._medicationRequestMode$.next(mode);
   }
 
@@ -59,93 +61,98 @@ export class PrescriptionStateService {
 
   public callCdsHooks(medicationRequest: MedicationRequest): void {
     const lMedicationRequest = lodash.cloneDeep(medicationRequest);
-    // TODO to can filtered by medication request code into CQL
-    const medication = lMedicationRequest.contained[0] as Medication;
-    if (medication.code != null) {
-      lMedicationRequest.medicationCodeableConcept = medication.code;
+    if (lMedicationRequest && lMedicationRequest.contained) {
+      // TODO to can filtered by medication request code into CQL
+      const medication = lMedicationRequest.contained[0] as Medication;
+      if (medication.code) {
+        lMedicationRequest.medicationCodeableConcept = medication.code;
 
-      this._cdsHooksService.getServices()
-        .subscribe(
-        {
-          next: services => {
-            const service = services.services[0];
-            let practitioner: Practitioner = null;
-            let patient: Patient = null;
-            if (this._stateService.state) {
-              const state = this._stateService.state as StateModel;
-              if (state.practitioner) {
-                practitioner = state.practitioner;
-              }
-              if (state.patient) {
-                patient = state.patient;
-              }
-            }
-            let hook: Hook;
-            if (service.hook === 'order-select') {
-              hook = new OrderSelectHook();
-              (hook as OrderSelectHook).context = new OrderSelectContext();
-              if (practitioner) {
-                (hook as OrderSelectHook).context.userId = practitioner.id;
-              }
-              if (patient) {
-                (hook as OrderSelectHook).context.patientId = patient.id;
-              }
-              (hook as OrderSelectHook).context.selections = [lMedicationRequest.id];
-              (hook as OrderSelectHook).context.draftOrders = {
-                resourceType: 'Bundle',
-                type: 'collection',
-                entry: [{
-                  resource: lMedicationRequest
-                }],
-              };
-            }
-            else {
-              return;
-            }
+        this._cdsHooksService.getServices()
+          .subscribe(
+            {
+              next: services => {
+                const service = services.services[0];
+                const prefetch = new Map<string, Resource>();
+                let practitioner: Practitioner | undefined;
+                let patient: Patient | undefined;
+                if (this._stateService.state) {
+                  const state = this._stateService.state as StateModel;
+                  if (state.practitioner) {
+                    practitioner = state.practitioner;
+                  }
+                  if (state.patient) {
+                    patient = state.patient;
+                    prefetch.set('item1', patient);
+                  }
+                }
 
-            hook.prefetch = {
-              item1: patient,
-              item2: lMedicationRequest
-            };
-            const observables: Array<Observable<object>> = [];
-            for (const item of Object.keys(service.prefetch)) {
-              if ('Patient?_id={{context.patientId}}' !== service.prefetch[item]) {
-                observables.push(this.buildPrefetch(patient, service.prefetch[item]));
-              }
-            }
-            forkJoin(observables)
-              .subscribe({
-                next: values => {
-                  let itemCount = 2;
-                  for (const value of values) {
-                    const bundle = value as Bundle;
-                    if (bundle.total > 0) {
-                      hook.prefetch['item' + ++itemCount] = value;
+                let hook: Hook;
+                const hookInstance = uuidv4();
+
+                if (service.hook === 'order-select') {
+                  if (practitioner?.id && patient?.id && lMedicationRequest?.id) {
+                    const context = new OrderSelectContext(practitioner.id, patient.id, [lMedicationRequest.id], {
+                      resourceType: 'Bundle',
+                      type: 'collection',
+                      entry: [{
+                        resource: lMedicationRequest
+                      }],
+                    });
+                    prefetch.set('item2', lMedicationRequest);
+                    hook = new OrderSelectHook(hookInstance, prefetch, context);
+                  }
+                }
+                else {
+                  return;
+                }
+
+                const observables: Array<Observable<object>> = [];
+                service.prefetch?.forEach(item => {
+                  if ('Patient?_id={{context.patientId}}' !== item) {
+                    const observable = this.buildPrefetch(patient, item);
+                    if (observable) {
+                      observables.push(observable);
                     }
                   }
+                });
 
-                  this._cdsHooksService.postHook(service, hook)
-                    .subscribe({
-                      next: (cdsCards) => {
-                        const cards = Array<CardReadable>();
-                        for (const card of cdsCards.cards) {
-                          cards.push(new CardReadable(card));
+                forkJoin(observables)
+                  .subscribe({
+                    next: values => {
+                      let itemCount = 2;
+                      for (const value of values) {
+                        const bundle = value as Bundle;
+                        if (bundle.total && bundle.total > 0) {
+                          hook.prefetch.set('item' + ++itemCount, bundle);
                         }
-                        this._cards$.next(cards);
-                      },
-                      error: err => console.error('error', err)
-                    });
-                },
-                error: err => console.error('error', err),
-              });
-          },
-          error: err => console.error('error', err)
-        }
-      );
+                      }
+
+                      this._cdsHooksService.postHook(service, hook)
+                        .subscribe({
+                          next: (cdsCards) => {
+                            const cards = Array<CardReadable>();
+                            for (const card of cdsCards.cards) {
+                              cards.push(new CardReadable(card));
+                            }
+                            this._cards$.next(cards);
+                          },
+                          error: err => console.error('error', err)
+                        });
+                    },
+                    error: err => console.error('error', err),
+                  });
+              },
+              error: err => console.error('error', err)
+            }
+          );
+      }
     }
   }
 
-  private buildPrefetch(patient: Patient, query: string): Observable<OperationOutcome | Resource> {
-    return this._dataSource.resourceSearch(query.replace('{{context.patientId}}', patient.id));
+  private buildPrefetch(patient: Patient | undefined | null, query: string): Observable<OperationOutcome | Resource> | undefined {
+    if (patient?.id) {
+      return this._dataSource.resourceSearch(query.replace('{{context.patientId}}', patient.id));
+    }
+    return undefined;
   }
 }

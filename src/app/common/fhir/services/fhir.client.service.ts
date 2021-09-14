@@ -72,7 +72,9 @@ export class FhirClientService {
     if (params.resourceType) { finalUrl.push(`${params.resourceType}/`); }
     if (params.id) { finalUrl.push(`${params.id}/`); }
 
-    finalUrl.push(`${params.name.startsWith('$') ? params.name : `$${params.name}`}`);
+    if (params.name) {
+      finalUrl.push(`${params.name.startsWith('$') ? params.name : `$${params.name}`}`);
+    }
 
     if (params.method === 'post') {
       return this._http.post<T>(baseUrl + finalUrl.join(''), params.input, options);
@@ -90,13 +92,13 @@ export class FhirClientService {
     return this._http.request<OperationOutcome | Resource>(method, baseUrl, options);
   }
 
-  public create<T>(baseUrl: string, params: Parameters, options: Options): Observable<T> {
+  public create<T>(baseUrl: string, params: Parameters, options?: Options): Observable<T> {
     return this._http.post<T>(`${baseUrl}/${params.resourceType}`, params.input, options);
   }
 
   // delete
 
-  public read<T>(baseUrl: string, params: Parameters, options: Options): Observable<T> {
+  public read<T>(baseUrl: string, params: Parameters, options?: Options): Observable<T> {
     return this._http.get<T>(`${baseUrl}/${params.resourceType}/${params.id}`, options);
   }
 
@@ -113,7 +115,7 @@ export class FhirClientService {
   // prevPage
   // history
 
-  public resourceSearch<T>(baseUrl: string, params: SearchParameters, options: Options): Observable<T> {
+  public resourceSearch<T>(baseUrl: string, params: SearchParameters, options?: Options): Observable<T> {
     let searchPath = `${baseUrl}/${params.resourceType}`;
     const query = queryString.stringify(params.searchParams);
     if (query) {

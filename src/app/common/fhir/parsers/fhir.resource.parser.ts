@@ -2,23 +2,24 @@ import {id, uri} from 'phast-fhir-ts';
 
 export class ReferenceParser {
 
-  private _id: id;
+  private _id?: id;
 
-  private _resourceType: string;
+  private _resourceType?: string;
 
-  private _baseUrl: uri;
+  private _baseUrl?: uri;
 
-  constructor() {}
+  constructor() {
+  }
 
-  public get baseUrl(): uri {
+  public get baseUrl(): uri | undefined {
     return this._baseUrl;
   }
 
-  public get resourceType(): string {
+  public get resourceType(): string | undefined {
     return this._resourceType;
   }
 
-  public get id(): id {
+  public get id(): id | undefined {
     return this._id;
   }
 

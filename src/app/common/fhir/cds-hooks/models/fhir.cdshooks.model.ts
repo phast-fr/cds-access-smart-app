@@ -10,7 +10,7 @@ export interface Service {
   name: string;
   title?: string;
   description?: string;
-  prefetch?: object;
+  prefetch?: Array<string>;
 }
 
 export class Hook {
@@ -18,7 +18,13 @@ export class Hook {
   hookInstance: string;
   fhirServer?: string;
   fhirAuthorization?: Authorization;
-  prefetch: object;
+  prefetch: Map<string, Resource>;
+
+  constructor(hook: string, hookInstance: string, prefetch: Map<string, Resource>) {
+    this.hook = hook;
+    this.hookInstance = hookInstance;
+    this.prefetch = prefetch;
+  }
 }
 
 export class Authorization {
@@ -27,12 +33,22 @@ export class Authorization {
   'expires_in': number;
   scope: string;
   subject: string;
+
+  constructor(scope: string, subject: string) {
+    this.scope = scope;
+    this.subject = subject;
+  }
 }
 
 export class HookContext {
   userId: string;
   patientId: string;
   encounterId?: string;
+
+  constructor(userId: string, patientId: string) {
+    this.userId = userId;
+    this.patientId = patientId;
+  }
 }
 
 /**
@@ -44,17 +60,31 @@ export class HookContext {
  * publicationStatus	snapshot
  */
 export class OrderSelectHook extends Hook {
-  hook: 'order-select';
   context: OrderSelectContext;
+
+  constructor(hookInstance: string, prefetch: Map<string, Resource>, context: OrderSelectContext) {
+    super('order-select', hookInstance, prefetch);
+    this.context = context;
+  }
 }
 
 export class OrderSelectContext extends HookContext {
   selections: Array<string>;
   draftOrders: Bundle;
+
+  constructor(userId: string, patientId: string, selections: Array<string>, draftOrders: Bundle) {
+    super(userId, patientId);
+    this.selections = selections;
+    this.draftOrders = draftOrders;
+  }
 }
 
 export class CdsCards {
   cards: Array<Card>;
+
+  constructor(cards: Array<Card>) {
+    this.cards = cards;
+  }
 }
 
 export class Card {
@@ -67,6 +97,13 @@ export class Card {
   selectionBehavior?: string;
   overrideReasons?: Array<Coding>;
   links?: Array<Link>;
+
+  constructor(summary: string, detail: string, indicator: IndicatorCode, source: Source) {
+    this.summary = summary;
+    this.detail = detail;
+    this.indicator = indicator;
+    this.source = source;
+  }
 }
 
 export class Source {
@@ -74,6 +111,10 @@ export class Source {
   url?: URL;
   icon?: URL;
   topic?: Coding;
+
+  constructor(label: string) {
+    this.label = label;
+  }
 }
 
 export class Suggestion {
@@ -81,6 +122,11 @@ export class Suggestion {
   uuid?: string;
   isRecommended?: boolean;
   actions: Array<Action>;
+
+  constructor(label: string, actions: Array<Action>) {
+    this.label = label;
+    this.actions = actions;
+  }
 }
 
 export class Link {
@@ -88,12 +134,24 @@ export class Link {
   url: URL;
   type: string;
   appContext?: string;
+
+  constructor(label: string, url: URL, type: string) {
+    this.label = label;
+    this.url = url;
+    this.type = type;
+  }
 }
 
 export class Action {
   type: string;
   description: string;
   resource: Resource;
+
+  constructor(type: string, description: string, resource: Resource) {
+    this.type = type;
+    this.description = description;
+    this.resource = resource;
+  }
 }
 
 enum IndicatorCode {

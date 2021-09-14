@@ -3,8 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { retry } from 'rxjs/operators';
 
-import { v4 as uuidv4 } from 'uuid';
-
 import { environment } from '../../../../../environments/environment';
 import { CdsCards, Hook, Service, Services } from '../models/fhir.cdshooks.model';
 
@@ -31,7 +29,6 @@ export class FhirCdsHooksService {
 
   public postHook(service: Service, hook: Hook): Observable<CdsCards> {
     hook.hook = service.hook;
-    hook.hookInstance = uuidv4();
     // to manage cqf-ruler
     hook.fhirServer = environment.cds_hooks_url + '/fhir';
 

@@ -57,21 +57,21 @@ export class MedicationBuilder {
     } as Medication;
   }
 
-  public code(medicationCode: CodeableConcept): this {
+  public code(medicationCode: CodeableConcept | undefined): this {
     if (medicationCode) {
       this._medication.code = medicationCode;
     }
     return this;
   }
 
-  public form(medicationForm: CodeableConcept): this {
+  public form(medicationForm: CodeableConcept | undefined): this {
     if (medicationForm) {
       this._medication.form = medicationForm;
     }
     return this;
   }
 
-  public ingredient(ingredient: Array<MedicationIngredient>): this {
+  public ingredient(ingredient: Array<MedicationIngredient> | undefined): this {
     if (ingredient) {
       this._medication.ingredient = ingredient;
     }
@@ -130,7 +130,7 @@ export class MedicationIngredientBuilder {
     return this;
   }
 
-  public strength(strength: Ratio): this {
+  public strength(strength: Ratio | undefined): this {
     if (strength) {
       this._medicationIngredient.strength = strength;
     }
@@ -181,11 +181,11 @@ export class DosageBuilder {
   }
 
   public addDoseAndRate(doseAndRate: DosageDoseAndRate): this {
-    if (this._dosage.doseAndRate) {
+    if (this._dosage?.doseAndRate) {
       this._dosage.doseAndRate = new Array<DosageDoseAndRate>(doseAndRate);
     }
     else {
-      this._dosage.doseAndRate.push(doseAndRate);
+      this._dosage.doseAndRate?.push(doseAndRate);
     }
     return this;
   }
@@ -242,9 +242,9 @@ export class ReferenceBuilder {
 
   private readonly _id: id;
 
-  private _resourceType: code;
+  private _resourceType?: code;
 
-  private _baseUrl: uri;
+  private _baseUrl?: uri;
 
   private readonly _reference: Reference;
 
@@ -260,7 +260,7 @@ export class ReferenceBuilder {
     return this;
   }
 
-  public display(referenceDisplay: string): this {
+  public display(referenceDisplay: string | undefined): this {
     if (referenceDisplay) {
       this._reference.display = referenceDisplay;
     }
@@ -355,7 +355,7 @@ export class TimingRepeatBuilder {
   public period(period: decimal): this {
     if (period) {
       this._timingRepeat.period = period;
-      this._timingRepeat.durationUnit = 'h';
+      this._timingRepeat.periodUnit = 'h';
     }
     return this;
   }
@@ -459,28 +459,28 @@ export class QuantityBuilder {
     this._quantity = {} as Quantity;
   }
 
-  public value(quantityValue: number): this {
+  public value(quantityValue: number | undefined): this {
     if (quantityValue) {
       this._quantity.value = quantityValue;
     }
     return this;
   }
 
-  public unit(quantityUnit: string): this {
+  public unit(quantityUnit: string | undefined): this {
     if (quantityUnit) {
       this._quantity.unit = quantityUnit;
     }
     return this;
   }
 
-  public code(quantityCode: code): this {
+  public code(quantityCode: code | undefined): this {
     if (quantityCode) {
       this._quantity.code = quantityCode;
     }
     return this;
   }
 
-  public system(quantitySystem: uri): this {
+  public system(quantitySystem: uri | undefined): this {
     if (quantitySystem) {
       this._quantity.system = quantitySystem;
     }
@@ -507,21 +507,21 @@ export class DurationBuilder {
     return this;
   }
 
-  public unit(durationUnit: string): this {
+  public unit(durationUnit: string | undefined): this {
     if (durationUnit) {
       this._duration.unit = durationUnit;
     }
     return this;
   }
 
-  public code(durationCode: code): this {
+  public code(durationCode: code | undefined): this {
     if (durationCode) {
       this._duration.code = durationCode;
     }
     return this;
   }
 
-  public system(durationSystem: uri): this {
+  public system(durationSystem: uri | undefined): this {
     if (durationSystem) {
       this._duration.system = durationSystem;
     }
@@ -560,7 +560,7 @@ export class CodeableConceptBuilder {
     return this;
   }
 
-  public text(text: string): this {
+  public text(text: string | undefined): this {
     if (text) {
       this._concept.text = text;
     }
@@ -580,21 +580,21 @@ export class CodingBuilder {
     this._coding = {} as Coding;
   }
 
-  public code(codingCode: code): this {
+  public code(codingCode: code | undefined): this {
     if (codingCode) {
       this._coding.code = codingCode;
     }
     return this;
   }
 
-  public system(codingSystem: uri): this {
+  public system(codingSystem: uri | undefined): this {
     if (codingSystem) {
       this._coding.system = codingSystem;
     }
     return this;
   }
 
-  public display(codingDisplay: string): this {
+  public display(codingDisplay: string | undefined): this {
     if (codingDisplay) {
       this._coding.display = codingDisplay;
     }

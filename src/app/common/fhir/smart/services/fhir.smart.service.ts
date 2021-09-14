@@ -17,23 +17,23 @@ import {environment} from '../../../../../environments/environment';
 @Injectable()
 export class FhirSmartService {
 
-  private readonly _baseUrl: BehaviorSubject<string | boolean>;
+  private readonly _baseUrl$: BehaviorSubject<string | boolean>;
 
-  private readonly _accessToken: BehaviorSubject<string | boolean>;
+  private readonly _accessToken$: BehaviorSubject<string | boolean>;
 
   constructor(private _stateService: StateService,
               private _fhirClient: FhirClientService,
               private _http: HttpClient) {
-    this._baseUrl = new BehaviorSubject<string | boolean>(false);
-    this._accessToken = new BehaviorSubject<string | boolean>(false);
+    this._baseUrl$ = new BehaviorSubject<string | boolean>(false);
+    this._accessToken$ = new BehaviorSubject<string | boolean>(false);
   }
 
   public get baseUrl$(): Observable<string | boolean> {
-    return this._baseUrl.asObservable();
+    return this._baseUrl$.asObservable();
   }
 
   public get accessToken$(): Observable<string | boolean> {
-    return this._accessToken.asObservable();
+    return this._accessToken$.asObservable();
   }
 
   public launch(context: string, iss: string, launch: string, redirectUri?: string): void {
@@ -42,7 +42,7 @@ export class FhirSmartService {
     if (redirectUri) {
       sessionStorage.setItem('redirect_uri', redirectUri);
     }
-    this.baseUrl = iss;
+    this.setBaseUrl(iss);
 
     const state = Utils.randomString(16);
 
@@ -57,12 +57,15 @@ export class FhirSmartService {
         next: metadata => {
           const params = new HttpParams()
             .set('response_type', 'code')
-            .set('client_id', environment.client_id[context])
-            .set('redirect_uri', redirectUri)
+            .set('client_id', environment.client_id.get(context) as string)
             .set('launch', launch)
-            .set('scope', environment.scope[context])
+            .set('scope', environment.scope.get(context) as string)
             .set('state', state)
             .set('aud', iss);
+
+          if (redirectUri) {
+            params.set('redirect_uri', redirectUri);
+          }
 
           window.location.href = metadata.authorizeUrl.href + '?' + params.toString();
         },
@@ -77,26 +80,33 @@ export class FhirSmartService {
         .set('Content-type', 'application/fhir+json')
     } as Options;
 
-    this._fhirClient.smartAuthMetadata(this.baseUrl, options)
-      .subscribe({
-        next: metadata => {
-          const context = sessionStorage.getItem('context');
-          const redirectUri = sessionStorage.getItem('redirect_uri');
-          const body = new HttpParams()
-            .set('grant_type', 'authorization_code')
-            .set('redirect_uri', redirectUri)
-            .set('client_id', environment.client_id[context])
-            .set('code', code)
-            .set('state', state);
+    const baseUrl = this.getBaseUrl();
+    if (baseUrl) {
+      this._fhirClient.smartAuthMetadata(baseUrl, options)
+        .subscribe({
+          next: metadata => {
+            const context = sessionStorage.getItem('context');
+            if (context) {
+              const body = new HttpParams()
+                .set('grant_type', 'authorization_code')
+                .set('client_id', environment.client_id.get(context) as string)
+                .set('code', code)
+                .set('state', state);
 
-          this.doPostToken(metadata.tokenUrl.href, body.toString());
-        },
-        error: err => console.error('error', err)
-      });
+              const redirectUri = sessionStorage.getItem('redirect_uri');
+              if (redirectUri) {
+                body.set('redirect_uri', redirectUri);
+              }
+
+              this.doPostToken(metadata.tokenUrl.href, body.toString());
+            }
+          },
+          error: err => console.error('error', err)
+        });
+    }
   }
 
   public refreshToken(): void {
-    const context = sessionStorage.getItem('context');
     const refreshToken = sessionStorage.getItem('refresh_token');
     if (refreshToken == null || refreshToken === '') { return; }
     const options = {
@@ -105,27 +115,35 @@ export class FhirSmartService {
         .set('Content-type', 'application/fhir+json')
     } as Options;
 
-    this._fhirClient.smartAuthMetadata(this.baseUrl, options)
-      .subscribe({
-        next: metadata => {
-          const body = new HttpParams()
-            .set('grant_type', 'refresh_token')
-            .set('refresh_token', refreshToken)
-            .set('scope', environment.scope[context]);
+    const baseUrl = this.getBaseUrl();
+    if (baseUrl) {
+      this._fhirClient.smartAuthMetadata(baseUrl, options)
+        .subscribe({
+          next: metadata => {
+            const context = sessionStorage.getItem('context');
+            if (context) {
+              const body = new HttpParams()
+                .set('grant_type', 'refresh_token')
+                .set('refresh_token', refreshToken)
+                .set('scope', environment.scope.get(context) as string);
 
-          this.doPostToken(metadata.tokenUrl.href, body.toString());
-        },
-        error: err => console.error('error', err)
-      });
+              this.doPostToken(metadata.tokenUrl.href, body.toString());
+            }
+          },
+          error: err => console.error('error', err)
+        });
+    }
   }
 
   public saveToken(token: SmartToken): void {
-    this.accessToken = token.access_token;
+    this.setAccessToken(token.access_token);
     sessionStorage.setItem('expire_date', String(new Date().getTime() + (1000 * token.expires_in)));
     sessionStorage.setItem('id_token', token.id_token);
     sessionStorage.setItem('patient_id', token.patient);
     sessionStorage.setItem('need_patient_banner', String(token.need_patient_banner));
-    sessionStorage.setItem('intent', token?.intent);
+    if (token.intent) {
+      sessionStorage.setItem('intent', token.intent);
+    }
 
     const user = this.getUser<FhirSmartUserModel>(token.id_token);
     console.log('smartUser', user);
@@ -139,77 +157,15 @@ export class FhirSmartService {
       headers: new HttpHeaders()
         .set('Accept', 'application/fhir+json,application/json')
         .set('Content-type', 'application/fhir+json')
-        .set('Authorization', `Bearer ${this.accessToken}`)
+        .set('Authorization', `Bearer ${this.getAccessToken()}`)
     } as Options;
 
-    if (token.patient) {
-      this._fhirClient.read<Patient>(this.baseUrl, {
-        resourceType: 'Patient',
-        id: token.patient
-      }, options)
-        .pipe(
-          filter(patient => FhirTypeGuard.isPatient(patient)),
-          map(patient => patient as Patient)
-        )
-        .subscribe({
-          next: patient => {
-            state.patient = patient;
-            if (state.practitioner) {
-              this._stateService.emitState(state);
-            }
-          },
-          error: err => console.error('error', err)
-        });
-    }
-
-    this._fhirClient.read(this.baseUrl, {
-        resourceType: 'Practitioner',
-        id: state.userId()
-      }, options)
-      .pipe(
-        filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
-        map(practitioner => practitioner as Practitioner)
-      )
-      .subscribe({
-        next: practitioner => {
-          state.practitioner = practitioner;
-          if (token.patient && state.patient) {
-            this._stateService.emitState(state);
-          }
-          else if (!token.patient) {
-            this._stateService.emitState(state);
-          }
-        },
-        error: err => console.error('error', err)
-      });
-  }
-
-  public loadToken(): void {
-    if (this.isTokenExpired()) {
-      this.refreshToken();
-    }
-    else {
-      const idPatient = sessionStorage.getItem('patient_id');
-      const idToken = sessionStorage.getItem('id_token');
-      const needPatientBanner = sessionStorage.getItem('need_patient_banner');
-      const intent = sessionStorage.getItem('intent');
-
-      const state = new StateModel();
-      state.user = this.getUser<FhirSmartUserModel>(idToken);
-      state.needPatientBanner = needPatientBanner === 'true';
-      state.intent = intent;
-
-      const options = {
-        headers: new HttpHeaders()
-          .set('Accept', 'application/fhir+json,application/json')
-          .set('Content-type', 'application/fhir+json')
-          .set('Authorization', `Bearer ${this.accessToken}`)
-      } as Options;
-
-      if (idPatient !== 'undefined') {
-        this._fhirClient.read(this.baseUrl, {
+    const baseUrl = this.getBaseUrl();
+    if (baseUrl) {
+      if (baseUrl && token.patient) {
+        this._fhirClient.read<Patient>(baseUrl, {
           resourceType: 'Patient',
-          id: idPatient
+          id: token.patient
         }, options)
           .pipe(
             filter(patient => FhirTypeGuard.isPatient(patient)),
@@ -226,7 +182,7 @@ export class FhirSmartService {
           });
       }
 
-      this._fhirClient.read(this.baseUrl, {
+      this._fhirClient.read(baseUrl, {
         resourceType: 'Practitioner',
         id: state.userId()
       }, options)
@@ -237,10 +193,10 @@ export class FhirSmartService {
         .subscribe({
           next: practitioner => {
             state.practitioner = practitioner;
-            if (idPatient !== 'undefined' && state.patient) {
+            if (token.patient && state.patient) {
               this._stateService.emitState(state);
             }
-            else if (idPatient === 'undefined') {
+            else if (!token.patient) {
               this._stateService.emitState(state);
             }
           },
@@ -249,9 +205,84 @@ export class FhirSmartService {
     }
   }
 
+  public loadToken(): void {
+    if (this.isTokenExpired()) {
+      this.refreshToken();
+    }
+    else {
+      const idPatient = sessionStorage.getItem('patient_id');
+      const idToken = sessionStorage.getItem('id_token');
+      const needPatientBanner = sessionStorage.getItem('need_patient_banner');
+      const intent = sessionStorage.getItem('intent');
+
+      const state = new StateModel();
+      if (idToken) {
+        state.user = this.getUser<FhirSmartUserModel>(idToken);
+      }
+      state.needPatientBanner = needPatientBanner === 'true';
+      if (intent) {
+        state.intent = intent;
+      }
+
+      const options = {
+        headers: new HttpHeaders()
+          .set('Accept', 'application/fhir+json,application/json')
+          .set('Content-type', 'application/fhir+json')
+          .set('Authorization', `Bearer ${this.getAccessToken()}`)
+      } as Options;
+
+      const baseUrl = this.getBaseUrl();
+      if (baseUrl) {
+        if (idPatient && idPatient !== 'undefined') {
+          this._fhirClient.read(baseUrl, {
+            resourceType: 'Patient',
+            id: idPatient
+          }, options)
+            .pipe(
+              filter(patient => FhirTypeGuard.isPatient(patient)),
+              map(patient => patient as Patient)
+            )
+            .subscribe({
+              next: patient => {
+                state.patient = patient;
+                if (state.practitioner) {
+                  this._stateService.emitState(state);
+                }
+              },
+              error: err => console.error('error', err)
+            });
+        }
+
+        this._fhirClient.read(baseUrl, {
+          resourceType: 'Practitioner',
+          id: state.userId()
+        }, options)
+          .pipe(
+            filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
+            map(practitioner => practitioner as Practitioner)
+          )
+          .subscribe({
+            next: practitioner => {
+              state.practitioner = practitioner;
+              if (idPatient !== 'undefined' && state.patient) {
+                this._stateService.emitState(state);
+              }
+              else if (idPatient === 'undefined') {
+                this._stateService.emitState(state);
+              }
+            },
+            error: err => console.error('error', err)
+          });
+      }
+    }
+  }
+
   public isTokenExpired(): boolean {
     const expireDate = sessionStorage.getItem('expire_date');
-    return new Date().getTime() > +expireDate;
+    if (expireDate) {
+      return new Date().getTime() > +expireDate;
+    }
+    return true;
   }
 
   public isTokenExist(): boolean {
@@ -262,34 +293,37 @@ export class FhirSmartService {
     return this.jwtDecode(tokenId) as any;
   }
 
-  private set baseUrl(value: string) {
+  private setBaseUrl(value: string): void {
     sessionStorage.setItem('iss', value);
-    this._baseUrl.next(value);
+    this._baseUrl$.next(value);
   }
 
-  private get baseUrl(): string | undefined  {
-    if (this._baseUrl.value) {
-      return this._baseUrl.value as string;
+  private getBaseUrl(): string | undefined  {
+    if (this._baseUrl$.value) {
+      return this._baseUrl$.value as string;
     }
-    else if (sessionStorage.getItem('iss')) {
-      this._baseUrl.next(sessionStorage.getItem('iss'));
-      return this._baseUrl.value as string;
+
+    const baseUrl = sessionStorage.getItem('iss');
+    if (baseUrl) {
+      this._baseUrl$.next(baseUrl);
+      return this._baseUrl$.value as string;
     }
     return undefined;
   }
 
-  private set accessToken(value: string) {
+  private setAccessToken(value: string): void {
     sessionStorage.setItem('access_token', value);
-    this._accessToken.next(value);
+    this._accessToken$.next(value);
   }
 
-  private get accessToken(): string | undefined {
-    if (this._accessToken.value) {
-      return this._accessToken.value as string;
+  private getAccessToken(): string | undefined {
+    if (this._accessToken$.value) {
+      return this._accessToken$.value as string;
     }
-    else if (sessionStorage.getItem('access_token')) {
-      this._accessToken.next(sessionStorage.getItem('access_token'));
-      return this._accessToken.value as string;
+    const accessToken = sessionStorage.getItem('access_token');
+    if (accessToken) {
+      this._accessToken$.next(accessToken);
+      return this._accessToken$.value as string;
     }
     return undefined;
   }

@@ -13,30 +13,38 @@ import {FhirLabelProviderFactory} from './fhir.label.provider.factory';
 
 export class NamedResourceLabelProvider implements ILabelProvider<Patient | Practitioner> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(namedResource: Patient | Practitioner): string | null {
-    if (namedResource.name.length > 0) {
-      const name = namedResource.name[0];
-      if (name.text) {
-        return name.text;
+  getText(namedResource: Patient | Practitioner | undefined | null): string | undefined {
+    if (namedResource?.name) {
+      if (namedResource.name.length > 0) {
+        const name = namedResource.name[0];
+        if (name?.text) {
+          return name.text;
+        }
+        if (name?.given) {
+          return name.given.join(' ') + ' ' + name.family;
+        }
       }
-      return name.given.join(' ') + ' ' + name.family;
     }
-    return null;
+    return undefined;
   }
 }
 
 export class MedicationKnowledgeLabelProvider implements ILabelProvider<MedicationKnowledge> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(medicationKnowledge: MedicationKnowledge | null): string | null {
-    if (medicationKnowledge.code != null) {
-      const codeableConcept = medicationKnowledge.code;
-      return codeableConcept.text;
+  getText(medicationKnowledge: MedicationKnowledge | undefined | null): string | undefined {
+    if (medicationKnowledge) {
+      if (medicationKnowledge.code) {
+        const codeableConcept = medicationKnowledge.code;
+        return codeableConcept.text;
+      }
     }
-    return null;
+    return undefined;
   }
 }
 
@@ -45,18 +53,21 @@ export class MedicationRequestLabelProvider implements ILabelProvider<Medication
   constructor(private _factory: FhirLabelProviderFactory) {
   }
 
-  getText(medicationRequest: MedicationRequest): string | null {
-    let labelComposed: string;
-    if (medicationRequest.medicationReference != null) {
+  getText(medicationRequest: MedicationRequest | undefined | null): string | undefined {
+    let labelComposed: string | undefined;
+    if (medicationRequest?.medicationReference?.reference) {
       const medicationId = medicationRequest.medicationReference.reference.substring(1);
-      const medicationIndex = medicationRequest.contained.findIndex(
-        (value) => value.id === medicationId);
-      const medication = medicationRequest.contained[medicationIndex] as Medication;
-      labelComposed = this._factory.getProvider(medication).getText(medication);
+      if (medicationRequest.contained) {
+        const medication = medicationRequest.contained.find(value => value.id === medicationId);
+        const labelProvider = this._factory.getProvider(medication);
+        if (labelProvider) {
+          labelComposed = labelProvider.getText(medication);
+        }
+      }
     }
-    if (medicationRequest.dosageInstruction
-      && medicationRequest.dosageInstruction.length > 0
-      && medicationRequest.dosageInstruction[0].route != null) {
+    if (medicationRequest?.dosageInstruction
+      && medicationRequest?.dosageInstruction.length > 0
+      && medicationRequest?.dosageInstruction[0].route != null) {
       labelComposed += ' ' + medicationRequest.dosageInstruction[0].route.text;
     }
     return labelComposed;
@@ -68,7 +79,12 @@ export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
   constructor(private _factory: FhirLabelProviderFactory) {
   }
 
-  getText(medication: Medication): string | null {
+  getText(medication: Medication | undefined | null): string | undefined {
+    if (medication?.code?.text) {
+      return medication.code.text;
+    }
+    return undefined;
+    /*
     let labelComposed: string;
     let separator: string;
     const medicationComposed = new Array<string>();
@@ -122,12 +138,12 @@ export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
     }
 
     return labelComposed;
+    */
   }
 
-  getTerm(medication: Medication, system: string): string | null{
-    let labelComposed: string;
-    labelComposed = this.getText(medication);
-    if (medication.code != null){
+  getTerm(medication: Medication | undefined | null, system: string): string | undefined {
+    let labelComposed = this.getText(medication);
+    if (medication?.code?.coding) {
       const x = medication.code.coding.find(e => e.system === system);
       if (x != null){
         labelComposed += ' (' + x.code + ' - ' + x.display + ')';
@@ -141,48 +157,52 @@ export class CompositionLabelProvider implements ILabelProvider<Composition> {
 
   constructor() {}
 
-  getText(composition: Composition): string | null {
+  getText(composition: Composition | undefined | null): string | undefined {
+    if (!composition) { return undefined; }
     return composition.title;
   }
 }
 
 export class CodeableConceptLabelProvider implements ILabelProvider<CodeableConcept> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(codeableConcept: CodeableConcept): string | null {
-    if (!codeableConcept) { return null; }
+  getText(codeableConcept: CodeableConcept | undefined | null): string | undefined {
+    if (!codeableConcept) { return undefined; }
     return codeableConcept.text;
   }
 }
 
 export class CodingLabelProvider implements ILabelProvider<Coding> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(coding: Coding): string | null {
-    if (!coding) { return null; }
+  getText(coding: Coding | undefined | null): string | undefined {
+    if (!coding) { return undefined; }
     return coding.display;
   }
 }
 
 export class QuantityLabelProvider implements ILabelProvider<Quantity> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(quantity: Quantity): string | null {
-    if (!quantity) { return null; }
-    if (quantity.value == null) { return null; }
-    return quantity.value.toString();
+  getText(quantity: Quantity | undefined | null): string | undefined {
+    if (!quantity) { return undefined; }
+    return quantity.value?.toString();
   }
 }
 
 export class RatioLabelProvider implements ILabelProvider<Ratio> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(ratio: Ratio): string | null {
-    if (!ratio) { return null; }
+  getText(ratio: Ratio | undefined | null): string | undefined {
+    if (!ratio) { return undefined; }
     const labelComposite = new Array<string>();
     if (ratio.numerator != null) {
       if (ratio.numerator.value != null) {
@@ -208,11 +228,12 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
 
 export class ReferenceLabelProvider implements ILabelProvider<Reference> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(reference: Reference): string | null {
-    if (!reference) { return null; }
-    if (reference.display != null) {
+  getText(reference: Reference | undefined | null): string | undefined {
+    if (!reference) { return undefined; }
+    if (reference.display) {
       return reference.display;
     }
     return reference.reference;
@@ -221,18 +242,17 @@ export class ReferenceLabelProvider implements ILabelProvider<Reference> {
 
 export class ParametersParameterLabelProvider implements ILabelProvider<ParametersParameter> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(parametersParameter: ParametersParameter): string | null {
-    if (!parametersParameter) { return null; }
+  getText(parametersParameter: ParametersParameter | undefined | null): string | undefined {
+    if (!parametersParameter?.part) { return undefined; }
     const pp = parametersParameter.part.find((e => e.name === 'reference'));
     // console.log(pp);
-    if (pp) {
+    if (pp?.valueReference) {
       return pp.valueReference.display;
     }
-    else {
-      return null;
-    }
+    return undefined;
   }
 }
 
@@ -241,8 +261,8 @@ export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetCon
   constructor() {
   }
 
-  public getText(valueSetContains: ValueSetContains): string | null {
-    if (! valueSetContains) { return null; }
+  public getText(valueSetContains: ValueSetContains | undefined | null): string | undefined {
+    if (! valueSetContains) { return undefined; }
     return valueSetContains.display;
   }
 }

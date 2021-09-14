@@ -8,6 +8,7 @@
 import { Injectable } from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
+
 import {ParsedUrlQueryInput} from 'querystring';
 
 import { environment } from '../../../../environments/environment';
@@ -51,7 +52,7 @@ export class PhastCioDcService {
     const searchParams = {
       _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
       'product-type': 'DC',
-      _elements: 'ingredient,code,id,relatedMedicationKnowledge',
+      _elements: 'ingredient,code,id',
       LinkPageNumber: 0
     };
 
@@ -64,7 +65,7 @@ export class PhastCioDcService {
     const searchParams = {
       _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
       'product-type': 'UCD',
-      _elements: 'ingredient,code,id,relatedMedicationKnowledge',
+      _elements: 'ingredient,code,id,doseForm',
       LinkPageNumber: 0
     };
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
@@ -85,8 +86,8 @@ export class PhastCioDcService {
   postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
     mkId: id,
     mkCode: CodeableConcept,
-    doseForm: CodeableConcept | undefined,
-    ingredient: MedicationIngredient[] | undefined,
+    doseForm?: CodeableConcept,
+    ingredient?: MedicationIngredient[],
     intendedRoute?: CodeableConcept
   ): Observable<Parameters> {
     const input = new MedicationKnowledgeDetailsBuilder(mkId, mkCode)
@@ -102,56 +103,6 @@ export class PhastCioDcService {
       method: 'post',
       input
     }, this._options);
-  }
-
-  synchronizeCompositionMedicationKnowledge(compositionId: id, medicationKnowledgeReferences: Array<Reference>):
-    Observable<OperationOutcome | Resource> {
-
-    const jsonPatch = {
-      resourceType: 'parameters',
-      parameter: [{
-        name: 'operation',
-        part: [{
-          name: 'type',
-          valueCode: 'add'
-        },
-        {
-          name: 'path',
-          valueString: 'Composition.section.where(title = root)'
-        },
-        {
-          name: 'name',
-          valueString: 'entry'
-        },
-        {
-          name: 'value',
-          part: []
-        }]
-      }]
-    };
-    const operationIndex = jsonPatch.parameter.findIndex(
-      parameter => parameter.name === 'operation'
-    );
-    const operationValueIndex = jsonPatch.parameter[operationIndex].part.findIndex(
-      operation => operation.name === 'value'
-    );
-
-    for (const medicationKnowledgeReference of medicationKnowledgeReferences) {
-      jsonPatch.parameter[operationIndex].part[operationValueIndex].part.push({
-        name: 'reference',
-        valueUri: medicationKnowledgeReference.reference
-      });
-    }
-
-    return this._fhirClient.request('PATCH', environment.cio_dc_url + '/Composition/' + compositionId, {
-      body: jsonPatch
-    } as RequestOptions);
-
-    /*return this.fhirClient.patch({
-      resourceType: 'Composition',
-      id: compositionId,
-      JSONPatch: jsonPatch
-    });*/
   }
 
   readCompositionMedicationKnowledge(compositionId: id): Observable<Composition> {
@@ -180,7 +131,7 @@ export class PhastCioDcService {
       searchParams['LinkPageNumber'] = page;
     }
 
-    if (typeof filter === 'string' && filter.length > 0) {
+    if (columnNameToFilter && typeof filter === 'string' && filter.length > 0) {
       searchParams[columnNameToFilter] = filter.trim();
       return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
         resourceType,
@@ -222,7 +173,7 @@ export class MedicationKnowledgeDetailsBuilder {
   }
 
   public doseForm(doseForm: CodeableConcept | undefined): this {
-    if (doseForm !== undefined) {
+    if (doseForm && this._parameters.parameter && this._parameters.parameter[1]) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       medicationKnowledge.doseForm = doseForm;
     }
@@ -230,19 +181,19 @@ export class MedicationKnowledgeDetailsBuilder {
   }
 
   public ingredient(ingredient: MedicationIngredient[] | undefined): this {
-    if (ingredient !== undefined) {
+    if (ingredient && this._parameters.parameter && this._parameters.parameter[1]) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      for (const element of ingredient) {
-        medicationKnowledge.ingredient.push(element);
-      }
+      ingredient.forEach(element => {
+        medicationKnowledge.ingredient?.push(element);
+      });
     }
     return this;
   }
 
   public intendedRoute(intendedRoute: CodeableConcept | undefined): this {
-    if (intendedRoute !== undefined) {
+    if (intendedRoute && this._parameters.parameter && this._parameters.parameter[1]) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      medicationKnowledge.intendedRoute.push(intendedRoute);
+      medicationKnowledge.intendedRoute?.push(intendedRoute);
     }
     return this;
   }

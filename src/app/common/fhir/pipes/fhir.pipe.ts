@@ -9,7 +9,7 @@ import {
   Medication,
   MedicationKnowledge, MedicationRequest,
   Patient,
-  Practitioner,
+  Practitioner, Quantity,
   Ratio,
   Reference, ValueSetContains
 } from 'phast-fhir-ts';
@@ -22,7 +22,7 @@ export class PersonNamePipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(person: Patient | Practitioner): string | null {
+  public transform(person: Patient | Practitioner): string | undefined {
     return this._labelProviderFactory.getProvider(person)?.getText(person);
   }
 }
@@ -35,7 +35,7 @@ export class MedicationRequestPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(medicationRequest: MedicationRequest): string | null {
+  public transform(medicationRequest: MedicationRequest): string | undefined {
     return this._labelProviderFactory.getProvider(medicationRequest)?.getText(medicationRequest);
   }
 }
@@ -48,7 +48,7 @@ export class MedicationKnowledgePipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(medicationKnowledge: MedicationKnowledge): string | null {
+  public transform(medicationKnowledge: MedicationKnowledge): string | undefined {
     return this._labelProviderFactory.getProvider(medicationKnowledge)?.getText(medicationKnowledge);
   }
 }
@@ -61,7 +61,7 @@ export class MedicationPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(medication: Medication): string | null {
+  public transform(medication: Medication): string | undefined {
     return this._labelProviderFactory.getProvider(medication)?.getText(medication);
   }
 }
@@ -74,7 +74,7 @@ export class CompositionPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(composition: Composition): string | null {
+  public transform(composition: Composition): string | undefined {
     return this._labelProviderFactory.getProvider(composition)?.getText(composition);
   }
 }
@@ -87,7 +87,7 @@ export class SnomedPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(medication: Medication): string | null {
+  public transform(medication: Medication): string | undefined {
     const medicationLabelProvider = this._labelProviderFactory.getProvider(medication) as MedicationLabelProvider;
     return medicationLabelProvider.getTerm(medication, 'http://snomed.info/sct');
   }
@@ -101,8 +101,21 @@ export class CodeableConceptPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(codeableConcept: CodeableConcept): string | null {
-    return this._labelProviderFactory.getProvider('fhir.CodeableConcept').getText(codeableConcept);
+  public transform(codeableConcept: CodeableConcept): string | undefined {
+    return this._labelProviderFactory.getProvider('fhir.CodeableConcept')?.getText(codeableConcept);
+  }
+}
+
+@Pipe({
+  name: 'quantity'
+})
+export class QuantityPipe implements PipeTransform {
+
+  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  }
+
+  public transform(quantity: Quantity): string | undefined {
+    return this._labelProviderFactory.getProvider('fhir.Quantity')?.getText(quantity);
   }
 }
 
@@ -114,8 +127,8 @@ export class RatioPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(ratio: Ratio): string | null {
-    return this._labelProviderFactory.getProvider('fhir.Ratio').getText(ratio);
+  public transform(ratio: Ratio): string | undefined {
+    return this._labelProviderFactory.getProvider('fhir.Ratio')?.getText(ratio);
   }
 }
 
@@ -127,8 +140,8 @@ export class ReferencePipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(reference: Reference): string | null {
-    return this._labelProviderFactory.getProvider('fhir.Reference').getText(reference);
+  public transform(reference: Reference): string | undefined {
+    return this._labelProviderFactory.getProvider('fhir.Reference')?.getText(reference);
   }
 }
 
@@ -140,8 +153,8 @@ export class CodingPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(coding: Coding): string | null {
-    return this._labelProviderFactory.getProvider('fhir.Coding').getText(coding);
+  public transform(coding: Coding): string | undefined {
+    return this._labelProviderFactory.getProvider('fhir.Coding')?.getText(coding);
   }
 }
 
@@ -153,7 +166,7 @@ export class ValueSetContainsPipe implements PipeTransform {
   constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
   }
 
-  public transform(valueSetContains: ValueSetContains): string | null {
-    return this._labelProviderFactory.getProvider('fhir.ValueSetContains').getText(valueSetContains);
+  public transform(valueSetContains: ValueSetContains): string | undefined {
+    return this._labelProviderFactory.getProvider('fhir.ValueSetContains')?.getText(valueSetContains);
   }
 }

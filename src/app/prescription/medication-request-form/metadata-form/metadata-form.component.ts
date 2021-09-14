@@ -10,7 +10,7 @@ import {MedicationRequestFormViewModel} from '../medication-request-form-view-mo
 import {
   MedicationFormIntentValueChangesTreatmentIntent
 } from '../medication-request-form.intent';
-import {CodeableConcept, MedicationRequest, ValueSetContains} from 'phast-fhir-ts';
+import {code, CodeableConcept, MedicationRequest, ValueSetContains} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-metadata-form',
@@ -42,7 +42,7 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
     return null;
   }
 
-  public get treatmentIntentList(): Array<CodeableConcept> {
+  public get treatmentIntentList(): Array<ValueSetContains> | undefined {
     return this._viewModel.treatmentIntent;
   }
 
@@ -72,12 +72,14 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
       case 'AddMedication':
-        this._metadataGroup$.next(
-          this.addMedication(state.medicationRequest)
-        );
+        if (state.medicationRequest) {
+          this._metadataGroup$.next(
+            this.addMedication(state.medicationRequest)
+          );
+        }
         break;
       case 'RemoveMedication':
-        if (state.medicationRequest) {
+        if (state.medicationRequest && this.metadataGroup) {
           this._metadataGroup$.next(this.metadataGroup);
         }
         else {
@@ -90,16 +92,20 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
     }
   }
 
-  public trackByValueSetContains(_, valueSetContains: ValueSetContains): string {
+  public trackByValueSetContains(_: number, valueSetContains: ValueSetContains): code | undefined {
     return valueSetContains.code;
   }
 
-  public displayFnValueSetContains(valueSetContains: ValueSetContains): string | null {
-    return this._labelProviderFactory.getProvider('fhir.ValueSetContains').getText(valueSetContains);
+  public displayFnValueSetContains(valueSetContains: ValueSetContains): string | undefined {
+    const provider = this._labelProviderFactory.getProvider('fhir.ValueSetContains');
+    if (provider) {
+      return provider.getText(valueSetContains);
+    }
+    return undefined;
   }
 
   private addMedication(medicationRequest: MedicationRequest): FormGroup {
-    let treatmentIntent: CodeableConcept;
+    let treatmentIntent: CodeableConcept | undefined;
     if (medicationRequest.extension) {
       medicationRequest.extension.forEach(value => {
         if (value.url === 'http://interopsante.org/fhir/StructureDefinition/FrTreatmentIntent') {
@@ -115,48 +121,69 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
   }
 
   private setUp(metadataGroup: FormGroup): void {
-    const treatmentIntentValid$ = metadataGroup.get('treatmentIntent').valueChanges
-      .pipe(
-        filter(predicate => this._viewModel.treatmentIntent.findIndex(
-          value => value.code === predicate.code
-        ) > -1)
-      );
-    const treatmentIntentNotValid$ = metadataGroup.get('treatmentIntent').valueChanges
-      .pipe(
-        filter(predicate => this._viewModel.treatmentIntent.findIndex(
-          value => value.code === predicate.code
-        ) === -1)
-      );
+    if (metadataGroup) {
+      const treatmentIntent = metadataGroup.get('treatmentIntent');
+      if (treatmentIntent) {
+        const treatmentIntentValid$ = treatmentIntent.valueChanges
+          .pipe(
+            filter(predicate => {
+              if (this._viewModel.treatmentIntent) {
+                return this._viewModel.treatmentIntent.findIndex(value => value.code === predicate.code) > -1;
+              }
+              return false;
+            })
+          );
+        const treatmentIntentNotValid$ = treatmentIntent.valueChanges
+          .pipe(
+            filter(predicate => {
+              if (this._viewModel.treatmentIntent) {
+                return this._viewModel.treatmentIntent.findIndex(
+                  value => value.code === predicate.code
+                ) === -1;
+              }
+              return false;
+            })
+          );
 
-    treatmentIntentValid$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(value => metadataGroup.get('treatmentIntent')
-          .setValue(value, {emitEvent: false}))
-      )
-      .subscribe({
-        next: value => this._viewModel.dispatchIntent(
-          new MedicationFormIntentValueChangesTreatmentIntent(
-            this._viewModel.medicationRequest,
-            value
+        treatmentIntentValid$
+          .pipe(
+            takeUntil(this._unsubscribeTrigger$),
+            tap(value => treatmentIntent
+              .setValue(value, {emitEvent: false}))
           )
-        ),
-        error: err => console.error('error', err)
-      });
-    treatmentIntentNotValid$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        tap(() => metadataGroup.get('treatmentIntent')
-          .setValue(null, {emitEvent: false}))
-      )
-      .subscribe({
-        next: () => this._viewModel.dispatchIntent(
-          new MedicationFormIntentValueChangesTreatmentIntent(
-            this._viewModel.medicationRequest,
-            null
+          .subscribe({
+            next: value => {
+              if (this._viewModel.medicationRequest) {
+                this._viewModel.dispatchIntent(
+                  new MedicationFormIntentValueChangesTreatmentIntent(
+                    this._viewModel.medicationRequest,
+                    value
+                  )
+                );
+              }
+            },
+            error: err => console.error('error', err)
+          });
+        treatmentIntentNotValid$
+          .pipe(
+            takeUntil(this._unsubscribeTrigger$),
+            tap(() => treatmentIntent
+              .setValue(null, {emitEvent: false}))
           )
-        ),
-        error: err => console.error('error', err)
-      });
+          .subscribe({
+            next: () => {
+              if (this._viewModel.medicationRequest) {
+                this._viewModel.dispatchIntent(
+                  new MedicationFormIntentValueChangesTreatmentIntent(
+                    this._viewModel.medicationRequest,
+                    null
+                  )
+                );
+              }
+            },
+            error: err => console.error('error', err)
+          });
+      }
+    }
   }
 }
