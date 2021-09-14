@@ -396,9 +396,7 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
 
     from(
       this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
-        medication.code,
-        forme, medication.ingredient,
-        route )
+        medication.code, forme, medication.amount, medication.ingredient, route )
     )
       .pipe(
         takeUntil(this._unsubscribeTrigger$),

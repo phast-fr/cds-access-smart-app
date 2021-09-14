@@ -296,7 +296,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           state.medicationRequest.dosageInstruction.forEach((dosage) => {
             observables.push(
               this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-                medicationKnowledgeId, medicationKnowledgeCode, medication.form, medication.ingredient, dosage?.route
+                medicationKnowledgeId, medicationKnowledgeCode, medication.form, medication.amount, medication.ingredient, dosage?.route
               )
                 .pipe(
                   retry({count: 3, delay: 1000})
@@ -313,7 +313,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         }
         else {
           this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-            medicationKnowledgeId, medicationKnowledgeCode, medication.form, medication.ingredient
+            medicationKnowledgeId, medicationKnowledgeCode, medication.form, medication.amount, medication.ingredient
           )
             .pipe(
               retry({count: 3, delay: 1000})
@@ -427,6 +427,15 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     if (parameters.parameter) {
       parameters.parameter.forEach(parameter => {
         switch (parameter.name) {
+          case 'amount':
+            const amountsForMed = state.amountMap.get(medicationId);
+            if (amountsForMed) {
+              const amounts = amountsForMed.get(nDosage);
+              if (amounts) {
+                this.addUniqueQuantity(amounts, parameter);
+              }
+            }
+            break;
           case 'intendedRoute':
             const routes = state.routeMap.get(nDosage);
             if (routes) {
@@ -976,6 +985,24 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       });
       if (!isExist) {
         uniqueRatioArray.push(valueRatio);
+      }
+    }
+  }
+
+  private addUniqueQuantity(uniqueQuantityArray: Array<Quantity>, parameter: ParametersParameter): void {
+    if (parameter.valueQuantity) {
+      const valueQuantity = parameter.valueQuantity;
+      const valueHash = hash(valueQuantity);
+      let isExist = false;
+      uniqueQuantityArray.forEach((value: Quantity) => {
+        const refHash = hash(value);
+        if (valueHash === refHash) {
+          isExist = true;
+          return;
+        }
+      });
+      if (!isExist) {
+        uniqueQuantityArray.push(valueQuantity);
       }
     }
   }

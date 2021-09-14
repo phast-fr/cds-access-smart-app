@@ -11,7 +11,7 @@ import {
   id,
   Medication,
   MedicationKnowledge,
-  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner,
+  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner, Quantity,
   Ratio,
   Reference, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
@@ -103,7 +103,7 @@ export class MedicationFormIntentValueChangesMedicationAmount implements IIntent
 
   constructor(private _medicationRequest: MedicationRequest,
               private _medication: Medication,
-              private _amountValue: Ratio | null) {
+              private _amountValue: Quantity | null) {
   }
 
   public get medicationRequest(): MedicationRequest {
@@ -114,7 +114,7 @@ export class MedicationFormIntentValueChangesMedicationAmount implements IIntent
     return this._medication;
   }
 
-  public get amountValue(): Ratio | null {
+  public get amountValue(): Quantity | null {
     return this._amountValue;
   }
 }

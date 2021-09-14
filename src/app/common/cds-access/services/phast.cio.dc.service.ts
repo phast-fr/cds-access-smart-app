@@ -13,16 +13,15 @@ import {ParsedUrlQueryInput} from 'querystring';
 
 import { environment } from '../../../../environments/environment';
 
-import {FhirClientService, Options, RequestOptions} from '../../fhir/services/fhir.client.service';
+import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
 import {
   Bundle,
   CodeableConcept,
   MedicationIngredient,
   MedicationKnowledge,
   OperationOutcome,
-  Reference,
   Parameters,
-  id, Composition, ParametersParameter, Resource
+  id, Composition, ParametersParameter, Quantity
 } from 'phast-fhir-ts';
 
 /**
@@ -87,11 +86,13 @@ export class PhastCioDcService {
     mkId: id,
     mkCode: CodeableConcept,
     doseForm?: CodeableConcept,
+    amount?: Quantity,
     ingredient?: MedicationIngredient[],
     intendedRoute?: CodeableConcept
   ): Observable<Parameters> {
-    const input = new MedicationKnowledgeDetailsBuilder(mkId, mkCode)
+    const input = new MedicationKnowledgeLookupBuilder(mkId, mkCode)
       .doseForm(doseForm)
+      .amount(amount)
       .ingredient(ingredient)
       .intendedRoute(intendedRoute)
       .build();
@@ -145,7 +146,7 @@ export class PhastCioDcService {
   }
 }
 
-export class MedicationKnowledgeDetailsBuilder {
+export class MedicationKnowledgeLookupBuilder {
   private readonly _parameters: Parameters;
 
   constructor(mkId: id, mkCode: CodeableConcept) {
@@ -194,6 +195,14 @@ export class MedicationKnowledgeDetailsBuilder {
     if (intendedRoute && this._parameters.parameter && this._parameters.parameter[1]) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       medicationKnowledge.intendedRoute?.push(intendedRoute);
+    }
+    return this;
+  }
+
+  public amount(amount: Quantity | undefined): this {
+    if (amount && this._parameters.parameter && this._parameters.parameter[1]) {
+      const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
+      medicationKnowledge.amount = amount;
     }
     return this;
   }

@@ -288,11 +288,9 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       amountObj$
         .pipe(
           takeUntil(this._unsubscribeTrigger$),
-          distinctUntilChanged<Ratio>((prev, curr) =>
-            prev?.numerator?.value === curr?.numerator?.value
-            && prev?.numerator?.code === curr?.numerator?.code
-            && prev?.denominator?.value === curr?.denominator?.value
-            && prev?.denominator?.code === curr?.denominator?.code)
+          distinctUntilChanged<Quantity>((prev, curr) =>
+            prev?.value === curr?.value
+            && prev?.code === curr?.code)
         )
         .subscribe({
           next: value => {
