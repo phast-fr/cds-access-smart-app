@@ -432,14 +432,14 @@ export class RatioBuilder {
     this._ratio = {} as Ratio;
   }
 
-  public numeratorQuantity(numeratorQuantity: Quantity): this {
+  public numeratorQuantity(numeratorQuantity: Quantity | undefined): this {
     if (numeratorQuantity) {
       this._ratio.numerator = numeratorQuantity;
     }
     return this;
   }
 
-  public denominatorQuality(denominatorQuantity: Quantity): this {
+  public denominatorQuality(denominatorQuantity: Quantity | undefined): this {
     if (denominatorQuantity) {
       this._ratio.denominator = denominatorQuantity;
     }
