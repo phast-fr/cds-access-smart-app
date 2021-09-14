@@ -1,49 +1,45 @@
-import {AfterViewInit, Component, ElementRef, Inject, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, Inject, OnDestroy, ViewChild} from '@angular/core';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material/dialog';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder } from '@angular/forms';
 import {BehaviorSubject, from, fromEvent, merge, Observable, of, Subject} from 'rxjs';
 import {catchError, debounceTime, distinctUntilChanged, filter, finalize, map, switchMap, takeUntil, tap} from 'rxjs/operators';
 
-import { StateService } from '../common/services/state.service';
-import { SmartService } from '../smart/services/smart.service';
+import { StateService } from '../common/cds-access/services/state.service';
+import { FhirSmartService } from '../common/fhir/smart/services/fhir.smart.service';
 import { DispenseStateService } from './dispense-state.service';
-import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
-import { FhirCioDcService } from '../common/services/fhir.cio.dc.service';
-import { FhirTypeGuard } from '../common/fhir/fhir.type.guard';
-import { FhirLabelProviderFactory } from '../common/fhir/fhir.label.provider.factory';
-import { fhir } from '../common/fhir/fhir.types';
-import Bundle = fhir.Bundle;
-import Composition = fhir.Composition;
-import Practitioner = fhir.Practitioner;
-import Patient = fhir.Patient;
-import MedicationRequest = fhir.MedicationRequest;
-import Medication = fhir.Medication;
-import MedicationKnowledge = fhir.MedicationKnowledge;
-import Parameters = fhir.Parameters;
-import Reference = fhir.Reference;
-import ParametersParameter = fhir.ParametersParameter;
+import { FhirDataSourceService } from '../common/fhir/services/fhir.data-source.service';
+import { PhastCioDcService } from '../common/cds-access/services/phast.cio.dc.service';
+import { FhirTypeGuard } from '../common/fhir/utils/fhir.type.guard';
+import { FhirLabelProviderFactory } from '../common/fhir/providers/fhir.label.provider.factory';
 import {MedicationRequestDataSource} from './dispense-table/dispense-table.component';
 import {MatTableDataSource} from '@angular/material/table';
-import {TableElement} from '../common/models/core.model';
+import {SmartComponent, StateModel, TableElement} from '../common/cds-access/models/core.model';
 import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {CollectionViewer, DataSource} from '@angular/cdk/collections';
 import {MatCheckboxChange} from '@angular/material/checkbox';
-
+import {SmartToken} from '../common/fhir/smart/models/fhir.smart.token.model';
+import {
+  Bundle,
+  Composition,
+  Medication,
+  MedicationRequest,
+  Parameters, ParametersParameter,
+  Patient,
+  Practitioner, Reference
+} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-dispense',
   templateUrl: './dispense.component.html',
   styleUrls: ['./dispense.component.css']
 })
-export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
+export class DispenseComponent extends SmartComponent implements OnDestroy, AfterViewInit  {
 
-  private _labelProviderFactory = new FhirLabelProviderFactory();
+  private _user?: Practitioner;
 
-  user: Practitioner;
-
-  composition: Composition;
+  composition?: Composition;
 
   medicationRequestControl = this._fb.control(null);
 
@@ -52,63 +48,52 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
   ucdDataSource: ParametersParameterDataSource;
 
   @ViewChild(MatPaginator)
-  paginator: MatPaginator;
+  paginator?: MatPaginator;
   @ViewChild(MatSort)
-  sort: MatSort;
+  sort?: MatSort;
   @ViewChild('inputFilter')
-  inputFilter: ElementRef;
+  inputFilter?: ElementRef;
 
-  private  _MedicationRequestDataSource: MedicationRequestDataSource;
+  private  _MedicationRequestDataSource?: MedicationRequestDataSource;
   private _medicationRequestArray = new Array<MedicationRequest>();
   private _medicationArray = new Array<Medication>();
   private _ucdArray = new Array<ParametersParameter>();
 
-  private _unsubscribeTrigger$ = new Subject<void>();
-  private _selectedMedicationRequest: MedicationRequest;
-  private _selectedMedication: Medication;
+  private _selectedMedicationRequest?: MedicationRequest;
+  private _selectedMedication?: Medication;
 
-  private  _patient: Patient;
+  private  _patient?: Patient;
 
-  private  _withLivret: boolean;
+  private _needBanner$ = new BehaviorSubject<boolean>(false);
+  private  _withLivret?: boolean;
 
   medicationDataSource = new MatTableDataSource<TableElement<Medication>>([]);
   displayedColumns: Array<string> = ['position', 'name'];
 
   constructor(public dialog: MatDialog,
               private _fb: FormBuilder,
-              private route: ActivatedRoute,
+              route: ActivatedRoute,
               private stateService: StateService,
-              private smartService: SmartService,
+              smartService: FhirSmartService,
               /*private _dispenseState: DispenseStateService,*/
               private _dataSource: FhirDataSourceService,
-              private _cioDcSource: FhirCioDcService) {
+              private _cioDcSource: PhastCioDcService,
+              private _labelProviderFactory: FhirLabelProviderFactory) {
+    super(route, smartService);
     this.ucdDataSource = new ParametersParameterDataSource(this._cioDcSource);
-    this.stateService.stateSubject$
+
+    this.stateService.state$
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(stateModel => stateModel.userType() === 'Practitioner'),
-        switchMap(stateModel => this._dataSource.readPractitioner(stateModel.userId()))
+        takeUntil(this.unsubscribeTrigger$),
+        filter(state => state !== false),
+        map(state => state as StateModel),
+        map(state => this.update(state)),
+        switchMap(() =>   this._cioDcSource.readCompositionMedicationKnowledge('phast-formulary-1'))
       )
-      .subscribe(
-        (user) => this.user = user
-      );
-    this.stateService.stateSubject$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        switchMap(stateModel => this._dataSource.readPatient(stateModel.patient))
-      )
-      .subscribe((patient: Patient) => this._patient = patient);
-    this.stateService.stateSubject$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        switchMap(stateModel =>   this._cioDcSource.readCompositionMedicationKnowledge('phast-formulary-1'))
-      )
-      .subscribe((composition: Composition) => this.composition = composition);
+      .subscribe(composition => this.composition = composition);
   }
 
-  public get labelProviderFactory(): FhirLabelProviderFactory {
-    return this._labelProviderFactory;
-  }
+  public needBanner$ = this._needBanner$.asObservable();
 
   public get medicationRequestArray(): Array<MedicationRequest> {
     return this._medicationRequestArray;
@@ -119,20 +104,21 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
   public get ucdArray(): Array<ParametersParameter> {
     return this._ucdArray;
   }
-  public get getPatient(): Patient{
+  public get patient(): Patient | undefined {
     return this._patient;
   }
-  public get withLivret(): boolean{
+
+  public get withLivret(): boolean | undefined {
     return this._withLivret;
   }
-  public  set withLivret(val){
+  public set withLivret(val){
     this._withLivret = val;
   }
-  public  get getUser(): Practitioner{
-    return this.user;
+  public get user(): Practitioner | undefined {
+    return this._user;
   }
 
-  public  get selectedMedication(): Medication
+  public  get selectedMedication(): Medication | undefined
   {
     return this._selectedMedication;
   }
@@ -140,57 +126,41 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     if (!this._selectedMedicationRequest) {
       return null;
     }
-    let labelComposed = '';
-      if (this._selectedMedicationRequest.dosageInstruction.length > 0){
+    let labelComposed = ' ';
+    if (this._selectedMedicationRequest.dosageInstruction != null && this._selectedMedicationRequest.dosageInstruction.length > 0){
         labelComposed += ' (';
-        for (const xx of this._selectedMedicationRequest.dosageInstruction){
-        for (const xxx of xx.doseAndRate){
-          labelComposed += ' ' + xxx.doseQuantity.value;
-          if (xxx.doseQuantity.unit != null){
-            labelComposed += xxx.doseQuantity.unit  ;
-          }
-          else {
-            labelComposed += ' unité' + (xxx.doseQuantity.value > 1 ? 's' : '');
-          }
-          if (xx.timing != null){
-            let first = true;
-            for ( const t of xx.timing.repeat.timeOfDay){
-              labelComposed += (first ? ' ' : '-') + t;
-              first = false;
+        for (const dosage of this._selectedMedicationRequest.dosageInstruction){
+          if (dosage.doseAndRate != null && dosage.doseAndRate.length > 0) {
+            for (const doseAndRate of dosage.doseAndRate) {
+              if (doseAndRate.doseQuantity != null ) {
+                labelComposed += ' ' + doseAndRate.doseQuantity.value;
+                if (doseAndRate.doseQuantity.unit != null) {
+                  labelComposed += doseAndRate.doseQuantity.unit;
+                } else {
+                  labelComposed += ' unité' + (doseAndRate.doseQuantity.value > 1 ? 's' : '');
+                }
+              }
+            }
+            if (dosage.timing != null) {
+                let first = true;
+                if (dosage.timing.repeat != null) {
+                  if (dosage.timing.repeat.timeOfDay != null && dosage.timing.repeat.timeOfDay.length > 0) {
+                    for (const t of dosage.timing.repeat.timeOfDay) {
+                      labelComposed += (first ? ' ' : '-') + t;
+                      first = false;
+                    }
+                  }
+                }
+              }
             }
           }
-        }
-      }
         labelComposed += ')';
-    }
+      }
     return labelComposed;
-  }
-  displayMedicationRequest(medicationRequest: MedicationRequest): string | null {
-    if (medicationRequest == null) { return null; }
-    return this._labelProviderFactory.getProvider(medicationRequest).getText(medicationRequest);
-  }
-  ngOnInit(): void {
-    const routeWithoutToken$ = this.route.queryParams
-      .pipe(
-        filter(_ => !this.smartService.isTokenExist())
-      );
-    const routeWithToken$ = this.route.queryParams
-      .pipe(
-        filter(_ => this.smartService.isTokenExist())
-      );
-    routeWithoutToken$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        map(params  => {
-          return {
-            code: params.code,
-            state: params.state
-          };
-        })
-      )
-      .subscribe(value => this.smartService.retrieveToken(value.code, value.state));
-    routeWithToken$
-      .subscribe(_ => this.smartService.loadToken());
+    }
+
+  displayMedicationRequest(medicationRequest: MedicationRequest): string | undefined {
+    return this._labelProviderFactory.getProvider(medicationRequest)?.getText(medicationRequest);
   }
 
   ngAfterViewInit(): void {
@@ -252,8 +222,9 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
   }
 
   ngOnDestroy(): void {
-    this._unsubscribeTrigger$.next();
-    this._unsubscribeTrigger$.complete();
+    super.ngOnDestroy();
+
+    this._needBanner$.complete();
   }
 /*
   displayComposition(composition: Composition): string | null {
@@ -265,37 +236,36 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     console.log(this._patient.name);
     this.isLoading = true;
     this._medicationRequestArray.length = 0;
-    this._dataSource.searchMedicationRequests(this._patient)
-      .then(
-        (res) => {
-          console.log(res);
-          this.isLoading = false;
-          const bundle = (res as Bundle);
-          if (bundle.entry != null){
-            for (const entry of bundle.entry) {
-              if (FhirTypeGuard.isMedicationRequest(entry.resource)) {
-                this._medicationRequestArray.push(entry.resource);
+    this._dataSource.medicationRequestSearch(this._patient)
+      .subscribe(res => {
+        console.log(res);
+        this.isLoading = false;
+        const bundle = (res as Bundle);
+        if (bundle.entry != null){
+          for (const entry of bundle.entry) {
+            if (FhirTypeGuard.isMedicationRequest(entry.resource)) {
+              this._medicationRequestArray.push(entry.resource);
 
-                for (const medication of entry.resource.contained){
-                  console.log(entry.resource.id + ' - ' + entry.resource.authoredOn + ' - ' + (medication as Medication).code.text);
-                }
+              for (const medication of entry.resource.contained){
+                console.log(entry.resource.id + ' - ' + entry.resource.authoredOn + ' - ' + (medication as Medication).code.text);
               }
             }
           }
-        });
+        }
+      });
   }
 
-  onWithLivret(ob: MatCheckboxChange){
+  onWithLivret(ob: MatCheckboxChange): void {
     this.getSpecialites(this._selectedMedication);
   }
 
 
-  getSpecialites(medication: Medication): void{
+  getSpecialites(medication: Medication): void {
     this._selectedMedication = medication;
     fromEvent(
         this.inputFilter.nativeElement, 'keyup'
       ).pipe(
-        takeUntil(this._unsubscribeTrigger$),
+        takeUntil(this.unsubscribeTrigger$),
         debounceTime(500),
         distinctUntilChanged(),
         tap(() => {
@@ -307,12 +277,12 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     this.ucdDataSource.loadPage(medication, this._selectedMedicationRequest, this._withLivret, this.composition );
 
     this.sort.sortChange.pipe(
-        takeUntil(this._unsubscribeTrigger$)
+        takeUntil(this.unsubscribeTrigger$)
       ).subscribe(() => this.paginator.pageIndex = 0);
 
     merge(this.sort.sortChange, this.paginator.page)
       .pipe(
-        takeUntil(this._unsubscribeTrigger$),
+        takeUntil(this.unsubscribeTrigger$),
         tap(() => this.loadPage(medication, this._selectedMedicationRequest))
       ).subscribe();
   }
@@ -330,14 +300,30 @@ export class DispenseComponent implements OnInit, OnDestroy, AfterViewInit  {
     );
   }
 
-  openDialog(parameter: ParametersParameter) {
+  openDialog(parameter: ParametersParameter): void {
+    let quantite = 0;
+    if (this._selectedMedicationRequest.dosageInstruction != null && this._selectedMedicationRequest.dosageInstruction.length > 0){
+      const di = this._selectedMedicationRequest.dosageInstruction[0];
+      if (di != null && di.doseAndRate != null && di.doseAndRate.length > 0){
+        const dq = di.doseAndRate[0];
+        if (dq != null && dq.doseQuantity != null && dq.doseQuantity.value != null){
+          quantite = dq.doseQuantity.value;
+        }
+      }
+    }
     const dialogRef = this.dialog.open(DialogOverviewExampleDialogComponent, {
       width: '400px',
-      data: {name: parameter.part.find(e => e.name === 'reference').valueReference.display, quantity: 0}
+      data: {name: parameter.part.find(e => e.name === 'reference').valueReference.display, quantity: quantite}
     });
     dialogRef.afterClosed().subscribe(result => {
       console.log('The dialog was closed with : ' + result + 'unit(s) selected' );
     });
+  }
+
+  private update(state: StateModel): void {
+    this._patient = state.patient;
+    this._user = state.practitioner;
+    this._needBanner$.next(state.needPatientBanner);
   }
 }
 
@@ -370,7 +356,7 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
 
   private _length: number;
 
-  constructor(private _cioDcSource: FhirCioDcService) {
+  constructor(private _cioDcSource: PhastCioDcService) {
   }
 
   public loading$ = this._loading$.asObservable();
@@ -384,7 +370,7 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
   }
 
   public get pageSize(): number {
-    return FhirCioDcService.DEFAULT_PAGE_SIZE;
+    return PhastCioDcService.DEFAULT_PAGE_SIZE;
   }
 
   connect(collectionViewer: CollectionViewer): Observable<TableElement<ParametersParameter>[]> {
@@ -403,11 +389,16 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
            pageIndex?: number, pageSize?: number): void {
     this._loading$.next(true);
 
+    const route = (selectedMedicationRequest.dosageInstruction && selectedMedicationRequest.dosageInstruction.length > 0) ?
+      selectedMedicationRequest.dosageInstruction[0].route : null;
+
+    const forme = medication.form;
+
     from(
-      this._cioDcSource.postMedicationKnowledgeDetailsByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
+      this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
         medication.code,
-        undefined, medication.ingredient,
-        selectedMedicationRequest.dosageInstruction[0].route )
+        forme, medication.ingredient,
+        route )
     )
       .pipe(
         takeUntil(this._unsubscribeTrigger$),
@@ -425,7 +416,8 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
         const pageSizeEffective = (pageSize) ? pageSize : this.pageSize;
         const tableElements = new Array<TableElement<ParametersParameter>>();
 
-        const ee = (res as Parameters).parameter.filter(e => e.name === 'relatedMedicationKnowledge' && e.part.filter(f => f.name === 'reference'));
+        const ee = (res as Parameters).parameter.filter(e => e.name === 'relatedMedicationKnowledge'
+          && e.part.filter(f => f.name === 'reference'));
         let index = 0;
         const ucdArray = new Array<ParametersParameter>();
         for (const eee of ee) {
@@ -439,12 +431,14 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
             } else {
               ucdArray.push(eee);
             }
-            ucdArray.sort((a, b) => a.part.find(e => e.name === 'reference').valueReference.display > b.part.find(e => e.name === 'reference').valueReference.display ? 1 : -1);
+            ucdArray.sort((a, b) =>
+              a.part.find(e => e.name === 'reference').valueReference.display >
+              b.part.find(e => e.name === 'reference').valueReference.display ? 1 : -1);
           }
         }
 
         const livretArray = new Array<Reference>();
-        for(const rr of livret.section[0].entry){
+        for (const rr of livret.section[0].entry){
           livretArray.push(rr);
         }
 
@@ -478,7 +472,3 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
       });
   }
 }
-
-
-
-

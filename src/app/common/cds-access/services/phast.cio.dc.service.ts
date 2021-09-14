@@ -9,17 +9,20 @@ import { Injectable } from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
 
+import {ParsedUrlQueryInput} from 'querystring';
+
 import { environment } from '../../../../environments/environment';
 
-import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
+import {FhirClientService, Options, RequestOptions} from '../../fhir/services/fhir.client.service';
 import {
   Bundle,
   CodeableConcept,
   MedicationIngredient,
   MedicationKnowledge,
   OperationOutcome,
+  Reference,
   Parameters,
-  id, Composition, ParametersParameter, Quantity
+  id, Composition, ParametersParameter, Resource
 } from 'phast-fhir-ts';
 
 /**
@@ -46,12 +49,12 @@ export class PhastCioDcService {
 
   searchMedicationKnowledgeDC(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                               page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const searchParams = new URLSearchParams({
-      _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
+    const searchParams = {
+      _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
       'product-type': 'DC',
       _elements: 'ingredient,code,id',
-      LinkPageNumber: '0'
-    });
+      LinkPageNumber: 0
+    };
 
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
       'code:text', filter, sortActive, sortDirection, page);
@@ -59,23 +62,23 @@ export class PhastCioDcService {
 
   searchMedicationKnowledgeUCD(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                                page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const searchParams = new URLSearchParams({
-      _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
+    const searchParams = {
+      _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
       'product-type': 'UCD',
       _elements: 'ingredient,code,id,doseForm',
-      LinkPageNumber: '0'
-    });
+      LinkPageNumber: 0
+    };
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
       'code:text', filter, sortActive, sortDirection, page);
   }
 
   searchComposition(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                     page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const searchParams = new URLSearchParams({
-      _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
+    const searchParams = {
+      _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
       _elements: 'id,title,category,type',
-      LinkPageNumber: '0'
-    });
+      LinkPageNumber: 0
+    };
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('Composition', searchParams,
       'type:text', filter, sortActive, sortDirection, page);
   }
@@ -84,13 +87,11 @@ export class PhastCioDcService {
     mkId: id,
     mkCode: CodeableConcept,
     doseForm?: CodeableConcept,
-    amount?: Quantity,
     ingredient?: MedicationIngredient[],
     intendedRoute?: CodeableConcept
   ): Observable<Parameters> {
-    const input = new MedicationKnowledgeLookupBuilder(mkId, mkCode)
+    const input = new MedicationKnowledgeDetailsBuilder(mkId, mkCode)
       .doseForm(doseForm)
-      .amount(amount)
       .ingredient(ingredient)
       .intendedRoute(intendedRoute)
       .build();
@@ -115,25 +116,23 @@ export class PhastCioDcService {
     );
   }
 
-  private search<T>(resourceType: string, searchParams: URLSearchParams, columnNameToFilter?: string, filter?: string | undefined,
+  private search<T>(resourceType: string, searchParams: ParsedUrlQueryInput, columnNameToFilter?: string, filter?: string | undefined,
                     sortActive?: string, sortDirection?: string, page?: number):
     Observable<T> {
 
-    if (sortActive) {
-      if (sortDirection && sortDirection === 'desc') {
-        searchParams.set('_sort', '-' + sortActive);
-      }
-      else if (sortDirection && sortDirection === 'asc') {
-        searchParams.set('_sort', sortActive);
-      }
+    if (sortDirection && sortDirection === 'desc') {
+      searchParams['_sort'] = '-' + sortActive;
+    }
+    else if (sortDirection && sortDirection === 'asc') {
+      searchParams['_sort'] = sortActive;
     }
 
     if (page) {
-      searchParams.set('LinkPageNumber', page.toString());
+      searchParams['LinkPageNumber'] = page;
     }
 
     if (columnNameToFilter && typeof filter === 'string' && filter.length > 0) {
-      searchParams.set(columnNameToFilter, filter.trim());
+      searchParams[columnNameToFilter] = filter.trim();
       return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
         resourceType,
         searchParams
@@ -146,7 +145,7 @@ export class PhastCioDcService {
   }
 }
 
-export class MedicationKnowledgeLookupBuilder {
+export class MedicationKnowledgeDetailsBuilder {
   private readonly _parameters: Parameters;
 
   constructor(mkId: id, mkCode: CodeableConcept) {
@@ -195,14 +194,6 @@ export class MedicationKnowledgeLookupBuilder {
     if (intendedRoute && this._parameters.parameter && this._parameters.parameter[1]) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       medicationKnowledge.intendedRoute?.push(intendedRoute);
-    }
-    return this;
-  }
-
-  public amount(amount: Quantity | undefined): this {
-    if (amount && this._parameters.parameter && this._parameters.parameter[1]) {
-      const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      medicationKnowledge.amount = amount;
     }
     return this;
   }

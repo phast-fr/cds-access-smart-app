@@ -192,7 +192,7 @@ export class QuantityLabelProvider implements ILabelProvider<Quantity> {
 
   getText(quantity: Quantity | undefined | null): string | undefined {
     if (!quantity) { return undefined; }
-    return `${quantity.value?.toString()} ${quantity.unit}`;
+    return quantity.value?.toString();
   }
 }
 
@@ -204,19 +204,19 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
   getText(ratio: Ratio | undefined | null): string | undefined {
     if (!ratio) { return undefined; }
     const labelComposite = new Array<string>();
-    if (ratio.numerator) {
-      if (ratio.numerator.value) {
+    if (ratio.numerator != null) {
+      if (ratio.numerator.value != null) {
         labelComposite.push(ratio.numerator.value.toString());
       }
-      if (ratio.numerator.unit) {
+      if (ratio.numerator.unit != null) {
         labelComposite.push(ratio.numerator.unit);
       }
-      if (ratio.denominator?.value
+      if (ratio.denominator?.value != null
         && ratio.denominator?.value !== 1) {
         labelComposite.push('/');
         labelComposite.push(ratio.denominator?.value?.toString());
       }
-      if (ratio.denominator?.unit
+      if (ratio.denominator?.unit != null
         && ratio.denominator?.unit !== '1') {
         labelComposite.push('/');
         labelComposite.push(ratio.denominator?.unit);
@@ -263,33 +263,6 @@ export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetCon
 
   public getText(valueSetContains: ValueSetContains | undefined | null): string | undefined {
     if (! valueSetContains) { return undefined; }
-    let display: string | undefined;
-    switch (valueSetContains.code) {
-      case 'a':
-        display = 'année';
-        break;
-      case 'mo':
-        display = 'mois';
-        break;
-      case 'wk':
-        display = 'semaine';
-        break;
-      case 'd':
-        display = 'jour';
-        break;
-      case 'h':
-        display = 'heure';
-        break;
-      case 'min':
-        display = 'minutes';
-        break;
-      case 's':
-        display = 'seconde';
-        break;
-      default:
-        display = valueSetContains.display;
-        break;
-    }
-    return display;
+    return valueSetContains.display;
   }
 }

@@ -1,92 +1,118 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
+import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
+import {BehaviorSubject, Observable} from 'rxjs';
+import {filter, map, takeUntil} from 'rxjs/operators';
 
-import { StateService } from '../common/services/state.service';
-import { SmartService } from '../smart/services/smart.service';
-import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
-import { PrescriptionStateService } from './prescription-state.service';
-import { CardReadable } from './prescription.model';
-import { fhir } from '../common/fhir/fhir.types';
-import Patient = fhir.Patient;
-import Practitioner = fhir.Practitioner;
+import {StateService} from '../common/cds-access/services/state.service';
+import {FhirSmartService} from '../common/fhir/smart/services/fhir.smart.service';
+import {PrescriptionStateService} from './prescription-state.service';
+import {SmartComponent, StateModel} from '../common/cds-access/models/core.model';
+import {CardReadable} from './prescription.model';
 
 @Component({
   selector: 'app-prescription',
   templateUrl: './prescription.component.html',
-  styleUrls: ['./prescription.component.css']
+  styleUrls: ['./prescription.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PrescriptionComponent implements OnInit, OnDestroy  {
+export class PrescriptionComponent extends SmartComponent implements OnInit, OnDestroy {
 
-  private _unsubscribeTrigger$ = new Subject<void>();
+  private readonly _loading$: BehaviorSubject<boolean>;
 
-  constructor(
-    private _stateService: StateService,
-    private _route: ActivatedRoute,
-    private _smartService: SmartService,
-    private _dataSource: FhirDataSourceService,
-    private _prescriptionState: PrescriptionStateService) {
-    this._stateService.stateSubject$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        switchMap(stateModel => this._dataSource.readPatient(stateModel.patient))
-      )
-      .subscribe((patient: Patient) => this._prescriptionState.patient = patient);
-    this._stateService.stateSubject$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        filter(stateModel => stateModel.userType() === 'Practitioner'),
-        switchMap(stateModel => this._dataSource.readPractitioner(stateModel.userId()))
-      )
-      .subscribe((user: Practitioner) => this._prescriptionState.user = user);
+  private readonly _needBanner$: BehaviorSubject<boolean>;
+
+  private readonly _badge$: BehaviorSubject<number>;
+
+  private readonly _cards: Array<CardReadable>;
+
+  constructor(route: ActivatedRoute,
+              smartService: FhirSmartService,
+              private _stateService: StateService,
+              private _prescriptionState: PrescriptionStateService) {
+    super(route, smartService);
+    this._loading$ = new BehaviorSubject<boolean>(true);
+    this._needBanner$ = new BehaviorSubject<boolean>(false);
+    this._badge$ = new BehaviorSubject<number>(0);
+    this._cards = new Array<CardReadable>();
   }
 
-  public get patient(): Patient {
-    return this._prescriptionState.patient;
+  public cards$ = this._prescriptionState.cards$;
+
+  public get loading$(): Observable<boolean> {
+    return this._loading$.asObservable();
+  }
+
+  public get needBanner$(): Observable<boolean> {
+    return this._needBanner$.asObservable();
+  }
+
+  public get badges$(): Observable<number> {
+    return this._badge$.asObservable();
+  }
+
+  public get medicationRequestMode$(): Observable<string> {
+    return this._prescriptionState.medicationRequestMode$;
   }
 
   public get cards(): Array<CardReadable> {
-    return this._prescriptionState.cards;
+    return this._cards;
   }
 
-  ngOnInit(): void {
-    const routeWithoutToken$ = this._route.queryParams
+  public ngOnInit(): void {
+    super.ngOnInit();
+
+    this._stateService.state$
       .pipe(
-        filter(_ => !this._smartService.isTokenExist())
-      );
-    const routeWithToken$ = this._route.queryParams
-      .pipe(
-        filter(_ => this._smartService.isTokenExist())
-      );
-    routeWithoutToken$
-      .pipe(
-        takeUntil(this._unsubscribeTrigger$),
-        map(params  => {
-          console.log(params);
-          return {
-            code: params.code,
-            state: params.state
-          };
-        })
+        takeUntil(this.unsubscribeTrigger$),
+        filter(state => state !== false),
+        map(state => state as StateModel),
       )
-      .subscribe(value => this._smartService.retrieveToken(value.code, value.state));
-    routeWithToken$
-      .subscribe(_ => this._smartService.loadToken());
+      .subscribe({
+        next: state => {
+          this._needBanner$.next(state.needPatientBanner);
+          this._loading$.next(false);
+        },
+        error: err => console.error('error', err)
+      });
+
+    this._prescriptionState.cards$
+      .pipe(
+        takeUntil(this.unsubscribeTrigger$),
+        filter(value => value !== false),
+        map(value => value as Array<CardReadable>)
+      )
+      .subscribe({
+        next: cards => {
+          this._cards.push(...cards);
+          this._badge$.next(this._cards.filter((obj) => !obj.isReaded).length);
+        },
+        error: err => console.error('error', err)
+      });
+    this._prescriptionState.cards$
+      .pipe(
+        takeUntil(this.unsubscribeTrigger$),
+        filter(value => value === false)
+      )
+      .subscribe({
+        next: () => {
+          this._cards.length = 0;
+          this._badge$.next(0);
+        },
+        error: err => console.error('error', err)
+      });
   }
 
-  ngOnDestroy(): void {
-    this._unsubscribeTrigger$.next();
-    this._unsubscribeTrigger$.complete();
+  public ngOnDestroy(): void {
+    super.ngOnDestroy();
+
+    this._loading$.complete();
+    this._needBanner$.complete();
   }
 
-  getBadge(): number {
-    return this._prescriptionState.cards.filter((obj) => obj.isReaded === false).length;
-  }
-
-  onReadCards(): void {
-    this._prescriptionState.cards.forEach(card => {
+  public onReadCards(): void {
+    this._cards.forEach(card => {
       card.isReaded = true;
     });
+    this._badge$.next(0);
   }
 }
