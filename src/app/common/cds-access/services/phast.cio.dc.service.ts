@@ -9,8 +9,6 @@ import { Injectable } from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
 
-import {ParsedUrlQueryInput} from 'querystring';
-
 import { environment } from '../../../../environments/environment';
 
 import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
@@ -117,7 +115,7 @@ export class PhastCioDcService {
     );
   }
 
-  private search<T>(resourceType: string, searchParams: ParsedUrlQueryInput, columnNameToFilter?: string, filter?: string | undefined,
+  private search<T>(resourceType: string, searchParams: Record<string, any>, columnNameToFilter?: string, filter?: string | undefined,
                     sortActive?: string, sortDirection?: string, page?: number):
     Observable<T> {
 

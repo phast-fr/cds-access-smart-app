@@ -3,8 +3,8 @@ import {HttpClient, HttpContext, HttpHeaders, HttpParams} from '@angular/common/
 import {Observable} from 'rxjs';
 import {map} from 'rxjs/operators';
 
-import * as queryString from 'querystring';
-import {ParsedUrlQueryInput} from 'querystring';
+import * as queryString from 'query-string';
+
 import {id, OperationOutcome, Resource} from 'phast-fhir-ts';
 
 export interface Options {
@@ -34,7 +34,7 @@ export interface RequestOptions {
 
 export interface SearchParameters {
   resourceType: string;
-  searchParams: ParsedUrlQueryInput;
+  searchParams: Record<string, any>;
 }
 
 export interface Parameters {
