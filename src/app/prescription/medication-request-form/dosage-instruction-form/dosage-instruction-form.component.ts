@@ -49,6 +49,7 @@ import {
   MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit,
 } from '../medication-request-form.intent';
 import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
+import {environment} from '../../../../environments/environment';
 
 @Component({
   selector: 'app-dosage-instruction-form',
@@ -155,7 +156,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         }
         break;
       case 'AddDosageInstruction':
-        if (state.nDosage && state.medicationRequest && state.medicationRequest.dosageInstruction) {
+        if (state.nDosage && state.medicationRequest?.dosageInstruction) {
           this.dosageInstruction?.push(
             this.addDosageInstruction(
               state.medicationRequest.dosageInstruction[state.nDosage],
@@ -396,26 +397,28 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   private addDosageInstruction(dosage: Dosage, nDosage: number): FormGroup {
     const dosageInstructionGroup = this._fb.group({
       'track-id': Utils.randomString(16),
-      route: [dosage?.route, [Validators.required]],
+      route: [dosage.route, [Validators.required]],
       timing: this._fb.group({
         repeat: this._fb.group({
           boundsMode: ['duration'],
           boundsDuration: this._fb.group({
-            value: [dosage?.timing?.repeat?.boundsDuration?.value, Validators.pattern( /\d/ )],
+            value: [dosage.timing?.repeat?.boundsDuration?.value, Validators.pattern( /\d/ )],
             unit: [undefined],
           }),
           boundsPeriod: this._fb.group({
-            start: [(dosage?.timing?.repeat?.boundsPeriod?.start) ?
-              DateTime.fromISO(dosage?.timing?.repeat?.boundsPeriod?.start).toFormat('dd/MM/yyyy') : undefined,
-              Validators.pattern( /\d{2}\/\d{2}\/\d{4}/ )],
-            end: [(dosage?.timing?.repeat?.boundsPeriod?.end) ?
-              DateTime.fromISO(dosage?.timing?.repeat?.boundsPeriod?.end).toFormat('dd/MM/yyyy') : undefined,
-              Validators.pattern( /\d{2}\/\d{2}\/\d{4}/ )]
+            start: [(dosage.timing?.repeat?.boundsPeriod?.start) ?
+              DateTime.fromFormat(dosage.timing?.repeat?.boundsPeriod?.start, environment.fhir_date_format)
+                .toFormat(environment.display_date_format) : undefined,
+              Validators.pattern( /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/ )],
+            end: [(dosage.timing?.repeat?.boundsPeriod?.end) ?
+              DateTime.fromFormat(dosage.timing?.repeat?.boundsPeriod?.end, environment.fhir_date_format)
+                .toFormat(environment.display_date_format) : undefined,
+              Validators.pattern( /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/ )]
           }),
-          duration: [dosage?.timing?.repeat?.duration], // How long when it happens
+          duration: [dosage.timing?.repeat?.duration], // How long when it happens
           durationUnit: [undefined],
-          frequency: [dosage?.timing?.repeat?.frequency, Validators.pattern( /\d/ )],
-          period: [dosage?.timing?.repeat?.period],
+          frequency: [dosage.timing?.repeat?.frequency, Validators.pattern( /\d/ )],
+          period: [dosage.timing?.repeat?.period],
           periodUnit: [undefined],
           timeOfDay: this._fb.array([]), // Time of day for action
           dayOfWeek: this._fb.array([
@@ -449,7 +452,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
             })
           ]),
           when: this._fb.array([]),
-          offset: [dosage?.timing?.repeat?.offset, Validators.pattern( /\d/ )]
+          offset: [dosage.timing?.repeat?.offset, Validators.pattern( /\d/ )]
         })
       }),
       doseAndRate: this._fb.array([])
@@ -457,18 +460,20 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
     const routeControl = dosageInstructionGroup.get('route');
     if (routeControl) {
-      const routeString$ = routeControl.valueChanges
-        .pipe(
-          filter(value => typeof value === 'string')
-        );
       const routeObj$ = routeControl.valueChanges
         .pipe(
           filter(value => value instanceof Object)
         );
+
+      const routeString$ = routeControl.valueChanges
+        .pipe(
+          filter(value => typeof value === 'string')
+        );
+
       routeString$
         .pipe(
           takeUntil(this._unsubscribeTrigger$),
-          tap(() => routeControl.reset(null, {emitEvent: false}))
+          tap(() => routeControl.reset(undefined, {emitEvent: false}))
         )
         .subscribe({
           next: () => {
@@ -487,8 +492,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         });
       routeObj$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          distinctUntilChanged<CodeableConcept>((prev, cur) => prev.text === cur.text)
+          takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
           next: value => {
@@ -1234,10 +1238,12 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     if (boundsPeriodStartControl && boundsPeriodEndControl && dosage.timing?.repeat?.boundsPeriod) {
       boundsPeriodStartControl.setValue(
         (dosage.timing.repeat.boundsPeriod?.start) ?
-          DateTime.fromISO(dosage.timing.repeat.boundsPeriod?.start).toFormat('dd/MM/yyyy') : undefined, options);
+          DateTime.fromFormat(dosage.timing?.repeat?.boundsPeriod?.start, environment.fhir_date_format)
+            .toFormat(environment.display_date_format) : undefined, options);
       boundsPeriodEndControl.setValue(
         (dosage.timing.repeat.boundsPeriod?.end) ?
-          DateTime.fromISO(dosage.timing.repeat.boundsPeriod?.end).toFormat('dd/MM/yyyy') : undefined, options);
+          DateTime.fromFormat(dosage.timing?.repeat?.boundsPeriod?.end, environment.fhir_date_format)
+            .toFormat(environment.display_date_format) : undefined, options);
     }
   }
 
@@ -1283,7 +1289,10 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         if (routes && routes.length === 1) {
           const routeControl = dosageInstructionGroup.get('route');
           if (routeControl) {
-            routeControl.setValue(routes[0]);
+            const cur = routeControl.value as CodeableConcept;
+            if (cur?.text !== routes[0].text) {
+              routeControl.setValue(routes[0]);
+            }
           }
         }
       });
@@ -1294,13 +1303,23 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     const options = {emitEvent: false};
 
     const boundsDurationUnit = dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit']);
-    if (boundsDurationUnit && dosage.timing?.repeat?.boundsDuration?.code) {
-      boundsDurationUnit.setValue(this.boundsDurationUnit(dosage.timing?.repeat?.boundsDuration?.code), options);
+    if (boundsDurationUnit) {
+      if (dosage.timing?.repeat?.boundsDuration?.code) {
+        boundsDurationUnit.setValue(this.boundsDurationUnit(dosage.timing?.repeat?.boundsDuration?.code), options);
+      }
+      else {
+        boundsDurationUnit.reset(undefined, options);
+      }
     }
 
     const periodUnit = dosageInstructionGroup.get(['timing', 'repeat', 'periodUnit']);
-    if (periodUnit && dosage.timing?.repeat?.periodUnit) {
-      periodUnit.setValue(this.durationUnit(dosage.timing?.repeat?.periodUnit), options);
+    if (periodUnit) {
+      if (dosage.timing?.repeat?.periodUnit) {
+        periodUnit.setValue(this.durationUnit(dosage.timing?.repeat?.periodUnit), options);
+      }
+      else {
+        periodUnit.reset(undefined, options);
+      }
     }
   }
 }
