@@ -28,7 +28,6 @@
     "luxon": "^2.0.2",
     "object-hash": "^2.2.0",
     "phast-fhir-ts": "^1.0.2",
-    "query-string": "^7.0.1",
     "rxjs": "^7.3.0",
     "tslib": "^2.3.1",
     "uuid": "^8.3.2",

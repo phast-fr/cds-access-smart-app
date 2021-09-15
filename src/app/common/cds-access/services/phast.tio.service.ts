@@ -41,10 +41,10 @@ export class PhastTioService {
   }
 
   public valueSet$expand(valueSetUrl: url): Observable<OperationOutcome | ValueSet> {
-    const input = {
+    const input = new URLSearchParams({
       url: valueSetUrl,
       displayLanguage: environment.display_language
-    };
+    });
     return this._fhirClient.operation<OperationOutcome | ValueSet>(environment.tio_url, {
       name: '$expand',
       resourceType: 'ValueSet',

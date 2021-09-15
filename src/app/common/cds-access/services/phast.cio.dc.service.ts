@@ -46,12 +46,12 @@ export class PhastCioDcService {
 
   searchMedicationKnowledgeDC(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                               page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const searchParams = {
-      _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
+    const searchParams = new URLSearchParams({
+      _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
       'product-type': 'DC',
       _elements: 'ingredient,code,id',
-      LinkPageNumber: 0
-    };
+      LinkPageNumber: '0'
+    });
 
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
       'code:text', filter, sortActive, sortDirection, page);
@@ -59,23 +59,23 @@ export class PhastCioDcService {
 
   searchMedicationKnowledgeUCD(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                                page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const searchParams = {
-      _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
+    const searchParams = new URLSearchParams({
+      _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
       'product-type': 'UCD',
       _elements: 'ingredient,code,id,doseForm',
-      LinkPageNumber: 0
-    };
+      LinkPageNumber: '0'
+    });
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
       'code:text', filter, sortActive, sortDirection, page);
   }
 
   searchComposition(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                     page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    const searchParams = {
-      _count: (pageSize) ? pageSize : PhastCioDcService.DEFAULT_PAGE_SIZE,
+    const searchParams = new URLSearchParams({
+      _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
       _elements: 'id,title,category,type',
-      LinkPageNumber: 0
-    };
+      LinkPageNumber: '0'
+    });
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('Composition', searchParams,
       'type:text', filter, sortActive, sortDirection, page);
   }
@@ -115,23 +115,25 @@ export class PhastCioDcService {
     );
   }
 
-  private search<T>(resourceType: string, searchParams: Record<string, any>, columnNameToFilter?: string, filter?: string | undefined,
+  private search<T>(resourceType: string, searchParams: URLSearchParams, columnNameToFilter?: string, filter?: string | undefined,
                     sortActive?: string, sortDirection?: string, page?: number):
     Observable<T> {
 
-    if (sortDirection && sortDirection === 'desc') {
-      searchParams['_sort'] = '-' + sortActive;
-    }
-    else if (sortDirection && sortDirection === 'asc') {
-      searchParams['_sort'] = sortActive;
+    if (sortActive) {
+      if (sortDirection && sortDirection === 'desc') {
+        searchParams.set('_sort', '-' + sortActive);
+      }
+      else if (sortDirection && sortDirection === 'asc') {
+        searchParams.set('_sort', sortActive);
+      }
     }
 
     if (page) {
-      searchParams['LinkPageNumber'] = page;
+      searchParams.set('LinkPageNumber', page.toString());
     }
 
     if (columnNameToFilter && typeof filter === 'string' && filter.length > 0) {
-      searchParams[columnNameToFilter] = filter.trim();
+      searchParams.set(columnNameToFilter, filter.trim());
       return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
         resourceType,
         searchParams
