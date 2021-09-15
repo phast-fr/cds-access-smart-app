@@ -8,9 +8,8 @@
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, takeUntil, tap } from 'rxjs/operators';
+import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/operators';
 
-// @ts-ignore
 import {DateTime} from 'luxon';
 
 import {IRender} from '../../../common/cds-access/models/state.model';
@@ -81,11 +80,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return this._dosageInstruction$.asObservable();
   }
 
-  public get dosageInstruction(): FormArray | null {
+  public get dosageInstruction(): FormArray | undefined {
     if (this._dosageInstruction$.value) {
       return this._dosageInstruction$.value as FormArray;
     }
-    return null;
+    return undefined;
   }
 
   public get isLoadingList$(): Observable<boolean> {
@@ -884,6 +883,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         takeUntil(this._unsubscribeTrigger$),
         debounceTime(500),
         distinctUntilChanged(),
+        tap(() => {
+          if (this.dosageInstruction) {
+            this._dosageInstruction$.next(this.dosageInstruction);
+          }
+        }),
         filter(() => timeOfDayControl.valid)
       )
       .subscribe({
