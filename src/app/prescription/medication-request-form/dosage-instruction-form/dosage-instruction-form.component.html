@@ -240,9 +240,9 @@
                           aria-label="Supprimer l'instruction de dose & débit"
                           (click)="onRemoveDoseAndRate(nDosage, i)"> - </button>
               <mat-form-field appearance="fill" class="dose-and-rate-value">
-                <mat-label> Quantité </mat-label>
+                <mat-label> Dose </mat-label>
                 <input type="text"
-                       aria-label="quantité"
+                       aria-label="dose"
                        matInput
                        [formControl]="toFormControl(dosageAndRate.get(['doseQuantity', 'value']))"/>
               </mat-form-field>
