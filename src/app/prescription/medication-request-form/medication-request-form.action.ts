@@ -1712,7 +1712,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioNumerator
         }
         else if (!dosage.doseAndRate[this._nDoseAndRate].rateRatio?.numerator) {
           const rateRatioBuilder = new RatioBuilder();
-          rateRatioBuilder.denominatorQuality(new QuantityBuilder()
+          rateRatioBuilder.numeratorQuantity(new QuantityBuilder()
             .code(this._rateRatioNumeratorUnit.code)
             .unit(this._rateRatioNumeratorUnit.display)
             .system(this._rateRatioNumeratorUnit.system)
