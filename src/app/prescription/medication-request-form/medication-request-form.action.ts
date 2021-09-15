@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
 import * as lodash from 'lodash';
-import {DateTime} from 'luxon';
+import {DateTime, Duration} from 'luxon';
 import {Utils} from '../../common/cds-access/utils/utils';
 import {IAction, IPartialState} from '../../common/cds-access/models/state.model';
 import {
@@ -44,6 +44,7 @@ import {
   Reference, time, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
 import {EventTiming} from 'phast-fhir-ts/lib/hl7/r4/fhir';
+import {environment} from '../../../environments/environment';
 
 export class MedicationFormActionAddMedicationRequest implements IAction {
   readonly type = 'AddMedicationRequest';
@@ -103,7 +104,7 @@ export class MedicationFormActionAddMedication implements IAction {
               .periodUnit('d')
               .frequency(1)
               .boundsPeriod(new PeriodBuilder()
-                .start(DateTime.now().toFormat('yyyy-MM-dd'))
+                .start(DateTime.now().toFormat(environment.fhir_date_short_format))
                 .build()
               )
               .boundsDuration(new DurationBuilder()
@@ -118,7 +119,7 @@ export class MedicationFormActionAddMedication implements IAction {
       );
       medicationRequest.dispenseRequest = new MedicationRequestDispenseRequestBuilder()
         .validityPeriod(new PeriodBuilder()
-          .start(DateTime.now().toFormat('yyyy-MM-dd'))
+          .start(DateTime.now().toFormat(environment.fhir_date_format))
           .build())
         .build();
 
@@ -477,7 +478,7 @@ export class MedicationFormActionAddDosageInstruction implements IAction {
               .periodUnit('d')
               .frequency(1)
               .boundsPeriod(new PeriodBuilder()
-                  .start(DateTime.now().toFormat('yyyy-MM-dd'))
+                  .start(DateTime.now().toFormat(environment.fhir_date_short_format))
                   .build()
                 )
                 .boundsDuration(new DurationBuilder()
@@ -625,8 +626,9 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
 
   private synchronizeBounds(dosage: Dosage): void {
     if (dosage.timing?.repeat?.boundsPeriod?.start) {
-      const start: DateTime = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
-
+      console.log(dosage.timing.repeat.boundsPeriod.start);
+      const start = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.start, environment.fhir_date_format);
+      console.log(start);
       let unit: string | undefined;
       if (dosage.timing.repeat.boundsDuration?.code) {
         unit = dosage.timing.repeat.boundsDuration.code;
@@ -641,8 +643,9 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
       if (dosage.timing.repeat.boundsDuration?.value && unit) {
         const duration = Utils.duration(dosage.timing.repeat.boundsDuration.value, unit);
         if (duration) {
-          const end = start.plus(duration);
-          dosage.timing.repeat.boundsPeriod.end = end.toFormat('yyyy-MM-dd');
+          const end = start.plus(duration.minus(Duration.fromObject({seconds: 1})));
+          dosage.timing.repeat.boundsPeriod.end = end.toFormat(environment.fhir_date_format);
+          console.log(dosage.timing.repeat.boundsPeriod.end);
         }
       }
     }
@@ -708,15 +711,15 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit
     if (dosage.timing?.repeat?.boundsPeriod?.start
       && dosage.timing?.repeat?.boundsDuration?.value
       && dosage.timing?.repeat?.boundsDuration?.code) {
-      const start: DateTime = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const start: DateTime = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.start, environment.fhir_date_format);
       const duration = Utils.duration(
         dosage.timing.repeat.boundsDuration.value,
         dosage.timing.repeat.boundsDuration.code
       );
 
       if (duration) {
-        const end = start.plus(duration);
-        dosage.timing.repeat.boundsPeriod.end = end.toFormat('yyyy-MM-dd');
+        const end = start.plus(duration).minus(Duration.fromObject({seconds: 1}));
+        dosage.timing.repeat.boundsPeriod.end = end.toFormat(environment.fhir_date_format);
       }
     }
   }
@@ -737,7 +740,8 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
       const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
       if (this._boundsPeriodStart) {
-        const boundsPeriodStart = DateTime.fromFormat(this._boundsPeriodStart, 'dd/MM/yyyy').toFormat('yyyy-MM-dd');
+        const boundsPeriodStart = DateTime.fromFormat(this._boundsPeriodStart, environment.display_date_format)
+          .toFormat(environment.fhir_date_format);
         if (!dosage.timing) {
           dosage.timing = new TimingBuilder()
             .timingRepeat(new TimingRepeatBuilder()
@@ -784,7 +788,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
   private synchronizeBounds(dosage: Dosage): void {
     if (dosage.timing?.repeat?.boundsPeriod?.start
       && dosage.timing?.repeat?.boundsDuration?.value) {
-      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
+      const start = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.start, environment.fhir_date_format);
 
       let unit;
       if (dosage.timing.repeat.boundsDuration.code) {
@@ -798,14 +802,14 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
       }
       const duration = Utils.duration(dosage.timing.repeat.boundsDuration.value, unit);
       if (duration) {
-        const end = start.plus(duration);
-        dosage.timing.repeat.boundsPeriod.end = end.toFormat('yyyy-MM-dd');
+        const end = start.plus(duration).minus(Duration.fromObject({seconds: 1}));
+        dosage.timing.repeat.boundsPeriod.end = end.toFormat(environment.fhir_date_format);
       }
     }
     else if (dosage.timing?.repeat?.boundsPeriod?.start
       && dosage.timing?.repeat?.boundsPeriod?.end) {
-      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
-      const end = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.end);
+      const start = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.start, environment.fhir_date_format);
+      const end = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.end, environment.fhir_date_format);
       const duration = end.diff(start, 'days').as('days');
       if (dosage.timing.repeat.boundsDuration === undefined) {
         dosage.timing.repeat.boundsDuration = new DurationBuilder()
@@ -838,7 +842,8 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd im
       const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
       if (this._boundsPeriodEnd) {
-        const boundsPeriodEnd = DateTime.fromFormat(this._boundsPeriodEnd, 'dd/MM/yyyy').toFormat('yyyy-MM-dd');
+        const boundsPeriodEnd = DateTime.fromFormat(this._boundsPeriodEnd, environment.display_date_format)
+          .toFormat(environment.fhir_date_format);
         if (!dosage.timing) {
           dosage.timing = new TimingBuilder()
             .timingRepeat(new TimingRepeatBuilder()
@@ -893,8 +898,8 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd im
   private synchronizedBounds(dosage: Dosage): void {
     if (dosage.timing?.repeat?.boundsPeriod?.start
       && dosage.timing?.repeat?.boundsPeriod?.end) {
-      const start = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.start);
-      const end = DateTime.fromISO(dosage.timing.repeat.boundsPeriod.end);
+      const start = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.start, environment.fhir_date_format);
+      const end = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.end, environment.fhir_date_format);
       const duration = end.diff(start, 'days').as('days');
       if (!dosage.timing.repeat.boundsDuration) {
         dosage.timing.repeat.boundsDuration = new DurationBuilder()
