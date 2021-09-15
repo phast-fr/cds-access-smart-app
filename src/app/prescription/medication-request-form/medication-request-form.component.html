@@ -36,7 +36,6 @@
   <app-medication-form></app-medication-form>
   <app-metadata-form></app-metadata-form>
   <app-dosage-instruction-form></app-dosage-instruction-form>
-  <app-dispense-request-form></app-dispense-request-form>
   <div class="form-field-row form-control" *ngIf="medicationRequest != null">
     <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
              [disabled]="!(isMedicationRequestAddable$ | async)"> Ajouter </button>

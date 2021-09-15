@@ -325,12 +325,12 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     const medicationGroupValid = (this._medicationForm?.medicationGroup) ? this._medicationForm.medicationGroup.valid : false;
     const dosageInstructionValid = (this._dosageInstructionForm?.dosageInstruction) ?
       this._dosageInstructionForm.dosageInstruction.valid : false;
-    const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?
-      this._dispenseRequestForm.dispenseRequestGroup.valid : false;
+    /*const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?
+      this._dispenseRequestForm.dispenseRequestGroup.valid : false;*/
     this._isMedicationRequestAddable$.next(
       medicationGroupValid
       && dosageInstructionValid
-      && dispenseRequestGroupValid
+      // && dispenseRequestGroupValid
     );
   }
 
