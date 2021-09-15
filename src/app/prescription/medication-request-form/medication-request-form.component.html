@@ -6,7 +6,7 @@
               matTooltipPosition="below"
               aria-label="Ajouter le produit selectionné"
               (click)="onAddMedication()"
-              [disabled]="!(isMedicationRequestAddable$ | async)"> + </button>
+              [disabled]="!(isMedicationAddable$ | async)"> + </button>
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-icon svgIcon="medicines" aria-hidden="false" aria-label="chercher un produit" matPrefix
                   matTooltip="Chercher un produit"></mat-icon>
