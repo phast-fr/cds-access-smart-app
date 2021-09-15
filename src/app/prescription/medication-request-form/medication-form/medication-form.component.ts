@@ -598,6 +598,16 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         }
       }
 
+      const amountControl = medicationGroup.get('amount');
+      if (amountControl) {
+        if (this.amountList.length === 0) {
+          amountControl.disable();
+        }
+        else {
+          amountControl.enable();
+        }
+      }
+
       if (this._viewModel.medicationRequest?.contained) {
         const ingredientFormArray = medicationGroup.get('ingredient') as FormArray;
         this._viewModel.medicationRequest.contained.forEach((value) => {
