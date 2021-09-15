@@ -79,12 +79,11 @@ export class FhirDataSourceService {
       const resourceType = resourceTypeSearch[0];
       const search = resourceTypeSearch[1];
 
-      const searchParams = {};
+      const searchParams = new URLSearchParams();
       for (const part of search.split('&')) {
         const keyValue = part.split('=');
         const key = keyValue[0];
-        // @ts-ignore
-        searchParams[key] = keyValue[1];
+        searchParams.set(key, keyValue[1]);
       }
       return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
         resourceType,
@@ -101,17 +100,17 @@ export class FhirDataSourceService {
         search = search.replace(/ /g, ',');
         return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
           resourceType: 'Patient',
-          searchParams: {
-            _count: '10',
-            name: search
-          }
+          searchParams: new URLSearchParams({
+              _count: '10',
+              name: search
+          })
         }, this._options);
       }
       return this._fhirClient.resourceSearch(this._baseUrl, {
         resourceType: 'Patient',
-        searchParams: {
+        searchParams: new URLSearchParams({
           _count: '10'
-        }
+        })
       }, this._options);
     }
     return undefined;
@@ -119,23 +118,25 @@ export class FhirDataSourceService {
 
   public medicationRequestSearch(patient: Patient, name?: string):
     Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
-    if (this._baseUrl) {
+    if (this._baseUrl && patient.id) {
       if (name) {
         let search = name.trim();
         search = search.replace(/ /g, ',');
-        return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
-          resourceType: 'MedicationRequest',
-          searchParams: {
-            subject: patient.id,
-            'code:text': search
-          }
-        }, this._options);
+        if (search) {
+          return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
+            resourceType: 'MedicationRequest',
+            searchParams: new URLSearchParams({
+              subject: patient.id,
+              'code:text': search
+            })
+          }, this._options);
+        }
       }
       return this._fhirClient.resourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(this._baseUrl, {
         resourceType: 'MedicationRequest',
-        searchParams: {
+        searchParams: new URLSearchParams({
           subject: patient.id
-        }
+        })
       }, this._options);
     }
     return undefined;

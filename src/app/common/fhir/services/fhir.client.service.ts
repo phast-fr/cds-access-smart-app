@@ -3,8 +3,6 @@ import {HttpClient, HttpContext, HttpHeaders, HttpParams} from '@angular/common/
 import {Observable} from 'rxjs';
 import {map} from 'rxjs/operators';
 
-import * as queryString from 'query-string';
-
 import {id, OperationOutcome, Resource} from 'phast-fhir-ts';
 
 export interface Options {
@@ -34,7 +32,7 @@ export interface RequestOptions {
 
 export interface SearchParameters {
   resourceType: string;
-  searchParams: Record<string, any>;
+  searchParams: URLSearchParams;
 }
 
 export interface Parameters {
@@ -81,7 +79,7 @@ export class FhirClientService {
     }
     else if (params.method === 'get') {
       if (params.input) {
-        finalUrl.push(`?${queryString.stringify(params.input)}`);
+        finalUrl.push(`?${params.input.toString()}`);
       }
       return this._http.get<T>(baseUrl + finalUrl.join(''), options);
     }
@@ -117,7 +115,7 @@ export class FhirClientService {
 
   public resourceSearch<T>(baseUrl: string, params: SearchParameters, options?: Options): Observable<T> {
     let searchPath = `${baseUrl}/${params.resourceType}`;
-    const query = queryString.stringify(params.searchParams);
+    const query = params.searchParams.toString();
     if (query) {
       searchPath += `?${query}`;
     }
