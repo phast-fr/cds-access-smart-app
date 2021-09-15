@@ -293,10 +293,11 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         const medicationKnowledgeCode = medicationKnowledge.code;
         if (state.medicationRequest?.dosageInstruction) {
           const observables = new Array<Observable<Parameters>>();
+          const amount = (medication.amount?.numerator) ? medication.amount.numerator : undefined;
           state.medicationRequest.dosageInstruction.forEach((dosage) => {
             observables.push(
               this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-                medicationKnowledgeId, medicationKnowledgeCode, medication.form, medication.amount, medication.ingredient, dosage?.route
+                medicationKnowledgeId, medicationKnowledgeCode, medication.form, amount, medication.ingredient, dosage?.route
               )
                 .pipe(
                   retry({count: 3, delay: 1000})
