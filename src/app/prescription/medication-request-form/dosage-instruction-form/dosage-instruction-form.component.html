@@ -23,6 +23,9 @@
                  matInput
                  [formControl]="toFormControl(dosageInstructionGroup.get('route'))"
                  [matAutocomplete]="autoRoute"/>
+          <mat-error *ngIf="toFormControl(dosageInstructionGroup.get('route')).errors?.required">
+            La voie est obligatoire
+          </mat-error>
         </mat-form-field>
         <mat-autocomplete #autoRoute="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
           <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
@@ -142,6 +145,9 @@
                        aria-label="heure"
                        matInput
                        [formControl]="toFormControl(timeOfDay)"/>
+                <mat-error *ngIf="toFormControl(timeOfDay).errors?.pattern">
+                  Le format de l'heure n'est pas conforme au modèle HH:mm (ex. 07:00 ou 18:00)
+                </mat-error>
               </mat-form-field>
             </div>
           </mat-card-content>
