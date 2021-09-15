@@ -333,7 +333,6 @@ export class FhirSmartService {
         headers: new HttpHeaders()
           .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
           .set('Accept', 'application/json')
-          .set('Accept-Charset', 'utf-8')
       }).subscribe({
         next: token => {
           console.log('token', token);
