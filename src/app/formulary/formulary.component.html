@@ -1,24 +1,30 @@
-<div fxLayout="row" class="form-field-row form-field-medication-knowledge">
-  <div fxFlex="100%">
-    <mat-form-field fxFlex="100%" appearance="fill">
-      <i matPrefix matTooltip="Library Add" class="material-icons icon">library_add</i>
-      <mat-label> Livret thérapeutique </mat-label>
-      <input type="text" placeholder="Ex. Livret"
-             aria-label="Livret thérapeutique"
-             matInput
-             [formControl]="compositionControl"
-             [matAutocomplete]="autoMedicationKnowledge"/>
-    </mat-form-field>
-  </div>
-  <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
-                    [displayWith]="displayComposition.bind(this)">
-    <mat-option *ngIf="isLoading" class="is-loading"> Recherche... </mat-option>
-    <ng-container *ngIf="!isLoading">
-      <mat-option *ngFor="let element of compositionArray;
-            index as i trackBy: trackByComposition" [value]="element">
-        {{labelProviderFactory.getProvider(element).getText(element)}}
-      </mat-option>
-    </ng-container>
-  </mat-autocomplete>
+<div class="loading-indicator" *ngIf="loading$ | async">
+  <mat-progress-spinner mode="indeterminate" color="primary"></mat-progress-spinner>
 </div>
-<app-formulary-table></app-formulary-table>
+<div class="formulary-container" *ngIf="!(loading$ | async)">
+  <div fxLayout="row" class="form-field-row form-field-composition">
+    <div fxFlex="100%">
+      <mat-form-field fxFlex="100%" appearance="fill">
+        <mat-icon svgIcon="medicines" aria-hidden="false" aria-label="chercher livret thérapeutique" matPrefix
+                  matTooltip="Chercher livret thérapeutique"></mat-icon>
+        <mat-label> Livret thérapeutique </mat-label>
+        <input type="text" placeholder="Ex. Livret"
+               aria-label="Livret thérapeutique"
+               matInput
+               [formControl]="compositionControl"
+               [matAutocomplete]="autoMedicationKnowledge"/>
+      </mat-form-field>
+    </div>
+    <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
+                      [displayWith]="displayFn.bind(this)">
+      <mat-option *ngIf="isSearching$ | async" class="is-loading"> Recherche... </mat-option>
+      <ng-container *ngIf="!(isSearching$ | async)">
+        <mat-option *ngFor="let element of compositionArray;
+              index as i trackBy: trackBy" [value]="element">
+          {{element | composition}}
+        </mat-option>
+      </ng-container>
+    </mat-autocomplete>
+  </div>
+  <app-formulary-table></app-formulary-table>
+</div>

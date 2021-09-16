@@ -20,15 +20,14 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { FlexLayoutModule } from '@angular/flex-layout';
 
-import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
-import { FhirCdsHooksService } from '../common/fhir/fhir.cdshooks.service';
-import { FhirCioDcService } from '../common/services/fhir.cio.dc.service';
-import { FhirTioService } from '../common/services/fhir.tio.service';
 import { FormularyRoutingModule } from './formulary-routing.module';
+import {FhirModule} from '../common/fhir/fhir.module';
+
+import { FormularyStateService } from './formulary-state.service';
 
 import { FormularyComponent } from './formulary.component';
 import { FormularyTableComponent } from './formulary-table/formulary-table.component';
-import {FormularyStateService} from './formulary-state.service';
+import {CdsAccessModule} from '../common/cds-access/cds-access.module';
 
 @NgModule({
   declarations: [
@@ -57,12 +56,10 @@ import {FormularyStateService} from './formulary-state.service';
     MatBadgeModule,
     MatSidenavModule,
     FormularyRoutingModule,
+    CdsAccessModule,
+    FhirModule
   ],
   providers: [
-    FhirDataSourceService,
-    FhirCioDcService,
-    FhirTioService,
-    FhirCdsHooksService,
     FormularyStateService
   ],
   bootstrap: [FormularyComponent]

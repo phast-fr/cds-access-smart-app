@@ -393,12 +393,11 @@ export class ParametersParameterDataSource implements DataSource<TableElement<Pa
       selectedMedicationRequest.dosageInstruction[0].route : null;
 
     const forme = medication.form;
+    const amount = (medication.amount?.numerator) ? medication.amount.numerator : undefined;
 
     from(
       this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient('MK_' + medication.code.coding[0].code,
-        medication.code,
-        forme, medication.ingredient,
-        route )
+        medication.code, forme, amount, medication.ingredient, route )
     )
       .pipe(
         takeUntil(this._unsubscribeTrigger$),

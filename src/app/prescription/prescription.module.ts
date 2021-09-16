@@ -18,14 +18,16 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatSidenavModule } from '@angular/material/sidenav';
-import { FlexLayoutModule } from '@angular/flex-layout';
+import {MatRadioModule} from '@angular/material/radio';
+import {MatGridListModule} from '@angular/material/grid-list';
+import {FlexLayoutModule} from '@angular/flex-layout';
 
-import { FhirDataSourceService } from '../common/services/fhir.data-source.service';
-import { FhirCdsHooksService } from '../common/fhir/fhir.cdshooks.service';
-import { FhirCioDcService } from '../common/services/fhir.cio.dc.service';
-import { PrescriptionStateService } from './prescription-state.service';
+import {FhirModule} from '../common/fhir/fhir.module';
+
 import { PrescriptionRoutingModule } from './prescription-routing.module';
-import { MedicationRequestFormService } from './medication-request-form/medication-request-form.service';
+
+import { PrescriptionStateService } from './prescription-state.service';
+import { MedicationRequestFormViewModel } from './medication-request-form/medication-request-form-view-model';
 
 import { PrescriptionComponent } from './prescription.component';
 import { CardListComponent } from './card-list/card-list.component';
@@ -34,48 +36,50 @@ import { MedicationFormComponent } from './medication-request-form/medication-fo
 import { DosageInstructionFormComponent } from './medication-request-form/dosage-instruction-form/dosage-instruction-form.component';
 import { DispenseRequestFormComponent } from './medication-request-form/dispense-request-form/dispense-request-form.component';
 import { MedicationRequestTableComponent } from './medication-request-table/medication-request-table.component';
-import {FhirTioService} from '../common/services/fhir.tio.service';
+import {CdsAccessModule} from '../common/cds-access/cds-access.module';
+import {MetadataFormComponent} from './medication-request-form/metadata-form/metadata-form.component';
 
 @NgModule({
   declarations: [
     PrescriptionComponent,
     MedicationRequestFormComponent,
+    MetadataFormComponent,
     MedicationFormComponent,
     DosageInstructionFormComponent,
     DispenseRequestFormComponent,
     MedicationRequestTableComponent,
     CardListComponent
   ],
-  imports: [
-    CommonModule,
-    FlexLayoutModule,
-    MatProgressSpinnerModule,
-    MatIconModule,
-    MatInputModule,
-    MatAutocompleteModule,
-    MatTooltipModule,
-    MatFormFieldModule,
-    MatCardModule,
-    MatListModule,
-    MatButtonModule,
-    MatTableModule,
-    MatCheckboxModule,
-    MatSortModule,
-    MatMenuModule,
-    ReactiveFormsModule,
-    MatPaginatorModule,
-    MatSelectModule,
-    MatBadgeModule,
-    MatSidenavModule,
-    PrescriptionRoutingModule,
-  ],
+    imports: [
+        CommonModule,
+        FlexLayoutModule,
+        MatProgressSpinnerModule,
+        MatIconModule,
+        MatInputModule,
+        MatAutocompleteModule,
+        MatTooltipModule,
+        MatFormFieldModule,
+        MatCardModule,
+        MatListModule,
+        MatButtonModule,
+        MatTableModule,
+        MatCheckboxModule,
+        MatSortModule,
+        MatMenuModule,
+        ReactiveFormsModule,
+        MatPaginatorModule,
+        MatSelectModule,
+        MatBadgeModule,
+        MatSidenavModule,
+        CdsAccessModule,
+        FhirModule,
+        PrescriptionRoutingModule,
+        MatRadioModule,
+        MatGridListModule
+    ],
   providers: [
-    FhirDataSourceService,
-    FhirCioDcService,
-    FhirTioService,
-    FhirCdsHooksService,
     PrescriptionStateService,
-    MedicationRequestFormService
+    MedicationRequestFormViewModel
   ],
   bootstrap: [PrescriptionComponent]
 })

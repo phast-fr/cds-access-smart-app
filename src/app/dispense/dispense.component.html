@@ -1,6 +1,8 @@
-<h2>Dispensation des prescriptions de <b style="color: mediumorchid">{{labelProviderFactory.getProvider(getPatient).getText(getPatient)}}</b>
-<label style="font-size: x-small; float: right;margin-right: 20px">{{labelProviderFactory.getProvider(getUser).getText(getUser)}}</label>
+<div *ngIf="patient; else stillLoading" >
+<h2 *ngIf="needBanner$ | async">Dispensation des prescriptions de <b style="color: mediumorchid">{{patient | personName}}</b>
+<label style="font-size: x-small; float: right;margin-right: 20px">{{user | personName}}</label>
 </h2>
+
 <div fxLayout="row" class="form-field-row form-field-medication-knowledge">
   <div fxFlex="100%">
     <mat-form-field fxFlex="100%" appearance="fill">
@@ -41,8 +43,7 @@
         <!-- Name Column -->
         <ng-container matColumnDef="name">
           <mat-header-cell mat-sort-header *matHeaderCellDef > Libellé </mat-header-cell>
-          <mat-cell *matCellDef="let element">{{labelProviderFactory.getProvider(
-            element.resource).getSnomed(element.resource)}}</mat-cell>
+          <mat-cell *matCellDef="let element">{{element.resource | snomed}}</mat-cell>
         </ng-container>
 
         <!--mat-header-row *matHeaderRowDef="displayedColumns" ></mat-header-row-->
@@ -53,7 +54,9 @@
     </div>
   </mat-card>
 </div>
-<div class="container" [hidden]="!selectedMedication">
+
+
+<div class="container" [style.visibility]="selectedMedication? 'visible' :'hidden'">
   <mat-card>
     <div class="spinner-container" *ngIf="ucdDataSource.loading$ | async">
       <mat-spinner></mat-spinner>
@@ -103,3 +106,8 @@
                    [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
   </mat-card>
 </div>
+</div>
+<ng-template #stillLoading><mat-spinner></mat-spinner></ng-template>
+
+
+
