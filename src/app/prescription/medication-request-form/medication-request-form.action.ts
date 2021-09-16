@@ -35,7 +35,7 @@ import {
 } from '../../common/fhir/builders/fhir.resource.builder';
 import {
   code,
-  CodeableConcept, Coding, decimal, Dosage, DosageDoseAndRate, Extension,
+  CodeableConcept, Coding, decimal, Dosage, DosageDoseAndRate, Extension, EventTiming,
   id,
   Medication, MedicationIngredient,
   MedicationKnowledge,
@@ -43,7 +43,7 @@ import {
   Ratio,
   Reference, time, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
-import {EventTiming} from 'phast-fhir-ts/lib/hl7/r4/fhir';
+
 import {environment} from '../../../environments/environment';
 
 export class MedicationFormActionAddMedicationRequest implements IAction {
