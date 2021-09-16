@@ -263,6 +263,33 @@ export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetCon
 
   public getText(valueSetContains: ValueSetContains | undefined | null): string | undefined {
     if (! valueSetContains) { return undefined; }
-    return valueSetContains.display;
+    let display: string | undefined;
+    switch (valueSetContains.code) {
+      case 'a':
+        display = 'année';
+        break;
+      case 'mo':
+        display = 'mois';
+        break;
+      case 'wk':
+        display = 'semaine';
+        break;
+      case 'd':
+        display = 'jour';
+        break;
+      case 'h':
+        display = 'heure';
+        break;
+      case 'min':
+        display = 'minutes';
+        break;
+      case 's':
+        display = 'seconde';
+        break;
+      default:
+        display = valueSetContains.display;
+        break;
+    }
+    return display;
   }
 }
