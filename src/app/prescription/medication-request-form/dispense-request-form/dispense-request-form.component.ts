@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://cds-access.phast.fr/license
  */
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
-import {FormBuilder, FormControl, FormGroup} from '@angular/forms';
+import {FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, takeUntil} from 'rxjs/operators';
 
@@ -17,6 +17,8 @@ import {
 } from '../medication-request-form.intent';
 import { MedicationRequestFormState } from '../medication-request-form.state';
 import {MedicationRequestDispenseRequest} from 'phast-fhir-ts';
+import {DateTime} from 'luxon';
+import {environment} from '../../../../environments/environment';
 
 @Component({
   selector: 'app-dispense-request-form',
@@ -115,11 +117,14 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
     const options = {emitEvent: false};
     const dispenseGroup = this._fb.group({
       validityPeriod: this._fb.group({
-        start: [dispenseRequest?.validityPeriod?.start],
-        end: [dispenseRequest?.validityPeriod?.end]
+        start: [(dispenseRequest.validityPeriod?.start) ?
+          DateTime.fromFormat(dispenseRequest.validityPeriod.start, environment.fhir_date_format)
+            .toFormat(environment.display_date_format) : undefined,
+          Validators.pattern( /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/ )],
+        end: [dispenseRequest.validityPeriod?.end]
       }),
       expectedSupplyDuration: this._fb.group({
-        value: [dispenseRequest?.expectedSupplyDuration?.value]
+        value: [dispenseRequest.expectedSupplyDuration?.value]
       })
     });
     dispenseGroup.valueChanges

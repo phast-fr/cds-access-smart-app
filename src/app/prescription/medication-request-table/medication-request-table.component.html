@@ -1,7 +1,7 @@
 <div fxLayout="row" class="form-field-row">
   <mat-form-field fxFlex="100%" appearance="fill">
     <mat-label> Filtre </mat-label>
-    <input matInput (keyup)="applyFilter($event)" placeholder="Ex. PARACETAMOL" #inputFilter>
+    <input matInput (keyup)="applyFilter($event)" placeholder="Ex. PARACETAMOL">
   </mat-form-field>
 </div>
 <div fxLayout="row">
@@ -35,21 +35,13 @@
     <!-- Name Column -->
     <ng-container matColumnDef="name">
       <mat-header-cell mat-sort-header *matHeaderCellDef> Libellé </mat-header-cell>
-      <mat-cell *matCellDef="let element"> {{labelProviderFactory.getProvider(
-        element.resource).getText(element.resource)}} </mat-cell>
+      <mat-cell *matCellDef="let element"> {{toTableElement(element).resource | medicationRequest}} </mat-cell>
     </ng-container>
 
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
     <mat-row *matRowDef="let row; columns: displayedColumns;"
              class="medication-request-row">
     </mat-row>
-
-    <!-- Row shown when there is no matching data. -->
-    <!--
-    <tr mat-row *matNoDataRow>
-      <td mat-cell [attr.colspan]="displayedColumns.length">No data matching the filter "{{inputFilter.value}}"</td>
-    </tr>
-    -->
   </mat-table>
 </div>
 <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>

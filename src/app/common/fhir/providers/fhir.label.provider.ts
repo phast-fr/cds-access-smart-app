@@ -192,7 +192,7 @@ export class QuantityLabelProvider implements ILabelProvider<Quantity> {
 
   getText(quantity: Quantity | undefined | null): string | undefined {
     if (!quantity) { return undefined; }
-    return quantity.value?.toString();
+    return `${quantity.value?.toString()} ${quantity.unit}`;
   }
 }
 
@@ -204,19 +204,19 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
   getText(ratio: Ratio | undefined | null): string | undefined {
     if (!ratio) { return undefined; }
     const labelComposite = new Array<string>();
-    if (ratio.numerator != null) {
-      if (ratio.numerator.value != null) {
+    if (ratio.numerator) {
+      if (ratio.numerator.value) {
         labelComposite.push(ratio.numerator.value.toString());
       }
-      if (ratio.numerator.unit != null) {
+      if (ratio.numerator.unit) {
         labelComposite.push(ratio.numerator.unit);
       }
-      if (ratio.denominator?.value != null
+      if (ratio.denominator?.value
         && ratio.denominator?.value !== 1) {
         labelComposite.push('/');
         labelComposite.push(ratio.denominator?.value?.toString());
       }
-      if (ratio.denominator?.unit != null
+      if (ratio.denominator?.unit
         && ratio.denominator?.unit !== '1') {
         labelComposite.push('/');
         labelComposite.push(ratio.denominator?.unit);
@@ -263,6 +263,20 @@ export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetCon
 
   public getText(valueSetContains: ValueSetContains | undefined | null): string | undefined {
     if (! valueSetContains) { return undefined; }
-    return valueSetContains.display;
+    let display: string | undefined;
+    switch (valueSetContains.code) {
+      case 'a':
+        display = 'année';
+        break;
+      case '':
+        break;
+      case 'd':
+        display = 'jour';
+        break;
+      default:
+        display = valueSetContains.display;
+        break;
+    }
+    return display;
   }
 }

@@ -107,14 +107,14 @@
       <div fxLayout="row"
            [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-period'">
         <mat-form-field fxFlex="75%" appearance="fill">
-          <mat-label> Tous les </mat-label>
+          <mat-label> Période d'administration </mat-label>
           <input type="text"
                  aria-label="période d'administration"
                  matInput
                  [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'period']))"/>
         </mat-form-field>
         <mat-form-field fxFlex="25%" appearance="fill">
-          <mat-label> Unité </mat-label>
+          <mat-label> Unité de période </mat-label>
           <input type="text"
                  aria-label="unité de période"
                  matInput

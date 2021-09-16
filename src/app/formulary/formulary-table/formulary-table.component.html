@@ -1,4 +1,4 @@
-<div class="container">
+<div class="formulary-table-container">
   <div class="spinner-container" *ngIf="tableDataSource.loading$ | async">
     <mat-spinner></mat-spinner>
   </div>
@@ -39,7 +39,7 @@
       <ng-container matColumnDef="code:text">
         <mat-header-cell mat-sort-header *matHeaderCellDef> Libellé </mat-header-cell>
         <mat-cell fxFlex="70%" *matCellDef="let element">
-          {{labelProviderFactory.getProvider(element.resource).getText(element.resource)}}
+          {{element.resource | medicationKnowledge}}
         </mat-cell>
       </ng-container>
 
@@ -48,13 +48,6 @@
                (click)="selection.toggle(row?.resource.id)"
                class="medication-knowledge-row">
       </mat-row>
-
-      <!-- Row shown when there is no matching data. -->
-      <!--
-      <tr mat-row *matNoDataRow>
-        <td mat-cell [attr.colspan]="displayedColumns.length">No data matching the filter "{{inputFilter.value}}"</td>
-      </tr>
-      -->
     </mat-table>
   </div>
   <mat-paginator [length]="tableDataSource.length" [pageSize]="tableDataSource.pageSize"

@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import {HttpClient, HttpHandler} from '@angular/common/http';
+import {PrescriptionModule} from '../../prescription.module';
 import { DispenseRequestFormComponent } from './dispense-request-form.component';
 
 describe('DispenseRequestFormComponent', () => {
@@ -8,7 +10,13 @@ describe('DispenseRequestFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ DispenseRequestFormComponent ]
+      imports: [
+        PrescriptionModule
+      ],
+      providers: [
+        HttpClient,
+        HttpHandler
+      ]
     })
     .compileComponents();
   });

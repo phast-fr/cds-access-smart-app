@@ -56,6 +56,8 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
 
   private readonly _loading$: BehaviorSubject<boolean>;
 
+  private readonly _isMedicationAddable$: BehaviorSubject<boolean>;
+
   private readonly _isMedicationRequestAddable$: BehaviorSubject<boolean>;
 
   @ViewChild(MedicationFormComponent)
@@ -78,6 +80,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     this._unsubscribeTrigger$ = new Subject<void>();
     this._medicationKnowledgeArray = new Array<MedicationKnowledge>();
     this._loading$ = new BehaviorSubject<boolean>(false);
+    this._isMedicationAddable$ = new BehaviorSubject<boolean>(false);
     this._isMedicationRequestAddable$ = new BehaviorSubject<boolean>(false);
     this._medicationRequestGroup$ = new BehaviorSubject<FormGroup>(this._fb.group({
       medicationKnowledge: [undefined],
@@ -87,6 +90,10 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
 
   public get isLoading$(): Observable<boolean> {
     return this._loading$.asObservable();
+  }
+
+  public get isMedicationAddable$(): Observable<boolean> {
+    return this._isMedicationAddable$.asObservable();
   }
 
   public get isMedicationRequestAddable$(): Observable<boolean> {
@@ -134,7 +141,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
           filter(medicationForm => medicationForm !== false)
         )
         .subscribe({
-          next: () => this.updateIsMedicationAddable(),
+          next: () => this.updateIsMedicationRequestAddable(),
           error: err => console.error('error', err)
         });
     }
@@ -145,7 +152,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
           filter(dosageInstruction => dosageInstruction !== false)
         )
         .subscribe({
-          next: () => this.updateIsMedicationAddable(),
+          next: () => this.updateIsMedicationRequestAddable(),
           error: err => console.error('error', err)
         });
     }
@@ -156,7 +163,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
           filter(dispenseRequest => dispenseRequest !== false)
         )
         .subscribe({
-          next: () => this.updateIsMedicationAddable(),
+          next: () => this.updateIsMedicationRequestAddable(),
           error: err => console.error('error', err)
         });
     }
@@ -296,7 +303,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: () => this._isMedicationRequestAddable$.next(true),
+          next: () => this._isMedicationAddable$.next(true),
           error: err => console.error('error', err)
         });
     }
@@ -314,16 +321,16 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     }
   }
 
-  private updateIsMedicationAddable(): void {
+  private updateIsMedicationRequestAddable(): void {
     const medicationGroupValid = (this._medicationForm?.medicationGroup) ? this._medicationForm.medicationGroup.valid : false;
     const dosageInstructionValid = (this._dosageInstructionForm?.dosageInstruction) ?
-      this._dosageInstructionForm.dosageInstruction.value : false;
-    const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?
-      this._dispenseRequestForm.dispenseRequestGroup.value : false;
+      this._dosageInstructionForm.dosageInstruction.valid : false;
+    /*const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?
+      this._dispenseRequestForm.dispenseRequestGroup.valid : false;*/
     this._isMedicationRequestAddable$.next(
       medicationGroupValid
       && dosageInstructionValid
-      && dispenseRequestGroupValid
+      // && dispenseRequestGroupValid
     );
   }
 
@@ -336,7 +343,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   }
 
   private onReset(): void {
-    this._isMedicationRequestAddable$.next(false);
+    this._isMedicationAddable$.next(false);
     this._medicationKnowledgeArray.length = 0;
   }
 }

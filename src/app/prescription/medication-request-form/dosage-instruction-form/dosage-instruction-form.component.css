@@ -12,8 +12,13 @@ button.mat-stroked-button {
   padding: 10px 0;
 }
 
+.form-group-footer {
+  margin-top: 5px;
+}
+
 .form-group-title {
   padding: 15px 0 0 15px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.125;
 }
@@ -27,4 +32,20 @@ button.mat-stroked-button {
   padding: 15px 0 0 15px;
   font-weight: 400;
   line-height: 1.125;
+}
+
+.form-field-row .mat-radio-button + .mat-radio-button {
+  margin-left: 8px;
+}
+
+.form-field-row .mat-checkbox + .mat-checkbox {
+  margin-left: 8px;
+}
+
+/deep/ .form-field-row .dose-and-rate-value .mat-form-field-infix {
+  width: 140px;
+}
+
+/deep/ .form-field-row .dose-and-rate-unit .mat-form-field-infix {
+  width: 50px;
 }

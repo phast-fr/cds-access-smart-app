@@ -269,7 +269,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       amountString$
         .pipe(
           takeUntil(this._unsubscribeTrigger$),
-          tap(() => amountControl.reset(null, {emitEvent: false}))
+          tap(() => amountControl.reset(undefined, {emitEvent: false}))
         )
         .subscribe({
           next: () => {
@@ -287,12 +287,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         });
       amountObj$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          distinctUntilChanged<Ratio>((prev, curr) =>
-            prev?.numerator?.value === curr?.numerator?.value
-            && prev?.numerator?.code === curr?.numerator?.code
-            && prev?.denominator?.value === curr?.denominator?.value
-            && prev?.denominator?.code === curr?.denominator?.code)
+          takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
           next: value => {
@@ -326,7 +321,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       formString$
         .pipe(
           takeUntil(this._unsubscribeTrigger$),
-          tap(() => formControl.reset(null, {emitEvent: false}))
+          tap(() => formControl.reset(undefined, {emitEvent: false}))
         )
         .subscribe({
           next: () => {
@@ -344,8 +339,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         });
       formObj$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          distinctUntilChanged<CodeableConcept>((prev, curr) => prev.text === curr.text)
+          takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
           next: value => {
@@ -445,7 +439,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       strengthString$
         .pipe(
           takeUntil(this._unsubscribeTrigger$),
-          tap(() => strengthControl.reset(null, {emitEvent: false}))
+          tap(() => strengthControl.reset(undefined, {emitEvent: false}))
         )
         .subscribe({
           next: () => {
@@ -465,8 +459,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         });
       strengthObj$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          distinctUntilChanged<Ratio>((prev, curr) => prev.numerator?.value === curr.numerator?.value)
+          takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
           next: value => {
@@ -544,7 +537,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       strengthNumeratorUnitString$
         .pipe(
           takeUntil(this._unsubscribeTrigger$),
-          tap(() => strengthUnitControl.reset(null, {emitEvent: false}))
+          tap(() => strengthUnitControl.reset(undefined, {emitEvent: false}))
         )
         .subscribe({
           next: () => {
@@ -564,8 +557,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         });
       strengthNumeratorUnitObj$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          distinctUntilChanged<Coding>((prev, cur) => prev.code === cur.code)
+          takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
           next: strengthUnit => {
@@ -589,14 +581,25 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   private onLoadedList(): void {
     if (this._medicationGroup$.value) {
+      const options = {emitEvent: false};
       const medicationGroup = this._medicationGroup$.value as FormGroup;
       const formControl = medicationGroup.get('form');
       if (formControl) {
         if (this.formList.length === 0) {
-          formControl.disable();
+          formControl.disable(options);
         }
         else {
-          formControl.enable();
+          formControl.enable(options);
+        }
+      }
+
+      const amountControl = medicationGroup.get('amount');
+      if (amountControl) {
+        if (this.amountList.length === 0) {
+          amountControl.disable(options);
+        }
+        else {
+          amountControl.enable(options);
         }
       }
 
@@ -605,12 +608,12 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         this._viewModel.medicationRequest.contained.forEach((value) => {
           const medication = value as Medication;
           if (medication.ingredient) {
-            medication.ingredient.forEach((ingredient, nIngredient) => {
+            medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
               if (ingredient.itemCodeableConcept?.text && this.strengthList(ingredient.itemCodeableConcept.text).length === 0) {
-                ingredientFormArray.at(nIngredient).disable();
+                ingredientFormArray.at(nIngredient).disable(options);
               }
               else if (ingredient.itemCodeableConcept) {
-                ingredientFormArray.at(nIngredient).enable();
+                ingredientFormArray.at(nIngredient).enable(options);
               }
             });
           }

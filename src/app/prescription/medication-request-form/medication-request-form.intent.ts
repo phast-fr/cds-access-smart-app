@@ -11,7 +11,7 @@ import {
   id,
   Medication,
   MedicationKnowledge,
-  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner,
+  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner, Quantity,
   Ratio,
   Reference, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
