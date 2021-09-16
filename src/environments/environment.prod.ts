@@ -4,27 +4,20 @@
 // This is useful for granularity you might need beyond just the environment.
 // Note that as usual, any environment variables you expose through it will end up in your
 // bundle, and you should not use it for any sensitive information like passwords or keys.
-import { env } from './.env';
+import {env} from './.env';
+import {credential} from './credential';
 
 export const environment = {
   production: true,
   version: env.npm_package_version,
-  client_id: new Map<string, string>([
-    ['prescription', '6965909a-8366-4236-ac7f-d754cd40bbdd'],
-    ['formulary', 'c9344bf2-96e2-4274-9a33-4ba502b25a42'],
-    ['dispense', 'ab8da2e9-3a40-44e5-b040-d3164975dccf']
-  ]),
-  scope: new Map<string, string>([
-    ['prescription', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
-    ['formulary', 'online_access profile openid fhirUser launch user/*.*'],
-    ['dispense', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*']
-  ]),
+  client_id: credential.client_id,
+  scope: credential.scope,
   display_language: 'fr-FR',
   cds_hooks_url: 'https://cds-access.phast.fr:8443/cqf-ruler-r4',
   cio_dc_url: 'https://jade.phast.fr/resources-server/api/FHIR',
-  cio_dc_credential: 'ZGF2aWQub3VhZ25lQHBoYXN0LmZyOjIncU1oa21+WFojdnpW',
+  cio_dc_credential: credential.cio_dc_credential,
   tio_url: 'https://jade.phast.fr/resources-server/api/FHIR',
-  tio_credential: 'ZGF2aWQub3VhZ25lQHBoYXN0LmZyOjIncU1oa21+WFojdnpW',
+  tio_credential: credential.tio_credential,
   fhir_date_short_format: 'yyyy-MM-dd\'T\'HH:mm:00',
   fhir_date_format: 'yyyy-MM-ddTHH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
