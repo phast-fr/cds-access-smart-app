@@ -19,7 +19,7 @@ export const environment = {
   tio_url: 'https://jade.phast.fr/resources-server/api/FHIR',
   tio_credential: credential.tio_credential,
   fhir_date_short_format: 'yyyy-MM-dd\'T\'HH:mm:00',
-  fhir_date_format: 'yyyy-MM-ddTHH:mm:ss',
+  fhir_date_format: 'yyyy-MM-dd\'T\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
   drug_formulary_resource_type: 'MedicationKnowledge'
 };
