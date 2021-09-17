@@ -55,7 +55,7 @@ export class FhirSmartService {
     this._fhirClient.smartAuthMetadata(iss, options)
       .subscribe({
         next: metadata => {
-          const params = new HttpParams()
+          let params = new HttpParams()
             .set('response_type', 'code')
             .set('client_id', environment.client_id.get(context) as string)
             .set('launch', launch)
@@ -64,7 +64,7 @@ export class FhirSmartService {
             .set('aud', iss);
 
           if (redirectUri) {
-            params.set('redirect_uri', redirectUri);
+            params = params.set('redirect_uri', redirectUri);
           }
 
           window.location.href = metadata.authorizeUrl.href + '?' + params.toString();
@@ -87,7 +87,7 @@ export class FhirSmartService {
           next: metadata => {
             const context = sessionStorage.getItem('context');
             if (context) {
-              const body = new HttpParams()
+              let body = new HttpParams()
                 .set('grant_type', 'authorization_code')
                 .set('client_id', environment.client_id.get(context) as string)
                 .set('code', code)
@@ -95,7 +95,7 @@ export class FhirSmartService {
 
               const redirectUri = sessionStorage.getItem('redirect_uri');
               if (redirectUri) {
-                body.set('redirect_uri', redirectUri);
+                body = body.set('redirect_uri', redirectUri);
               }
 
               this.doPostToken(metadata.tokenUrl.href, body.toString());
