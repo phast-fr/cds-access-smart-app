@@ -5,7 +5,7 @@
 // Note that as usual, any environment variables you expose through it will end up in your
 // bundle, and you should not use it for any sensitive information like passwords or keys.
 import {env} from './.env';
-import {credential} from './credential';
+import {credential} from './credential.prod';
 
 export const environment = {
   production: true,
