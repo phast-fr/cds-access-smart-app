@@ -1,6 +1,6 @@
-# cds-access
+# CDS-ACCESS Smart on FHIR App
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 11.2.8.
+This project Smart on FHIR App is a part of CDS ACCESS project which aims to facilitate the integration of CDS in the hospital  
 
 ## Development server
 
