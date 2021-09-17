@@ -626,9 +626,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
 
   private synchronizeBounds(dosage: Dosage): void {
     if (dosage.timing?.repeat?.boundsPeriod?.start) {
-      console.log(dosage.timing.repeat.boundsPeriod.start);
       const start = DateTime.fromFormat(dosage.timing.repeat.boundsPeriod.start, environment.fhir_date_format);
-      console.log(start);
       let unit: string | undefined;
       if (dosage.timing.repeat.boundsDuration?.code) {
         unit = dosage.timing.repeat.boundsDuration.code;
@@ -645,7 +643,6 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
         if (duration) {
           const end = start.plus(duration.minus(Duration.fromObject({seconds: 1})));
           dosage.timing.repeat.boundsPeriod.end = end.toFormat(environment.fhir_date_format);
-          console.log(dosage.timing.repeat.boundsPeriod.end);
         }
       }
     }
