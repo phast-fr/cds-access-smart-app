@@ -80,11 +80,6 @@ export const credential = {
     ['formulary', 'TODO put here your client_id'],
     ['dispense', 'TODO put here your client_id']
   ]),
-  scope: new Map<string, string>([
-    ['prescription', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
-    ['formulary', 'online_access profile openid fhirUser launch user/*.*'],
-    ['dispense', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*']
-  ]),
   cio_dc_credential: 'TODO put here your CIOdc credentials',
-  tio_credential: 'ZGF2aWQub3VhZ25lQHBoYXN0LmZyOjIncU1oa21+WFojdnpW'
+  tio_credential: 'TODO put here your CIOdc credentials'
 };
