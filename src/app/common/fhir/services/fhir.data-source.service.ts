@@ -118,7 +118,7 @@ export class FhirDataSourceService {
 
   public medicationRequestSearch(patient: Patient, name?: string):
     Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
-    if (this._baseUrl) {
+    if (this._baseUrl && patient.id) {
       if (name) {
         let search = name.trim();
         search = search.replace(/ /g, ',');

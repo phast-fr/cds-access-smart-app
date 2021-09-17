@@ -119,11 +119,13 @@ export class PhastCioDcService {
                     sortActive?: string, sortDirection?: string, page?: number):
     Observable<T> {
 
-    if (sortDirection && sortDirection === 'desc') {
-      searchParams.set('_sort', '-' + sortActive);
-    }
-    else if (sortDirection && sortDirection === 'asc') {
-      searchParams.set('_sort', sortActive);
+    if (sortActive) {
+      if (sortDirection && sortDirection === 'desc') {
+        searchParams.set('_sort', '-' + sortActive);
+      }
+      else if (sortDirection && sortDirection === 'asc') {
+        searchParams.set('_sort', sortActive);
+      }
     }
 
     if (page) {
