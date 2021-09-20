@@ -1,4 +1,4 @@
-FROM nginx:1.19.8-alpine
+FROM nginx:1.21.3-alpine
 
 MAINTAINER David Ouagne <david.ouagne@gmail.com>
 
@@ -13,6 +13,6 @@ COPY nginx/default.conf /etc/nginx/conf.d/
 RUN rm -rf /usr/share/nginx/html/*
 
 ## Copy the artifacts in dist folder to default nginx public folder
-COPY /dist/cds-access /usr/share/nginx/html
+COPY /dist/cds-access-smart-app /usr/share/nginx/html
 
 CMD ["nginx", "-g", "daemon off;"]

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "cds-access": {
+    "cds-access-smart-app": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/cds-access",
+            "outputPath": "dist/cds-access-smart-app",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": "src/polyfills.ts",
@@ -67,18 +67,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "cds-access:build"
+            "browserTarget": "cds-access-smart-app:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "cds-access:build:production"
+              "browserTarget": "cds-access-smart-app:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "cds-access:build"
+            "browserTarget": "cds-access-smart-app:build"
           }
         },
         "test": {
@@ -116,16 +116,16 @@
           "builder": "@angular-devkit/build-angular:protractor",
           "options": {
             "protractorConfig": "e2e/protractor.conf.js",
-            "devServerTarget": "cds-access:serve"
+            "devServerTarget": "cds-access-smart-app:serve"
           },
           "configurations": {
             "production": {
-              "devServerTarget": "cds-access:serve:production"
+              "devServerTarget": "cds-access-smart-app:serve:production"
             }
           }
         }
       }
     }
   },
-  "defaultProject": "cds-access"
+  "defaultProject": "cds-access-smart-app"
 }
