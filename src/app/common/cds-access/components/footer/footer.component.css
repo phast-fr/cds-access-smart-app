@@ -11,9 +11,8 @@
 }
 
 .description a {
-  color: #e91e63;
+  color: #24903F;
 }
-
 
 .icon {
   text-decoration: none;
@@ -21,7 +20,7 @@
 
 .issues {
   width: 200px;
-  background-color: #e91e63;
+  background-color: #24903F;
   border: none;
   color: white;
   font-size: 1em;
