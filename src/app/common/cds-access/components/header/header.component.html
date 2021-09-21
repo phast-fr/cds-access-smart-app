@@ -33,7 +33,7 @@
     <div fxFlex="39%" class="header-context-wrapper">
       <div class="header-context-value">
         <i matTooltip="Intention de prescription" class="material-icons icon">lightbulb</i>
-        <span>{{(intent$ | async) | myI18nSelect: intentMap }}</span>
+        <span>{{ (intent$ | async) | myI18nSelect: intentMap }}</span>
       </div>
     </div>
     <div fxFlex="30%" class="header-persona-wrapper">
@@ -43,10 +43,10 @@
             <mat-icon svgIcon="doctor" aria-hidden="false" aria-label="doctor icon" class="persona-icon"></mat-icon>
           </div>
           <mat-card-title>
-            <span>{{(practitioner$ | async) | personName}}</span>
+            <span>{{ (practitioner$ | async) | personName }}</span>
           </mat-card-title>
           <mat-card-subtitle class="header-persona-info">
-            <span>FHIR ID : </span><span>{{(practitioner$ | async).id}}</span>
+            <span>FHIR ID : </span><span>{{ (practitioner$ | async).id }}</span>
           </mat-card-subtitle>
         </mat-card-header>
       </mat-card>
