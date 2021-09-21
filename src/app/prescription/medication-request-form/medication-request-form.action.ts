@@ -82,10 +82,15 @@ export class MedicationFormActionAddMedication implements IAction {
     let medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     const medication = new MedicationBuilder(this._medicationId)
-      .code(this._medicationKnowledge.code)
-      .form(this._medicationKnowledge.doseForm)
-      .ingredient(lodash.cloneDeep(this._medicationKnowledge.ingredient))
-      .build();
+        .code(this._medicationKnowledge.code)
+        .form(this._medicationKnowledge.doseForm)
+        .ingredient(lodash.cloneDeep(this._medicationKnowledge.ingredient))
+        .build();
+    if (this._medicationKnowledge.amount) {
+      medication.amount = new RatioBuilder()
+          .numeratorQuantity(this._medicationKnowledge.amount)
+          .build();
+    }
     if (!medicationRequest && this._patient.id) {
       medicationRequest = new MedicationRequestBuilder(
           'active',

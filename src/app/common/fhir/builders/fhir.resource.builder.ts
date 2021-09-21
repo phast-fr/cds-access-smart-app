@@ -64,6 +64,13 @@ export class MedicationBuilder {
     return this;
   }
 
+  public amount(amount: Ratio | undefined): this {
+    if (amount) {
+      this._medication.amount = amount;
+    }
+    return this;
+  }
+
   public form(medicationForm: CodeableConcept | undefined): this {
     if (medicationForm) {
       this._medication.form = medicationForm;

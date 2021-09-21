@@ -377,14 +377,25 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   private updateMedication(nMedication: number, medication: Medication): FormGroup | boolean {
     if (this._medicationGroup$.value) {
+      const options = {emitEvent: false};
       const medicationGroup = this._medicationGroup$.value as FormGroup;
+      const amountControl = medicationGroup.get('amount');
+      if (amountControl) {
+        if (medication?.amount) {
+          amountControl.setValue(medication.amount, options);
+        }
+        else {
+          amountControl.reset(undefined, options);
+        }
+      }
+
       const formControl = medicationGroup.get('form');
       if (formControl) {
         if (medication?.form) {
-          formControl.setValue(medication.form, {emitEvent: false});
+          formControl.setValue(medication.form, options);
         }
         else {
-          formControl.reset(undefined, {emitEvent: false});
+          formControl.reset(undefined, options);
         }
       }
 
@@ -397,7 +408,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
               if (ingredientControl) {
                 const strengthControl = ingredientControl.get('strength');
                 if (strengthControl) {
-                  strengthControl.setValue(ingredient.strength, {emitEvent: false});
+                  strengthControl.setValue(ingredient.strength, options);
                 }
               }
             }
@@ -406,7 +417,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
               if (ingredientControl) {
                 const strengthControl = ingredientControl.get('strength');
                 if (strengthControl) {
-                  strengthControl.reset(undefined, {emitEvent: false});
+                  strengthControl.reset(undefined, options);
                 }
               }
             }
