@@ -1,6 +1,5 @@
-.prescription-container {
-  min-height: 100vh;
-  background-color: #fafafafa;
+.empty {
+  height: calc(100vh - (90px + 40px));
 }
 
 mat-drawer {

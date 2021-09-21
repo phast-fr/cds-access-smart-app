@@ -1,7 +1,7 @@
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {BehaviorSubject, Observable} from 'rxjs';
-import {filter, map, takeUntil} from 'rxjs/operators';
+import {filter, map, takeUntil, tap} from 'rxjs/operators';
 
 import {StateService} from '../common/cds-access/services/state.service';
 import {FhirSmartService} from '../common/fhir/smart/services/fhir.smart.service';
@@ -52,6 +52,10 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
 
   public get medicationRequestMode$(): Observable<string> {
     return this._prescriptionState.medicationRequestMode$;
+  }
+
+  public get hasMedications$(): Observable<boolean> {
+    return this._prescriptionState.hasMedication$;
   }
 
   public get cards(): Array<CardReadable> {

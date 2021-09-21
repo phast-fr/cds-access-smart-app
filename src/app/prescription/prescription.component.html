@@ -2,7 +2,7 @@
   <mat-progress-spinner mode="indeterminate" color="primary"></mat-progress-spinner>
 </div>
 <app-header *ngIf="needBanner$ | async"></app-header>
-<div class="prescription-container" *ngIf="!(loading$ | async)">
+<div class="prescription-container" [class.empty]="!(hasMedications$ | async)" *ngIf="!(loading$ | async)">
   <mat-drawer-container>
     <mat-drawer-content>
       <div class="view-medication-prescription">
@@ -34,7 +34,7 @@
         <mat-divider></mat-divider>
 
         <!-- Table of display list of Medication Request -->
-        <mat-card class="mat-elevation-z1">
+        <mat-card>
           <mat-card-header>
             <mat-card-title> Liste des prescriptions </mat-card-title>
           </mat-card-header>
@@ -49,4 +49,4 @@
     </mat-drawer>
   </mat-drawer-container>
 </div>
-<app-footer></app-footer>
+<app-footer *ngIf="!(loading$ | async)"></app-footer>

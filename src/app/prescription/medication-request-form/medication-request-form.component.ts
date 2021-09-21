@@ -178,11 +178,18 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
 
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
+      case 'AddMedication':
+        this._prescriptionState.hasMedication = true;
+        break;
+      case 'RemoveMedication':
+        this._prescriptionState.hasMedication = false;
+        break;
       case 'AddMedicationRequest':
         const medicationKnowledgeControl = this.medicationRequestGroup.get('medicationKnowledge');
         if (medicationKnowledgeControl) {
           medicationKnowledgeControl.reset(undefined);
         }
+        this._prescriptionState.hasMedication = false;
         break;
     }
   }

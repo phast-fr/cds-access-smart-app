@@ -21,12 +21,15 @@ export class PrescriptionStateService {
 
   private readonly _medicationRequestMode$: BehaviorSubject<string>;
 
+  private readonly _hasMedications$: BehaviorSubject<boolean>;
+
   constructor(private _stateService: StateService,
               private _dataSource: FhirDataSourceService,
               private _cdsHooksService: FhirCdsHooksService) {
     this._medicationRequest$ = new BehaviorSubject<MedicationRequest | boolean>(false);
     this._cards$ = new BehaviorSubject<Array<CardReadable> | boolean>(false);
     this._medicationRequestMode$ = new BehaviorSubject<string>('dc');
+    this._hasMedications$ = new BehaviorSubject<boolean>(false);
   }
 
   public get cards$(): Observable<Array<CardReadable> | boolean> {
@@ -43,6 +46,14 @@ export class PrescriptionStateService {
 
   public get medicationRequestMode$(): Observable<string> {
     return this._medicationRequestMode$.asObservable();
+  }
+
+  public set hasMedication(hasMedication: boolean) {
+    this._hasMedications$.next(hasMedication);
+  }
+
+  public get hasMedication$(): Observable<boolean> {
+    return this._hasMedications$.asObservable();
   }
 
   public addMedicationRequest(medicationRequest: MedicationRequest): void {

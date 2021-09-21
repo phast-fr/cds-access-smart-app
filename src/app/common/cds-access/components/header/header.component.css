@@ -1,9 +1,14 @@
-.header-wrapper {
-  width: 100%;
-  height: 80px;
-  padding: 5px 0 5px 5px;
+:host {
+  display: block;
+  width: 100vw;
+  height: 90px;
   background: -webkit-gradient(linear,left top,left bottom,from(#86af38),to(#25913f));
   background: linear-gradient(#86af38,#25913f);
+}
+
+.header {
+  display: block;
+  padding: 5px 0 5px 5px;
 }
 
 /deep/ .patient-card.mat-card,

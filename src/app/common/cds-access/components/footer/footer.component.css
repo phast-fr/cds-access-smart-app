@@ -1,9 +1,14 @@
-.footer {
-  height: 40px !important;
-  min-height: 40px;
+:host {
+  display: block;
+  width: 100vw;
   background-color: #2f2f2f;
   border: none;
   color: white;
+  z-index: 1;
+}
+
+.footer {
+  min-height: 40px;
 }
 
 .description {
@@ -20,11 +25,11 @@
 
 .issues {
   width: 200px;
+  min-height: 40px;
   background-color: #24903F;
   border: none;
   color: white;
   font-size: 1em;
-  height: 100%;
   text-align: center;
   text-decoration: none;
 }
