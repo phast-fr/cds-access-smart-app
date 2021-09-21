@@ -22,6 +22,7 @@ import {HeaderComponent} from './components/header/header.component';
 import {FooterComponent} from './components/footer/footer.component';
 
 import {AgePipe} from './pipes/age.pipe';
+import {MyI18nSelectPipe} from './pipes/i18n.pipe';
 
 /**
  * @description
@@ -32,7 +33,8 @@ import {AgePipe} from './pipes/age.pipe';
   declarations: [
     HeaderComponent,
     FooterComponent,
-    AgePipe
+    AgePipe,
+    MyI18nSelectPipe
   ],
   imports: [
     CommonModule,

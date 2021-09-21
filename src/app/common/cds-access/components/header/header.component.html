@@ -33,7 +33,7 @@
     <div fxFlex="39%" class="header-context-wrapper">
       <div class="header-context-value">
         <i matTooltip="Intention de prescription" class="material-icons icon">lightbulb</i>
-        <span>{{(intent$ | async) | i18nSelect:{'nephrology': 'Néphrologie'} }}</span>
+        <span>{{(intent$ | async) | myI18nSelect: intentMap }}</span>
       </div>
     </div>
     <div fxFlex="30%" class="header-persona-wrapper">

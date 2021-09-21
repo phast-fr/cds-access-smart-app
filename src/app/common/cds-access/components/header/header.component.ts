@@ -47,6 +47,8 @@ export class HeaderComponent implements OnDestroy {
 
   private readonly _intent$: BehaviorSubject<string | undefined>;
 
+  private readonly _intentMap: { [key: string]: string; };
+
   constructor(private _iconRegistry: MatIconRegistry,
               private _sanitizer: DomSanitizer,
               private _stateService: StateService) {
@@ -56,6 +58,7 @@ export class HeaderComponent implements OnDestroy {
     this._patient$ = new BehaviorSubject<Patient | undefined>(undefined);
     this._practitioner$ = new BehaviorSubject<Practitioner | undefined>(undefined);
     this._intent$ = new BehaviorSubject<string | undefined>(undefined);
+    this._intentMap = {nephrology: 'Néphrologie'};
 
     this.update(this._stateService.state);
     this._stateService.state$
@@ -80,6 +83,10 @@ export class HeaderComponent implements OnDestroy {
 
   public get intent$(): Observable<string | undefined> {
     return this._intent$.asObservable();
+  }
+
+  public get intentMap(): { [key: string]: string; } {
+    return this._intentMap;
   }
 
   public ngOnDestroy(): void {
