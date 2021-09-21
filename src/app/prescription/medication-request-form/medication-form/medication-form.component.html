@@ -102,7 +102,7 @@
     </div>
   </div>
 
-  <mat-autocomplete #autoAmount="matAutocomplete" [displayWith]="displayFnQuantity.bind(this)">
+  <mat-autocomplete #autoAmount="matAutocomplete" [displayWith]="displayFnRatio.bind(this)">
     <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
     <ng-container *ngIf="!(isLoadingList$ | async)">
       <mat-option *ngFor="let amount of amountList; trackBy: trackByQuantity" [value]="amount">

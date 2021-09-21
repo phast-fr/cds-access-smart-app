@@ -49,7 +49,7 @@ export class PhastCioDcService {
     const searchParams = new URLSearchParams({
       _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
       'product-type': 'DC',
-      _elements: 'ingredient,code,id',
+      _elements: 'ingredient,code,id,doseForm,amount',
       LinkPageNumber: '0'
     });
 
@@ -62,7 +62,7 @@ export class PhastCioDcService {
     const searchParams = new URLSearchParams({
       _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
       'product-type': 'UCD',
-      _elements: 'ingredient,code,id,doseForm',
+      _elements: 'ingredient,code,id,doseForm,amount',
       LinkPageNumber: '0'
     });
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
