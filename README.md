@@ -9,7 +9,7 @@ Smart on FHIR App is a part of CDS ACCESS project which aims to facilitate the i
 3. Install the application dependencies: in the cds-access-smart-app directory, run npm install
 4. Creation of an account on the Logica Sandbox: https://sandbox.logicahealth.org/ (or another Smart on FHIR platform)
 5. Create a Sandbox in FHIR R4 version
-6. Register Prescription Smart App: App Launch URI: http://localhost:4200/prescription/launch; App Redirect URIs: http://localhost:4200/prescription; Scope: online_access profile openid fhirUser launch launch/user user/*.* patient/*.* (for more details: https://logica.atlassian.net/wiki/spaces/HSPC/pages/60915727/Sandbox+Registered+Apps)
+6. Register Prescription Smart App: App Launch URI: http://localhost:4200/prescription/launch; App Redirect URIs: http://localhost:4200/prescription; Scope: online_access profile openid fhirUser launch launch/user user/\*.\* patient/\*.\* (for more details: https://logica.atlassian.net/wiki/spaces/HSPC/pages/60915727/Sandbox+Registered+Apps)
 7. Configuration
    7.1. in the environment directory, create a credential.ts file on the template of the credential.template.ts file
    7.2. in the newly created credential.ts file, update the client_id of the prescription module with the UUID obtained during the registration of the App and the identifiers obtained from PHAST in cio_dc_credential and tio_credential
