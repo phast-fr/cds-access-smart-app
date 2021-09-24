@@ -23,7 +23,10 @@ export class MyI18nSelectPipe extends I18nSelectPipe implements PipeTransform {
     transform(value: string | null | undefined, mapping: { [key: string]: string; }): string {
         const result = super.transform(value, mapping);
         if (!result) {
-            return value;
+            if (value) {
+                return value;
+            }
+            return '';
         }
         return result;
     }
