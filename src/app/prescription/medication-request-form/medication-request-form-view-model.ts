@@ -9,7 +9,7 @@ import { Injectable } from '@angular/core';
 import {BehaviorSubject, forkJoin, Observable, Subject} from 'rxjs';
 import {filter, map, retry} from 'rxjs/operators';
 
-import hash from 'object-hash';
+import * as hash from 'object-hash';
 
 import {IAction, IIntent, IViewModel} from '../../common/cds-access/models/state.model';
 import { MedicationRequestFormState } from './medication-request-form.state';
