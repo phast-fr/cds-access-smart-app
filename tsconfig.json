@@ -19,6 +19,7 @@
     ]
   },
   "angularCompilerOptions": {
+    "types" : ["node"],
     "enableI18nLegacyMessageIdFormat": false
   }
 }
