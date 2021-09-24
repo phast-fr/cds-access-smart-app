@@ -1,5 +1,5 @@
 import {AfterViewInit, ChangeDetectionStrategy, Component, OnInit, ViewChild} from '@angular/core';
-import {forkJoin, Observable} from 'rxjs';
+import {BehaviorSubject, forkJoin, Observable} from 'rxjs';
 import {filter, map} from 'rxjs/operators';
 import {SelectionModel} from '@angular/cdk/collections';
 import {MatTableDataSource} from '@angular/material/table';
@@ -28,6 +28,8 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
 
   private readonly _displayedColumns: Array<string>;
 
+  private readonly _saving$: BehaviorSubject<boolean>;
+
   @ViewChild(MatPaginator)
   paginator?: MatPaginator;
 
@@ -40,6 +42,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
     this._medicationRequestDataSource = new MatTableDataSource<TableElement<MedicationRequest>>([]);
     this._selection = new SelectionModel<TableElement<MedicationRequest>>(true, []);
     this._displayedColumns = ['select', 'position', 'name'];
+    this._saving$ = new BehaviorSubject<boolean>(false);
   }
 
   public get medicationRequestDataSource(): MatTableDataSource<TableElement<MedicationRequest>> {
@@ -52,6 +55,10 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
 
   public get selection(): SelectionModel<TableElement<MedicationRequest>> {
     return this._selection;
+  }
+
+  public get saving$(): Observable<boolean> {
+    return this._saving$.asObservable();
   }
 
   public ngOnInit(): void {
@@ -145,6 +152,7 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   public onSave(): void {
+    this._saving$.next(true);
     const observables = new Array<Observable<OperationOutcome | Resource>>();
     const elements = this._medicationRequestDataSource.data.slice();
     elements.forEach(value => {
@@ -173,7 +181,8 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
           }
           this._selection.clear();
         },
-        error: err => console.error('error', err)
+        error: err => console.error('error', err),
+        complete: () => this._saving$.next(false)
       });
   }
 

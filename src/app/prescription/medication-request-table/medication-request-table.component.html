@@ -45,7 +45,7 @@
   </mat-table>
 </div>
 <mat-paginator [pageSizeOptions]="[5, 10, 25, 100]"></mat-paginator>
-<button mat-raised-button color="primary" (click)="onSave()"> Enregister </button>
+<button mat-raised-button color="primary" [disabled]="saving$ | async" (click)="onSave()"> Enregister </button>
 
 <mat-menu #actionMenu="matMenu">
   <button mat-menu-item (click)="onDeleteMedicationRequest()"> Supprimer </button>
