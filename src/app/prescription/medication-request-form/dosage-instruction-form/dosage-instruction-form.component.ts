@@ -11,11 +11,12 @@ import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/operators';
 
 import {DateTime} from 'luxon';
+import {nanoid} from 'nanoid';
+import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
 
 import {IRender} from '../../../common/cds-access/models/state.model';
-import { Utils } from '../../../common/cds-access/utils/utils';
 import { FhirLabelProviderFactory } from '../../../common/fhir/providers/fhir.label.provider.factory';
-import { MedicationRequestFormViewModel } from '../medication-request-form-view-model';
+import { MedicationRequestFormViewModel } from '../medication-request-form.view-model';
 import { MedicationRequestFormState } from '../medication-request-form.state';
 import {
   MedicationFormIntentAddDosageInstruction,
@@ -47,7 +48,7 @@ import {
   MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue,
   MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit,
 } from '../medication-request-form.intent';
-import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
+
 import {environment} from '../../../../environments/environment';
 
 @Component({
@@ -395,7 +396,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
   private addDosageInstruction(dosage: Dosage, nDosage: number): FormGroup {
     const dosageInstructionGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
+      'track-id': nanoid(16),
       route: [dosage.route, [Validators.required]],
       timing: this._fb.group({
         repeat: this._fb.group({

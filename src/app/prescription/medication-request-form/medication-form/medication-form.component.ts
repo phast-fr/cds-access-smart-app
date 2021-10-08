@@ -10,8 +10,18 @@ import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup} from '@
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/operators';
 
+import {nanoid} from 'nanoid';
+import {
+  CodeableConcept,
+  Coding, id,
+  Medication,
+  MedicationIngredient, Quantity,
+  Ratio,
+  Reference
+} from 'phast-fhir-ts';
+
 import {IRender} from '../../../common/cds-access/models/state.model';
-import {MedicationRequestFormViewModel} from '../medication-request-form-view-model';
+import {MedicationRequestFormViewModel} from '../medication-request-form.view-model';
 import {
   MedicationFormIntentRemoveIngredient,
   MedicationFormIntentRemoveMedication, MedicationFormIntentValueChangesMedicationAmount,
@@ -23,14 +33,6 @@ import {
 import {MedicationRequestFormState} from '../medication-request-form.state';
 import {Utils} from '../../../common/cds-access/utils/utils';
 import {FhirLabelProviderFactory} from '../../../common/fhir/providers/fhir.label.provider.factory';
-import {
-  CodeableConcept,
-  Coding, id,
-  Medication,
-  MedicationIngredient, Quantity,
-  Ratio,
-  Reference
-} from 'phast-fhir-ts';
 
 @Component({
   selector: 'app-medication-form',
@@ -179,7 +181,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
   }
 
   public trackByQuantity(_: number, quantity: Quantity): string | undefined {
-    return quantity?.code;
+    return quantity.code;
   }
 
   public displayFnQuantity(quantity: Quantity): string | undefined {
@@ -230,7 +232,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   private addMedication(nMedication: number, medication: Medication): FormGroup {
     const medicationGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
+      'track-id': nanoid(16),
       medication: [medication],
       ingredient: this._fb.array([]),
       amount: [medication.amount],
@@ -375,7 +377,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   }
 
-  private updateMedication(nMedication: number, medication: Medication): FormGroup | boolean {
+  private updateMedication(_: number, medication: Medication): FormGroup | boolean {
     if (this._medicationGroup$.value) {
       const options = {emitEvent: false};
       const medicationGroup = this._medicationGroup$.value as FormGroup;
@@ -429,10 +431,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return false;
   }
 
-  private addIngredientCodeableConcept(nMedication: number, medication: Medication,
+  private addIngredientCodeableConcept(_: number, medication: Medication,
                                        ingredient: MedicationIngredient): FormGroup {
     const ingredientGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
+      'track-id': nanoid(16),
       itemCodeableConcept: ingredient.itemCodeableConcept,
       strength: ingredient.strength
     });
@@ -495,7 +497,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   private addIngredientReference(medication: Medication, ingredient: MedicationIngredient): FormGroup {
     const ingredientGroup = this._fb.group({
-      'track-id': Utils.randomString(16),
+      'track-id': nanoid(16),
       itemReference: ingredient.itemReference,
       strength: this._fb.group({
         numerator: this._fb.group({

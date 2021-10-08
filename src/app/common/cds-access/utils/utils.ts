@@ -15,23 +15,13 @@ import {Duration} from 'luxon';
 export class Utils {
 
   /**
-   * Generates random strings. By default this returns random 8 characters long
-   * alphanumeric strings.
-   * @param strLength The length of the output string. Defaults to 8.
-   * @param charSet A string containing all the possible characters.
-   *     Defaults to all the upper and lower-case letters plus digits.
+   * Decodes a JWT token and returns it's body.
+   * @param tokenId The token to read
    * @category Utility
    */
-  public static randomString(
-    strLength = 8,
-    charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  ): string {
-    const result = new Array<string>();
-    const len = charSet.length;
-    while (strLength--) {
-      result.push(charSet.charAt(Math.floor(Math.random() * len)));
-    }
-    return result.join('');
+  public static jwtDecode(tokenId: string): object {
+    const payload = tokenId.split('.')[1];
+    return JSON.parse(atob(payload));
   }
 
   public static duration(value: number, unitCode: string): Duration | undefined {
