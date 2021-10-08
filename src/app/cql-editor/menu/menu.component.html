@@ -1,0 +1,32 @@
+<mat-toolbar color="primary">
+  <button mat-button [matMenuTriggerFor]="fileMenu">File</button>
+  <span class="example-spacer"></span>
+  <div class="form-container">
+    <form [formGroup]="form">
+      <mat-form-field hideRequiredMarker [style.width.px]="700">
+        <i matPrefix matTooltip="Library Add" class="material-icons icon">library_add</i>
+        <mat-label></mat-label>
+        <input type="text"
+               matInput placeholder="Library Title"
+               formControlName="library"
+               [matAutocomplete]="library"
+               aria-label="Library Title" required>
+      </mat-form-field>
+    </form>
+    <mat-autocomplete #library="matAutocomplete" [displayWith]="displayFnLibrary.bind(this)">
+      <mat-option *ngIf="isSearching$ | async" class="is-searching">Recherche...</mat-option>
+      <ng-container *ngIf="!(isSearching$ | async)">
+        <mat-option *ngFor="let library of libraries; index as i trackBy: trackByLibraries" [value]="library">
+          {{ library | library }}
+        </mat-option>
+      </ng-container>
+    </mat-autocomplete>
+  </div>
+
+</mat-toolbar>
+
+<mat-menu #fileMenu="matMenu">
+  <button mat-menu-item> New </button>
+  <button mat-menu-item [disabled]="!(isDirty$ | async)" (click)="onSave()"> Save </button>
+  <button mat-menu-item> Load </button>
+</mat-menu>

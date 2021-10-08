@@ -1,0 +1,39 @@
+<div class="runner-wrapper">
+    <div fxLayout="row" class="runner-menu">
+        <app-menu fxFlex="100%"></app-menu>
+    </div>
+    <div fxLayout="row" class="runner">
+        <div fxFlex="50%">
+            <!--Input-->
+            <nav class="input" fxLayout fxLayoutAlign="space-between none">
+                <div class="in" fxLayout fxLayoutAlign="center center">
+                    <h4>Input</h4>
+                </div>
+                <div fxLayout fxLayoutAlign="center center">
+                    <button title="If code is selected, only the selected code will be executed" class="run" [disabled]
+                            [class.running]="running$ | async" (click)="run()" fxLayout="column" fxLayoutAlign="center center"
+                            mat-raised-button>
+                        <i class="material-icons icon" *ngIf="!(running$ | async)">play_arrow</i>
+                        <i class="material-icons icon" *ngIf="running$ | async">hourglass_full</i>
+                        <span class="button-label">{{ (running$ |async) ? 'Running' : 'Run' }}</span>
+                    </button>
+                </div>
+            </nav>
+            <textarea appCqlCodeMirror [type]="editorType.input"></textarea>
+        </div>
+        <div fxFlex="50%">
+            <!--Output-->
+            <nav class="output" fxLayout fxLayoutAlign="space-between none">
+                <div class="out" fxLayout fxLayoutAlign="center center">
+                    <h4>Output</h4>
+                </div>
+                <button class="clear" [class.running]="running$ | async" id="clearBtn" (click)="clearOutput()" fxLayout="column"
+                        fxLayoutAlign="center center" mat-raised-button>
+                    <i class="material-icons icon">clear_all</i>
+                    <span class="button-label">Clear</span>
+                </button>
+            </nav>
+            <textarea appCqlCodeMirror [type]="editorType.output">{{ defaultContent }}</textarea>
+        </div>
+    </div>
+</div>
