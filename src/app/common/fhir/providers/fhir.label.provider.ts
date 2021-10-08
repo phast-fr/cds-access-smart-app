@@ -2,7 +2,7 @@ import {ILabelProvider, ITermLabelProvider} from '../../cds-access/models/core.m
 import {
   CodeableConcept,
   Coding,
-  Composition,
+  Composition, Library,
   Medication,
   MedicationKnowledge,
   MedicationRequest, ParametersParameter,
@@ -278,5 +278,16 @@ export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetCon
         break;
     }
     return display;
+  }
+}
+
+export class LibraryLabelProvider {
+
+  constructor() {
+  }
+
+  public getText(library: Library | undefined | null): string | undefined {
+    if (! library) { return undefined; }
+    return library.title + ' v' + library.version;
   }
 }
