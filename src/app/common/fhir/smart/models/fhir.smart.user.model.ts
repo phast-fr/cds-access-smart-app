@@ -1,5 +1,5 @@
 
-export interface FhirSmartUserModel {
+export interface SmartUser {
   aud: string;
   displayName: string;
   email: string;

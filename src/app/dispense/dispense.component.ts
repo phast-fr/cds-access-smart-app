@@ -19,7 +19,7 @@ import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {CollectionViewer, DataSource} from '@angular/cdk/collections';
 import {MatCheckboxChange} from '@angular/material/checkbox';
-import {SmartToken} from '../common/fhir/smart/models/fhir.smart.token.model';
+import {SmartContext} from '../common/fhir/smart/models/fhir.smart.context.model';
 import {
   Bundle,
   Composition,

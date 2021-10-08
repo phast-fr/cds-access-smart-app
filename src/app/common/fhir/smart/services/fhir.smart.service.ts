@@ -1,16 +1,18 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {filter, map} from 'rxjs/operators';
 
-import { Utils } from '../../../cds-access/utils/utils';
-import { StateService } from '../../../cds-access/services/state.service';
+import {nanoid} from 'nanoid';
+import {Patient, Practitioner} from 'phast-fhir-ts';
+
+import {Utils} from '../../../cds-access/utils/utils';
+import {StateService} from '../../../cds-access/services/state.service';
 import {FhirClientService, Options} from '../../services/fhir.client.service';
 import {StateModel} from '../../../cds-access/models/core.model';
-import { SmartToken } from '../models/fhir.smart.token.model';
-import { FhirSmartUserModel } from '../models/fhir.smart.user.model';
+import {SmartContext} from '../models/fhir.smart.context.model';
+import {SmartUser} from '../models/fhir.smart.user.model';
 import {FhirTypeGuard} from '../../utils/fhir.type.guard';
-import { Patient, Practitioner } from 'phast-fhir-ts';
 
 import {environment} from '../../../../../environments/environment';
 
@@ -44,7 +46,7 @@ export class FhirSmartService {
     }
     this.setBaseUrl(iss);
 
-    const state = Utils.randomString(16);
+    const state = nanoid(16);
 
     const options = {
       headers: new HttpHeaders()
@@ -73,7 +75,7 @@ export class FhirSmartService {
       });
   }
 
-  public retrieveToken(code: string, state: string): void {
+  public retrieveContext(code: string, state: string): void {
     const options = {
       headers: new HttpHeaders()
         .set('Accept', 'application/fhir+json,application/json')
@@ -106,7 +108,7 @@ export class FhirSmartService {
     }
   }
 
-  public refreshToken(): void {
+  public refreshContext(): void {
     const refreshToken = sessionStorage.getItem('refresh_token');
     if (refreshToken == null || refreshToken === '') { return; }
     const options = {
@@ -135,23 +137,32 @@ export class FhirSmartService {
     }
   }
 
-  public saveToken(token: SmartToken): void {
-    this.setAccessToken(token.access_token);
-    sessionStorage.setItem('expire_date', String(new Date().getTime() + (1000 * token.expires_in)));
-    sessionStorage.setItem('id_token', token.id_token);
-    sessionStorage.setItem('patient_id', token.patient);
-    sessionStorage.setItem('need_patient_banner', String(token.need_patient_banner));
-    if (token.intent) {
-      sessionStorage.setItem('intent', token.intent);
+  public saveContext(context: SmartContext): void {
+    const baseUrl = this.getBaseUrl();
+    if (baseUrl) {
+      context.iss = baseUrl;
+    }
+    this.setAccessToken(context.access_token);
+    sessionStorage.setItem('expires_in', String(context.expires_in));
+    sessionStorage.setItem('expire_date', String(new Date().getTime() + (1000 * context.expires_in)));
+    sessionStorage.setItem('scope', context.scope);
+    sessionStorage.setItem('token_type', context.token_type);
+    sessionStorage.setItem('id_token', context.id_token);
+    sessionStorage.setItem('patient', context.patient);
+    sessionStorage.setItem('need_patient_banner', String(context.need_patient_banner));
+    if (context.refresh_token) {
+      sessionStorage.setItem('refresh_token', context.refresh_token);
+    }
+    if (context.intent) {
+      sessionStorage.setItem('intent', context.intent);
     }
 
-    const user = this.getUser<FhirSmartUserModel>(token.id_token);
-    console.log('smartUser', user);
-
+    const user = this.getUser<SmartUser>(context.id_token);
     const state = new StateModel();
+    state.context = context;
     state.user = user;
-    state.needPatientBanner = token.need_patient_banner;
-    state.intent = token.intent;
+    state.needPatientBanner = context.need_patient_banner;
+    state.intent = context.intent;
 
     const options = {
       headers: new HttpHeaders()
@@ -160,12 +171,11 @@ export class FhirSmartService {
         .set('Authorization', `Bearer ${this.getAccessToken()}`)
     } as Options;
 
-    const baseUrl = this.getBaseUrl();
-    if (baseUrl) {
-      if (baseUrl && token.patient) {
-        this._fhirClient.read<Patient>(baseUrl, {
+    if (context.iss) {
+      if (context.iss && context.patient) {
+        this._fhirClient.read<Patient>(context.iss, {
           resourceType: 'Patient',
-          id: token.patient
+          id: context.patient
         }, options)
           .pipe(
             filter(patient => FhirTypeGuard.isPatient(patient)),
@@ -182,7 +192,7 @@ export class FhirSmartService {
           });
       }
 
-      this._fhirClient.read(baseUrl, {
+      this._fhirClient.read(context.iss, {
         resourceType: 'Practitioner',
         id: state.userId()
       }, options)
@@ -193,10 +203,10 @@ export class FhirSmartService {
         .subscribe({
           next: practitioner => {
             state.practitioner = practitioner;
-            if (token.patient && state.patient) {
+            if (context.patient && state.patient) {
               this._stateService.emitState(state);
             }
-            else if (!token.patient) {
+            else if (!context.patient) {
               this._stateService.emitState(state);
             }
           },
@@ -205,23 +215,51 @@ export class FhirSmartService {
     }
   }
 
-  public loadToken(): void {
+  public loadContext(): void {
     if (this.isTokenExpired()) {
-      this.refreshToken();
+      this.refreshContext();
     }
     else {
-      const idPatient = sessionStorage.getItem('patient_id');
+      const context = {} as SmartContext;
+      const baseUrl = this.getBaseUrl();
+      if (baseUrl) {
+        context.iss = baseUrl;
+      }
+      const accessToken = this.getAccessToken();
+      if (accessToken) {
+        context.access_token = accessToken;
+      }
+      context.expires_in = Number(sessionStorage.getItem('expires_in'));
+      const scope = sessionStorage.getItem('scope');
+      if (scope) {
+        context.scope = scope;
+      }
+      const tokenType = sessionStorage.getItem('token_type');
+      if (tokenType) {
+        context.token_type = tokenType;
+      }
       const idToken = sessionStorage.getItem('id_token');
-      const needPatientBanner = sessionStorage.getItem('need_patient_banner');
+      if (idToken) {
+        context.id_token = idToken;
+      }
+      const patientId = sessionStorage.getItem('patient');
+      if (patientId) {
+        context.patient = patientId;
+      }
+      context.need_patient_banner = sessionStorage.getItem('need_patient_banner') === 'true';
       const intent = sessionStorage.getItem('intent');
+      if (intent) {
+        context.intent = intent;
+      }
 
       const state = new StateModel();
-      if (idToken) {
-        state.user = this.getUser<FhirSmartUserModel>(idToken);
+      state.context = context;
+      if (context.id_token) {
+        state.user = this.getUser<SmartUser>(context.id_token);
       }
-      state.needPatientBanner = needPatientBanner === 'true';
-      if (intent) {
-        state.intent = intent;
+      state.needPatientBanner = context.need_patient_banner;
+      if (context.intent) {
+        state.intent = context.intent;
       }
 
       const options = {
@@ -231,12 +269,11 @@ export class FhirSmartService {
           .set('Authorization', `Bearer ${this.getAccessToken()}`)
       } as Options;
 
-      const baseUrl = this.getBaseUrl();
-      if (baseUrl) {
-        if (idPatient && idPatient !== 'undefined') {
-          this._fhirClient.read(baseUrl, {
+      if (context.iss) {
+        if (context.patient && context.patient !== 'undefined') {
+          this._fhirClient.read(context.iss, {
             resourceType: 'Patient',
-            id: idPatient
+            id: context.patient
           }, options)
             .pipe(
               filter(patient => FhirTypeGuard.isPatient(patient)),
@@ -253,7 +290,7 @@ export class FhirSmartService {
             });
         }
 
-        this._fhirClient.read(baseUrl, {
+        this._fhirClient.read(context.iss, {
           resourceType: 'Practitioner',
           id: state.userId()
         }, options)
@@ -264,10 +301,10 @@ export class FhirSmartService {
           .subscribe({
             next: practitioner => {
               state.practitioner = practitioner;
-              if (idPatient !== 'undefined' && state.patient) {
+              if (context.patient !== 'undefined' && state.patient) {
                 this._stateService.emitState(state);
               }
-              else if (idPatient === 'undefined') {
+              else if (context.patient === 'undefined') {
                 this._stateService.emitState(state);
               }
             },
@@ -290,7 +327,7 @@ export class FhirSmartService {
   }
 
   public getUser<T>(tokenId: string): T {
-    return this.jwtDecode(tokenId) as any;
+    return Utils.jwtDecode(tokenId) as any;
   }
 
   private setBaseUrl(value: string): void {
@@ -329,26 +366,16 @@ export class FhirSmartService {
   }
 
   private doPostToken(url: string, body: string): void {
-      this._http.post<SmartToken>(url, body, {
+      this._http.post<SmartContext>(url, body, {
         headers: new HttpHeaders()
           .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
           .set('Accept', 'application/json')
       }).subscribe({
-        next: token => {
-          console.log('token', token);
-          this.saveToken(token);
+        next: context => {
+          console.log('smart context', context);
+          this.saveContext(context);
         },
         error: err => console.error('error', err)
       });
-  }
-
-  /**
-   * Decodes a JWT token and returns it's body.
-   * @param tokenId The token to read
-   * @category Utility
-   */
-  private jwtDecode(tokenId: string): object {
-    const payload = tokenId.split('.')[1];
-    return JSON.parse(atob(payload));
   }
 }

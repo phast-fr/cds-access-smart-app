@@ -9,9 +9,10 @@ import {Component, OnDestroy, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Subject} from 'rxjs';
 import {filter, map, takeUntil} from 'rxjs/operators';
-import {FhirSmartUserModel} from '../../fhir/smart/models/fhir.smart.user.model';
+import {SmartUser} from '../../fhir/smart/models/fhir.smart.user.model';
 import {FhirSmartService} from '../../fhir/smart/services/fhir.smart.service';
 import {Element, Patient, Practitioner, Resource} from 'phast-fhir-ts';
+import {SmartContext} from '../../fhir/smart/models/fhir.smart.context.model';
 
 /**
  * @ngModule CdsAccessModule
@@ -64,7 +65,7 @@ export interface TableElement<T extends Resource | Element> {
  * // TODO
  */
 export interface IStateModel {
-  user?: FhirSmartUserModel;
+  user?: SmartUser;
   patient?: Patient;
   practitioner?: Practitioner;
   needPatientBanner: boolean;
@@ -79,7 +80,9 @@ export interface IStateModel {
  */
 export class StateModel implements IStateModel {
 
-  private _user?: FhirSmartUserModel;
+  private _context?: SmartContext;
+
+  private _user?: SmartUser;
 
   patient?: Patient;
 
@@ -93,11 +96,19 @@ export class StateModel implements IStateModel {
     this.needPatientBanner = false;
   }
 
-  public get user(): FhirSmartUserModel | undefined {
+  public get context(): SmartContext | undefined {
+    return this._context;
+  }
+
+  public set context(context: SmartContext | undefined) {
+    this._context = context;
+  }
+
+  public get user(): SmartUser | undefined {
     return this._user;
   }
 
-  public set user(user: FhirSmartUserModel | undefined) {
+  public set user(user: SmartUser | undefined) {
     this._user = user;
   }
 
@@ -153,7 +164,7 @@ export abstract class SmartComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: value => this._smartService.retrieveToken(value.code, value.state),
+        next: value => this._smartService.retrieveContext(value.code, value.state),
         error: err => console.error(err)
       });
     routeWithToken$
@@ -161,7 +172,7 @@ export abstract class SmartComponent implements OnInit, OnDestroy {
         takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
-        next: () => this._smartService.loadToken(),
+        next: () => this._smartService.loadContext(),
         error: err => console.error(err)
       });
   }
