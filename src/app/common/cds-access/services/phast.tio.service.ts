@@ -29,7 +29,7 @@ export class PhastTioService {
       headers: new HttpHeaders()
         .set('Accept', 'application/json; charset=utf-8; q=1')
         .set('Content-type', 'application/fhir+json')
-        .set('Authorization', `Basic ${environment.cio_dc_credential}`)
+        .set('Authorization', `Basic ${environment.tio_credential}`)
     } as Options;
   }
 
