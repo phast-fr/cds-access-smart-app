@@ -1,0 +1,14 @@
+<div class="loading-indicator" *ngIf="loading$ | async">
+  <mat-progress-spinner mode="indeterminate" color="primary"></mat-progress-spinner>
+</div>
+<div class="cql-editor">
+  <div fxLayout="row" class="cql-editor-header">
+    <app-header fxFlex="100%" *ngIf="needBanner$ | async"></app-header>
+  </div>
+  <div fxLayout="row" class="cql-editor-container">
+    <app-runner fxFlex="100%" *ngIf="!(loading$ | async)"></app-runner>
+  </div>
+  <div fxLayout="row" class="cql-editor-footer">
+    <app-footer fxFlex="100%" *ngIf="!(loading$ | async)"></app-footer>
+  </div>
+</div>
