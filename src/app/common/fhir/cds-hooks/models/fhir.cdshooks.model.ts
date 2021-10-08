@@ -10,7 +10,7 @@ export interface Service {
   name: string;
   title?: string;
   description?: string;
-  prefetch?: Array<string>;
+  prefetch: { [s: string]: string; };
 }
 
 export class Hook {
@@ -18,9 +18,9 @@ export class Hook {
   hookInstance: string;
   fhirServer?: string;
   fhirAuthorization?: Authorization;
-  prefetch: Map<string, Resource>;
+  prefetch: { [s: string]: Resource; };
 
-  constructor(hook: string, hookInstance: string, prefetch: Map<string, Resource>) {
+  constructor(hook: string, hookInstance: string, prefetch: { [s: string]: Resource; }) {
     this.hook = hook;
     this.hookInstance = hookInstance;
     this.prefetch = prefetch;
@@ -62,7 +62,7 @@ export class HookContext {
 export class OrderSelectHook extends Hook {
   context: OrderSelectContext;
 
-  constructor(hookInstance: string, prefetch: Map<string, Resource>, context: OrderSelectContext) {
+  constructor(hookInstance: string, prefetch: { [s: string]: Resource; }, context: OrderSelectContext) {
     super('order-select', hookInstance, prefetch);
     this.context = context;
   }

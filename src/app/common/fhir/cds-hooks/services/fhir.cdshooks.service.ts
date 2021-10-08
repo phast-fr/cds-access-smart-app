@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { retry } from 'rxjs/operators';
+import {retry} from 'rxjs/operators';
 
 import { environment } from '../../../../../environments/environment';
 import { CdsCards, Hook, Service, Services } from '../models/fhir.cdshooks.model';
@@ -23,7 +23,7 @@ export class FhirCdsHooksService {
   public getServices(): Observable<Services> {
     return this._httpClient.get<Services>(FhirCdsHooksService.CDS_SERVICES, this._options)
       .pipe(
-        retry(3)
+          retry(3)
       );
   }
 
@@ -31,7 +31,6 @@ export class FhirCdsHooksService {
     hook.hook = service.hook;
     // to manage cqf-ruler
     hook.fhirServer = environment.cds_hooks_url + '/fhir';
-
     return this._httpClient.post<CdsCards>(FhirCdsHooksService.CDS_SERVICES + '/' + service.id, hook, this._options)
       .pipe(
         retry(3)
