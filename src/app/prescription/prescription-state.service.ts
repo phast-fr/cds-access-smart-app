@@ -76,6 +76,7 @@ export class PrescriptionStateService {
       // TODO to can filtered by medication request code into CQL
       const medication = lMedicationRequest.contained[0] as Medication;
       if (medication.code) {
+        lMedicationRequest.id = 'tmp';
         lMedicationRequest.medicationCodeableConcept = medication.code;
 
         this._cdsHooksService.getServices()
@@ -83,7 +84,7 @@ export class PrescriptionStateService {
             {
               next: services => {
                 const service = services.services[0];
-                const prefetch = new Map<string, Resource>();
+                const prefetch = {} as {[s: string]: Resource};
                 let practitioner: Practitioner | undefined;
                 let patient: Patient | undefined;
                 if (this._stateService.state) {
@@ -93,13 +94,12 @@ export class PrescriptionStateService {
                   }
                   if (state.patient) {
                     patient = state.patient;
-                    prefetch.set('item1', patient);
+                    prefetch['item1'] = patient;
                   }
                 }
 
                 let hook: Hook;
                 const hookInstance = uuidv4();
-
                 if (service.hook === 'order-select') {
                   if (practitioner?.id && patient?.id && lMedicationRequest?.id) {
                     const context = new OrderSelectContext(practitioner.id, patient.id, [lMedicationRequest.id], {
@@ -109,49 +109,69 @@ export class PrescriptionStateService {
                         resource: lMedicationRequest
                       }],
                     });
-                    prefetch.set('item2', lMedicationRequest);
+                    prefetch['item2'] = lMedicationRequest;
                     hook = new OrderSelectHook(hookInstance, prefetch, context);
+                  }
+                  else {
+                    console.error('error', 'id is null');
+                    return;
                   }
                 }
                 else {
+                  console.error('error', 'the hook ' + service.hook + ' is not supported');
                   return;
                 }
 
-                const observables: Array<Observable<object>> = [];
-                service.prefetch?.forEach(item => {
-                  if ('Patient?_id={{context.patientId}}' !== item) {
-                    const observable = this.buildPrefetch(patient, item);
-                    if (observable) {
-                      observables.push(observable);
-                    }
-                  }
-                });
-
-                forkJoin(observables)
-                  .subscribe({
-                    next: values => {
-                      let itemCount = 2;
-                      for (const value of values) {
-                        const bundle = value as Bundle;
-                        if (bundle.total && bundle.total > 0) {
-                          hook.prefetch.set('item' + ++itemCount, bundle);
-                        }
+                if (service.prefetch) {
+                  const observables: Array<Observable<object>> = [];
+                  Object.keys(service.prefetch)?.forEach(key => {
+                    const item = service.prefetch[key];
+                    if ('Patient?_id={{context.patientId}}' !== item) {
+                      const observable = this.buildPrefetch(patient, item);
+                      if (observable) {
+                        observables.push(observable);
                       }
-
-                      this._cdsHooksService.postHook(service, hook)
-                        .subscribe({
-                          next: (cdsCards) => {
-                            const cards = Array<CardReadable>();
-                            for (const card of cdsCards.cards) {
-                              cards.push(new CardReadable(card));
-                            }
-                            this._cards$.next(cards);
-                          },
-                          error: err => console.error('error', err)
-                        });
-                    },
-                    error: err => console.error('error', err),
+                    }
                   });
+                  forkJoin(observables)
+                      .subscribe({
+                        next: values => {
+                          let itemCount = 2;
+                          values.forEach(value => {
+                            const bundle = value as Bundle;
+                            if (bundle.total && bundle.total > 0) {
+                              hook.prefetch['item' + ++itemCount] = bundle;
+                            }
+                          });
+                          console.log(hook);
+                          this._cdsHooksService.postHook(service, hook)
+                              .subscribe({
+                                next: (cdsCards) => {
+                                  const cards = Array<CardReadable>();
+                                  for (const card of cdsCards.cards) {
+                                    cards.push(new CardReadable(card));
+                                  }
+                                  this._cards$.next(cards);
+                                },
+                                error: err => console.error('error', err)
+                              });
+                        },
+                        error: err => console.error('error', err),
+                      });
+                }
+                else {
+                  this._cdsHooksService.postHook(service, hook)
+                      .subscribe({
+                        next: (cdsCards) => {
+                          const cards = Array<CardReadable>();
+                          for (const card of cdsCards.cards) {
+                            cards.push(new CardReadable(card));
+                          }
+                          this._cards$.next(cards);
+                        },
+                        error: err => console.error('error', err)
+                      });
+                }
               },
               error: err => console.error('error', err)
             }
