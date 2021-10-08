@@ -17,7 +17,7 @@ import {
   MedicationFormIntentAddMedicationRequest,
   MedicationFormIntentCdsHelp
 } from './medication-request-form.intent';
-import {MedicationRequestFormViewModel} from './medication-request-form-view-model';
+import {MedicationRequestFormViewModel} from './medication-request-form.view-model';
 import {MedicationRequestFormState} from './medication-request-form.state';
 import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
 import {Bundle, MedicationKnowledge, MedicationRequest, Patient, Practitioner} from 'phast-fhir-ts';

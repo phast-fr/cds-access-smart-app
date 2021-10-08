@@ -11,7 +11,7 @@ import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, takeUntil} from 'rxjs/operators';
 
 import {IRender} from '../../../common/cds-access/models/state.model';
-import { MedicationRequestFormViewModel } from '../medication-request-form-view-model';
+import { MedicationRequestFormViewModel } from '../medication-request-form.view-model';
 import {
   MedicationFormIntentValueChangesDispenseRequest
 } from '../medication-request-form.intent';

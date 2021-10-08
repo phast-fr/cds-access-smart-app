@@ -17,7 +17,7 @@ import {
   MedicationFormStateValueChangesTreatmentIntent,
   MedicationFormStateAddWhen, MedicationFormStateRemoveWhen
 } from './medication-request-form.state';
-import {MedicationRequestFormViewModel} from './medication-request-form-view-model';
+import {MedicationRequestFormViewModel} from './medication-request-form.view-model';
 
 export class MedicationRequestFormReducer implements IReducer<MedicationRequestFormState>{
 

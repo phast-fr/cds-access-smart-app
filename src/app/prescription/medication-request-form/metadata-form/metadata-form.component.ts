@@ -6,7 +6,7 @@ import {filter, takeUntil, tap} from 'rxjs/operators';
 import {IRender} from '../../../common/cds-access/models/state.model';
 import {MedicationRequestFormState} from '../medication-request-form.state';
 import {FhirLabelProviderFactory} from '../../../common/fhir/providers/fhir.label.provider.factory';
-import {MedicationRequestFormViewModel} from '../medication-request-form-view-model';
+import {MedicationRequestFormViewModel} from '../medication-request-form.view-model';
 import {
   MedicationFormIntentValueChangesTreatmentIntent
 } from '../medication-request-form.intent';
