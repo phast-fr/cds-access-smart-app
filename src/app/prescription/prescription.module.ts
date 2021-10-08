@@ -19,7 +19,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import {MatRadioModule} from '@angular/material/radio';
-import {MatGridListModule} from '@angular/material/grid-list';
 import {FlexLayoutModule} from '@angular/flex-layout';
 
 import {FhirModule} from '../common/fhir/fhir.module';
@@ -27,7 +26,7 @@ import {FhirModule} from '../common/fhir/fhir.module';
 import { PrescriptionRoutingModule } from './prescription-routing.module';
 
 import { PrescriptionStateService } from './prescription-state.service';
-import { MedicationRequestFormViewModel } from './medication-request-form/medication-request-form-view-model';
+import { MedicationRequestFormViewModel } from './medication-request-form/medication-request-form.view-model';
 
 import { PrescriptionComponent } from './prescription.component';
 import { CardListComponent } from './card-list/card-list.component';
@@ -74,8 +73,7 @@ import {MetadataFormComponent} from './medication-request-form/metadata-form/met
         CdsAccessModule,
         FhirModule,
         PrescriptionRoutingModule,
-        MatRadioModule,
-        MatGridListModule
+        MatRadioModule
     ],
   providers: [
     PrescriptionStateService,
