@@ -1,7 +1,4 @@
 :host {
-  display: block;
-  width: 100vw;
-  height: 90px;
   background: -webkit-gradient(linear,left top,left bottom,from(#86af38),to(#25913f));
   background: linear-gradient(#86af38,#25913f);
 }

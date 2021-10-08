@@ -1,3 +1,22 @@
+.prescription {
+  display: block;
+  height: 100%;
+}
+
+.prescription-header {
+  width: 100%;
+  height: 90px;
+}
+
+.prescription-container {
+  width: 100%;
+}
+
+.prescription-footer {
+  width: 100%;
+  height: 40px;
+}
+
 .empty {
   height: calc(100vh - (90px + 40px));
 }

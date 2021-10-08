@@ -1,52 +1,58 @@
 <div class="loading-indicator" *ngIf="loading$ | async">
   <mat-progress-spinner mode="indeterminate" color="primary"></mat-progress-spinner>
 </div>
-<app-header *ngIf="needBanner$ | async"></app-header>
-<div class="prescription-container" [class.empty]="!(hasMedications$ | async)" *ngIf="!(loading$ | async)">
-  <mat-drawer-container>
-    <mat-drawer-content>
-      <div class="view-medication-prescription">
-        <div class="card-notify">
-          <button *ngIf="!(cards$ | async) && !drawer.opened" mat-fab disabled>
-            <mat-icon>email</mat-icon>
-          </button>
-          <button *ngIf="(cards$ | async) && cards.length === 0 && drawer.opened"
-                  mat-fab color="primary" (click)="drawer.toggle()">
-            <mat-icon>email</mat-icon>
-          </button>
-          <button *ngIf="(cards$ | async) && cards.length > 0"
-                  mat-fab color="primary" (click)="drawer.toggle(); onReadCards();">
-            <mat-icon *ngIf="(badges$ | async) > 0" matBadge="{{ badges$ | async }}" matBadgeColor="warn">email</mat-icon>
-            <mat-icon *ngIf="(badges$ | async) === 0">email</mat-icon>
-          </button>
+<div class="prescription">
+  <div fxLayout="row" class="prescription-header">
+    <app-header fxFlex="100%" *ngIf="needBanner$ | async"></app-header>
+  </div>
+  <div fxLayout="row" class="prescription-container" [class.empty]="!(hasMedications$ | async)">
+    <mat-drawer-container fxFlex="100%" *ngIf="!(loading$ | async)">
+      <mat-drawer-content>
+        <div class="view-medication-prescription">
+          <div class="card-notify">
+            <button *ngIf="!(cards$ | async) && !drawer.opened" mat-fab disabled>
+              <mat-icon>email</mat-icon>
+            </button>
+            <button *ngIf="(cards$ | async) && cards.length === 0 && drawer.opened"
+                    mat-fab color="primary" (click)="drawer.toggle()">
+              <mat-icon>email</mat-icon>
+            </button>
+            <button *ngIf="(cards$ | async) && cards.length > 0"
+                    mat-fab color="primary" (click)="drawer.toggle(); onReadCards();">
+              <mat-icon *ngIf="(badges$ | async) > 0" matBadge="{{ badges$ | async }}" matBadgeColor="warn">email</mat-icon>
+              <mat-icon *ngIf="(badges$ | async) === 0">email</mat-icon>
+            </button>
+          </div>
+          <mat-card class="mat-elevation-z1">
+            <mat-card-header>
+              <mat-card-title> Prescription en
+                {{(medicationRequestMode$ | async) | i18nSelect:{'dc': 'DC', 'sp': 'Spécialité'} }}
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="form-container">
+              <app-medication-request-form></app-medication-request-form>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-divider></mat-divider>
+
+          <!-- Table of display list of Medication Request -->
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title> Liste des prescriptions </mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="table-container">
+              <app-medication-request-table></app-medication-request-table>
+            </mat-card-content>
+          </mat-card>
         </div>
-        <mat-card class="mat-elevation-z1">
-          <mat-card-header>
-            <mat-card-title> Prescription en
-              {{(medicationRequestMode$ | async) | i18nSelect:{'dc': 'DC', 'sp': 'Spécialité'} }}
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content class="form-container">
-            <app-medication-request-form></app-medication-request-form>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-divider></mat-divider>
-
-        <!-- Table of display list of Medication Request -->
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title> Liste des prescriptions </mat-card-title>
-          </mat-card-header>
-          <mat-card-content class="table-container">
-            <app-medication-request-table></app-medication-request-table>
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </mat-drawer-content>
-    <mat-drawer #drawer mode="side" position="end">
-      <app-card-list></app-card-list>
-    </mat-drawer>
-  </mat-drawer-container>
+      </mat-drawer-content>
+      <mat-drawer #drawer mode="side" position="end">
+        <app-card-list></app-card-list>
+      </mat-drawer>
+    </mat-drawer-container>
+  </div>
+  <div fxLayout="row" class="prescription-footer">
+    <app-footer fxFlex="100%" *ngIf="!(loading$ | async)"></app-footer>
+  </div>
 </div>
-<app-footer *ngIf="!(loading$ | async)"></app-footer>
