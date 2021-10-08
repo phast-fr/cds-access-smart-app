@@ -15,7 +15,7 @@ import {
   ReferenceLabelProvider,
   CompositionLabelProvider,
   ParametersParameterLabelProvider,
-  ValueSetContainsLabelProvider
+  ValueSetContainsLabelProvider, LibraryLabelProvider
 } from './fhir.label.provider';
 
 @Injectable({
@@ -77,6 +77,14 @@ export class FhirLabelProviderFactory {
       }
       const provider = new CompositionLabelProvider() as ILabelProvider<any>;
       this._labelProviders.set('fhir.Composition', provider);
+      return provider;
+    }
+    else if (FhirTypeGuard.isLibrary(object)) {
+      if (this._labelProviders.has('fhir.Library')) {
+        return this._labelProviders.get('fhir.Library');
+      }
+      const provider = new LibraryLabelProvider() as ILabelProvider<any>;
+      this._labelProviders.set('fhir.Library', provider);
       return provider;
     }
     else if (object === 'fhir.Ratio') {
