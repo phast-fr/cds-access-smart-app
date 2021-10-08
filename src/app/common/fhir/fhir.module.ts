@@ -7,7 +7,7 @@ import {FhirCdsHooksService} from './cds-hooks/services/fhir.cdshooks.service';
 
 import {
   CodeableConceptPipe, CodingPipe,
-  CompositionPipe,
+  CompositionPipe, LibraryPipe,
   MedicationKnowledgePipe,
   MedicationPipe, MedicationRequestPipe,
   PersonNamePipe, QuantityPipe,
@@ -20,22 +20,23 @@ import {FhirClientService} from './services/fhir.client.service';
 
 @NgModule({
   declarations: [
-    SmartLaunchComponent,
-    PersonNamePipe,
-    MedicationRequestPipe,
-    MedicationKnowledgePipe,
-    MedicationPipe,
-    CodeableConceptPipe,
-    QuantityPipe,
-    RatioPipe,
-    ReferencePipe,
-    CodingPipe,
-    CompositionPipe,
-    ValueSetContainsPipe,
-    SnomedPipe
+      SmartLaunchComponent,
+      PersonNamePipe,
+      MedicationRequestPipe,
+      MedicationKnowledgePipe,
+      MedicationPipe,
+      CodeableConceptPipe,
+      QuantityPipe,
+      RatioPipe,
+      ReferencePipe,
+      CodingPipe,
+      CompositionPipe,
+      LibraryPipe,
+      ValueSetContainsPipe,
+      SnomedPipe
   ],
   imports: [
-    MatProgressSpinnerModule
+      MatProgressSpinnerModule
   ],
   exports: [
     SmartLaunchComponent,
@@ -50,13 +51,14 @@ import {FhirClientService} from './services/fhir.client.service';
     CompositionPipe,
     SnomedPipe,
     ValueSetContainsPipe,
-    QuantityPipe
+    QuantityPipe,
+    LibraryPipe
   ],
   providers: [
-    FhirClientService,
-    FhirSmartService,
-    FhirDataSourceService,
-    FhirCdsHooksService
+      FhirClientService,
+      FhirSmartService,
+      FhirDataSourceService,
+      FhirCdsHooksService
   ]
 })
 export class FhirModule { }
