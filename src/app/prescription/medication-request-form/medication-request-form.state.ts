@@ -223,7 +223,7 @@ export class MedicationFormStateRemoveDoseAndRate implements IPartialState {
   }
 }
 
-export class MedicationFormStateValueChangesTreatmentIntent implements IState {
+export class MedicationFormStateValueChangesTreatmentIntent implements IPartialState {
   readonly type = 'ValueChangesTreatmentIntent';
 
   constructor(private _medicationRequest: MedicationRequest) {
@@ -268,7 +268,7 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _whenArray: Array<ValueSetContains>;
 
-  constructor(private _type: string) {
+  constructor(public type: string) {
     this._loadingCIOList$ = new BehaviorSubject<boolean>(false);
     this._loadingTIOList$ = new BehaviorSubject<boolean>(false);
     this._nMedicationArray = new Array<number>();
@@ -292,14 +292,6 @@ export class MedicationRequestFormState implements IState {
       return this._medicationRequest.contained[0] as Medication;
     }
     return undefined;
-  }
-
-  public get type(): string {
-    return this._type;
-  }
-
-  public set type(type: string) {
-    this._type = type;
   }
 
   public set loadingCIOList(loading: boolean) {
