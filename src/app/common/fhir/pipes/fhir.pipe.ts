@@ -5,7 +5,7 @@ import {MedicationLabelProvider} from '../providers/fhir.label.provider';
 import {
   CodeableConcept,
   Coding,
-  Composition,
+  Composition, Library,
   Medication,
   MedicationKnowledge, MedicationRequest,
   Patient,
@@ -168,5 +168,18 @@ export class ValueSetContainsPipe implements PipeTransform {
 
   public transform(valueSetContains: ValueSetContains): string | undefined {
     return this._labelProviderFactory.getProvider('fhir.ValueSetContains')?.getText(valueSetContains);
+  }
+}
+
+@Pipe({
+  name: 'library'
+})
+export class LibraryPipe implements PipeTransform {
+
+  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  }
+
+  public transform(library: Library): string | undefined {
+    return this._labelProviderFactory.getProvider(library)?.getText(library);
   }
 }
