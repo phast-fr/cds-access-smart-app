@@ -91,16 +91,20 @@ export const environment = {
   scope: new Map<string, string>([
     ['prescription', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
     ['formulary', 'online_access profile openid fhirUser launch user/*.*'],
-    ['dispense', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*']
+    ['dispense', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
+    ['cql-editor', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*']
   ]),
   display_language: 'fr-FR',
-  cds_hooks_url: 'https://cds-access.phast.fr:8443/cqf-ruler-r4',
-  cio_dc_url: ' https://recette.phast.fr/resources-server_Atelier/api/FHIR',
+  cds_hooks_url: 'http://localhost:8080/cqf-ruler-r4',
+  cio_dc_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',
   cio_dc_credential: credential.cio_dc_credential,
-  tio_url: ' https://recette.phast.fr/resources-server_Atelier/api/FHIR',
+  tio_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',
   tio_credential: credential.tio_credential,
   fhir_date_short_format: 'yyyy-MM-dd\'T\'HH:mm:00',
   fhir_date_format: 'yyyy-MM-dd\'T\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
-  drug_formulary_resource_type: 'MedicationKnowledge'
+  drug_formulary_resource_type: 'MedicationKnowledge',
+  library_url: 'http://localhost:8080/cqf-ruler-r4/fhir',
+  library_credential: credential.library_credential,
+  cql_service_url: 'http://localhost:8081/r4/fhir'
 };
