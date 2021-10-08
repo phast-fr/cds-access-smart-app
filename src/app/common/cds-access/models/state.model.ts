@@ -79,5 +79,5 @@ export interface IPartialState {
  * Implemented by classes representing a state
  */
 export interface IState {
-  type: string;
+  readonly type: string;
 }
