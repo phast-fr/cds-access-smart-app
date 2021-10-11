@@ -80,11 +80,11 @@ export class PhastCQLService {
                 },
                 {
                     name : 'libraryServiceUri',
-                    valueString : environment.library_url
+                    valueString : environment.cio_dc_url
                 },
                 {
                     name : 'libraryCredential',
-                    valueString : environment.library_credential
+                    valueString : environment.cio_dc_credential
                 }
             ]
         } as Parameters;

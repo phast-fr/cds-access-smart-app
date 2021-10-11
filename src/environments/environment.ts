@@ -104,7 +104,5 @@ export const environment = {
   fhir_date_format: 'yyyy-MM-dd\'T\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
   drug_formulary_resource_type: 'MedicationKnowledge',
-  library_url: 'http://localhost:8080/cqf-ruler-r4/fhir',
-  library_credential: credential.library_credential,
   cql_service_url: 'http://localhost:8081/r4/fhir'
 };

@@ -52,6 +52,7 @@ export class PhastCioCdsService {
       headers: new HttpHeaders()
         .set('Accept', 'application/json; charset=utf-8; q=1')
         .set('Content-type', 'application/fhir+json')
+        .set('Authorization', `Basic ${environment.cio_dc_credential}`)
     } as Options;
   }
 
@@ -67,7 +68,7 @@ export class PhastCioCdsService {
   }
 
   public updateLibraryCQL(library: Library): Observable<Library> {
-    return this._fhirClient.update<Library>(environment.library_url, {
+    return this._fhirClient.update<Library>(environment.cio_dc_url, {
       resourceType: 'Library',
       id: library.id,
       input: JSON.stringify(library)
@@ -92,12 +93,12 @@ export class PhastCioCdsService {
 
     if (columnNameToFilter && typeof filter === 'string' && filter.length > 0) {
       searchParams.set(columnNameToFilter, filter.trim());
-      return this._fhirClient.resourceSearch<T>(environment.library_url, {
+      return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
         resourceType,
         searchParams
       }, this._options);
     }
-    return this._fhirClient.resourceSearch<T>(environment.library_url, {
+    return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
       resourceType,
       searchParams
     }, this._options);
