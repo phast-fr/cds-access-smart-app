@@ -15,19 +15,17 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { Injectable } from '@angular/core';
+
+import {Injectable} from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
 
-import { environment } from '../../../../environments/environment';
-
-import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
 import {
   Bundle,
   CodeableConcept,
@@ -37,6 +35,9 @@ import {
   Parameters,
   id, Composition, ParametersParameter, Quantity
 } from 'phast-fhir-ts';
+
+import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
+import {environment} from '../../../../environments/environment';
 
 /**
  * @ngModule CdsAccessModule
@@ -64,13 +65,20 @@ export class PhastCioDcService {
                               page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
     const searchParams = new URLSearchParams({
       _count: (pageSize) ? pageSize.toString() : PhastCioDcService.DEFAULT_PAGE_SIZE.toString(),
-      'product-type': 'DC',
+      'product-type': 'DC1',
       _elements: 'ingredient,code,id,doseForm,amount',
       LinkPageNumber: '0'
     });
 
-    return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
-      'code:text', filter, sortActive, sortDirection, page);
+    return this.search<OperationOutcome | Bundle & { type: 'searchset' }>(
+        'MedicationKnowledge',
+        searchParams,
+      'code:text',
+        filter,
+        sortActive,
+        sortDirection,
+        page
+    );
   }
 
   searchMedicationKnowledgeUCD(filter?: string | undefined, sortActive?: string, sortDirection?: string,
@@ -81,8 +89,15 @@ export class PhastCioDcService {
       _elements: 'ingredient,code,id,doseForm,amount',
       LinkPageNumber: '0'
     });
-    return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('MedicationKnowledge', searchParams,
-      'code:text', filter, sortActive, sortDirection, page);
+    return this.search<OperationOutcome | Bundle & { type: 'searchset' }>(
+        'MedicationKnowledge',
+        searchParams,
+      'code:text',
+        filter,
+        sortActive,
+        sortDirection,
+        page
+    );
   }
 
   searchComposition(filter?: string | undefined, sortActive?: string, sortDirection?: string,
@@ -92,8 +107,15 @@ export class PhastCioDcService {
       _elements: 'id,title,category,type',
       LinkPageNumber: '0'
     });
-    return this.search<OperationOutcome | Bundle & { type: 'searchset' }>('Composition', searchParams,
-      'type:text', filter, sortActive, sortDirection, page);
+    return this.search<OperationOutcome | Bundle & { type: 'searchset' }>(
+        'Composition',
+        searchParams,
+      'type:text',
+        filter,
+        sortActive,
+        sortDirection,
+        page
+    );
   }
 
   postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
@@ -111,29 +133,44 @@ export class PhastCioDcService {
       .intendedRoute(intendedRoute)
       .build();
 
-    return this._fhirClient.operation<Parameters>(environment.cio_dc_url, {
-      name: '$lookup?with-related-medication-knowledge=true',
-      resourceType: 'MedicationKnowledge',
-      id: mkId,
-      method: 'post',
-      input
-    }, this._options);
+    return this._fhirClient.operation<Parameters>(
+        environment.cio_dc_url,
+        {
+          name: '$lookup?with-related-medication-knowledge=true',
+          resourceType: 'MedicationKnowledge',
+          id: mkId,
+          method: 'post',
+          input
+        },
+        this._options
+    );
   }
 
   readCompositionMedicationKnowledge(compositionId: id): Observable<Composition> {
-    return this._fhirClient.read<Composition>(environment.cio_dc_url, {resourceType: 'Composition', id: compositionId},
-      this._options);
+    return this._fhirClient.read<Composition>(
+        environment.cio_dc_url,
+        {
+          resourceType: 'Composition',
+          id: compositionId
+        },
+        this._options
+    );
   }
 
   putCompositionMedicationKnowledge(composition: Composition): Observable<OperationOutcome> {
     return this._fhirClient.update<OperationOutcome>(
-      environment.cio_dc_url, {resourceType: 'Composition', id: composition.id, input: composition}, this._options
+      environment.cio_dc_url,
+        {
+          resourceType: 'Composition',
+          id: composition.id,
+          input: composition
+        },
+        this._options
     );
   }
 
-  private search<T>(resourceType: string, searchParams: URLSearchParams, columnNameToFilter?: string, filter?: string | undefined,
-                    sortActive?: string, sortDirection?: string, page?: number):
-    Observable<T> {
+  private search<T>(resourceType: string, searchParams: URLSearchParams, columnNameToFilter?: string,
+                    filter?: string | undefined, sortActive?: string, sortDirection?: string, page?: number): Observable<T> {
 
     if (sortActive) {
       if (sortDirection && sortDirection === 'desc') {
@@ -150,15 +187,23 @@ export class PhastCioDcService {
 
     if (columnNameToFilter && typeof filter === 'string' && filter.length > 0) {
       searchParams.set(columnNameToFilter, filter.trim());
-      return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
-        resourceType,
-        searchParams
-      }, this._options);
+      return this._fhirClient.resourceSearch<T>(
+          environment.cio_dc_url,
+          {
+            resourceType,
+            searchParams
+          },
+          this._options
+      );
     }
-    return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
-      resourceType,
-      searchParams
-    }, this._options);
+    return this._fhirClient.resourceSearch<T>(
+        environment.cio_dc_url,
+        {
+          resourceType,
+          searchParams
+        },
+        this._options
+    );
   }
 }
 
