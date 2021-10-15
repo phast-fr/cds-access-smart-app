@@ -15,17 +15,27 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
 import { Injectable } from '@angular/core';
-import {BehaviorSubject, forkJoin, Observable, Subject} from 'rxjs';
+import {BehaviorSubject, forkJoin, Observable, Subject, switchMap} from 'rxjs';
 import {filter, map, retry} from 'rxjs/operators';
 
 import * as hash from 'object-hash';
+import {
+  Bundle,
+  CodeableConcept, Coding, Dosage,
+  id,
+  Medication, MedicationIngredient,
+  MedicationKnowledge, MedicationRequest, OperationOutcome,
+  Parameters, ParametersParameter, Quantity,
+  Ratio,
+  ValueSet, ValueSetContains
+} from 'phast-fhir-ts';
 
 import {IAction, IIntent, IViewModel} from '../../common/cds-access/models/state.model';
 import { MedicationRequestFormState } from './medication-request-form.state';
@@ -116,16 +126,6 @@ import {
   MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorValue,
   MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorUnit, MedicationFormActionValueChangesMedicationAmount
 } from './medication-request-form.action';
-import {
-  Bundle,
-  CodeableConcept, Coding, Dosage,
-  id,
-  Medication, MedicationIngredient,
-  MedicationKnowledge, MedicationRequest, OperationOutcome,
-  Parameters, ParametersParameter, Quantity,
-  Ratio,
-  ValueSet, ValueSetContains
-} from 'phast-fhir-ts';
 
 @Injectable()
 export class MedicationRequestFormViewModel implements IViewModel<IIntent, MedicationRequestFormState>{
@@ -637,17 +637,17 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
   private handlerIntent(): void {
     this._intents$
-      .pipe(
-        map(intent => this.intentToAction(intent)),
-        filter(action => !!action),
-        map(action => action as IAction),
-        map(action => action.execute()),
-        map(partialState => this._reducer.reduce(this._state$.value as MedicationRequestFormState, partialState))
-      )
-      .subscribe({
-        next: state => this.emitState(state as MedicationRequestFormState),
-        error: err => console.error('error', err)
-      });
+        .pipe(
+            map(intent => this.intentToAction(intent)),
+            filter(action => !!action),
+            map(action => action as IAction),
+            map(action => action.execute()),
+            switchMap(partialState => this._reducer.reduce(this._state$.value as MedicationRequestFormState, partialState))
+        )
+        .subscribe({
+          next: state => this.emitState(state as MedicationRequestFormState),
+          error: err => console.error('error', err)
+        });
   }
 
   private intentToAction(intent: IIntent): IAction | undefined {
