@@ -1,5 +1,7 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
+package-lock.json
+
 /src/environments/credential.ts
 /src/environments/credential.prod.ts
 
