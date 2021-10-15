@@ -15,7 +15,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -24,7 +24,7 @@
 
 import { Injectable } from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
-import {Observable, switchMap} from 'rxjs';
+import {Observable, of, switchMap} from 'rxjs';
 import {filter, map} from 'rxjs/operators';
 
 import { FhirSmartService } from '../smart/services/fhir.smart.service';
@@ -33,6 +33,7 @@ import {Bundle, Composition, id, MedicationRequest, OperationOutcome, Patient, P
 import * as lodash from 'lodash';
 import {ReferenceBuilder} from '../builders/fhir.resource.builder';
 import {FhirTypeGuard} from '../utils/fhir.type.guard';
+import {OperationOutcomeIssue} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 @Injectable()
 export class FhirDataSourceService {
@@ -204,23 +205,38 @@ export class FhirDataSourceService {
       medicationRequest.contained.length = 0;
       delete medicationRequest.contained;
       if (medications.length === 1) {
-        return this.resourceSave(medications[0])
-            .pipe(
-                switchMap(medication => {
-                  if (FhirTypeGuard.isMedication(medication)) {
-                    medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
-                        .resourceType('Medication')
-                        .build();
-                  }
-                  return this.resourceSave(medicationRequest);
-                })
-            );
+          const observable = this.resourceSave(medications[0]);
+          if (observable) {
+              return observable
+                  .pipe(
+                      switchMap(medication => {
+                          if (FhirTypeGuard.isMedication(medication) && medication.id) {
+                              medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+                                  .resourceType('Medication')
+                                  .build();
+                          }
+                          const innerObservable = this.resourceSave(medicationRequest);
+                          if (innerObservable) {
+                              return innerObservable;
+                          }
+                          return of({
+                              issue: [{
+                                  severity: 'error',
+                                  code: 'unknown'
+                              }]
+                          } as OperationOutcome);
+                      })
+                  );
+          }
       }
       else {
         const observables = new Array<Observable<OperationOutcome | Resource>>();
         // TODO manage compound medication (resolve id from medication tree)
         medications.forEach(medication => {
-          observables.push(this.resourceSave(medication));
+            const observable = this.resourceSave(medication);
+            if (observable) {
+                observables.push(observable);
+            }
         });
       }
     }
