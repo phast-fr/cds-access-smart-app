@@ -15,7 +15,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -40,7 +40,7 @@ import {FhirTypeGuard} from '../common/fhir/utils/fhir.type.guard';
 import {Bundle, Library, Parameters} from 'phast-fhir-ts';
 
 
-export class CqlEditorReducer {
+export class CqlEditorReducer implements IReducer<CqlEditorState> {
 
   constructor(private _viewModel: CqlEditorViewModel) {
   }
@@ -180,7 +180,7 @@ export class CqlEditorReducer {
             if (p[0].valueString) {
               location = p[0].valueString;
             }
-            value = p[1].valueString ? decodeURIComponent(escape(p[1].valueString)) :
+            value = p[1].valueString ? p[1].valueString :
                 (p[1].resource ? JSON.stringify(p[1].resource) : 'undefined');
           }
           state.oValue += '>> ' + location + ': ' + name + ' -> ' + value + '\n';

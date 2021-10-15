@@ -15,7 +15,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -180,11 +180,13 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
     const observables = new Array<Observable<OperationOutcome | Resource>>();
     const elements = this._medicationRequestDataSource.data.slice();
     elements.forEach(value => {
-      const resource = lodash.cloneDeep(value.resource);
-      delete resource.medicationCodeableConcept;
+      const medicationRequest = lodash.cloneDeep(value.resource);
+      if (medicationRequest.medicationCodeableConcept) {
+        delete medicationRequest.medicationCodeableConcept;
+      }
       const authoredOn = new Date();
-      resource.authoredOn = authoredOn.toISOString();
-      const observable = this._dataSource.resourceSave(resource);
+      medicationRequest.authoredOn = authoredOn.toISOString();
+      const observable = this._dataSource.medicationRequestSave(medicationRequest);
       if (observable) {
         observables.push(observable);
       }
