@@ -59,8 +59,8 @@ export class PhastCioCdsService {
   public searchLibraryCQL(filter?: string | undefined, sortActive?: string, sortDirection?: string,
                           page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
     const searchParams = new URLSearchParams({
-      _count: (pageSize) ? pageSize.toString() : PhastCioCdsService.DEFAULT_PAGE_SIZE.toString(),
-      'content-type': 'text/cql'
+      _count: (pageSize) ? pageSize.toString() : PhastCioCdsService.DEFAULT_PAGE_SIZE.toString()/*,
+      'content-type': 'text/cql'*/
     });
     return this.search<OperationOutcome | Bundle & { type: 'searchset' }>(
         'Library', searchParams, 'title', filter, sortActive, sortDirection, page
