@@ -100,7 +100,7 @@ export const environment = {
   cio_dc_credential: credential.cio_dc_credential,
   tio_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',
   tio_credential: credential.tio_credential,
-  cql_service_url: 'http://localhost:8081/r4/fhir',
+  cql_service_url: 'https://cds-access.phast.fr:8443/r4/fhir',
   fhir_date_short_format: 'yyyy-MM-dd\'T\'HH:mm:00',
   fhir_date_format: 'yyyy-MM-dd\'T\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
