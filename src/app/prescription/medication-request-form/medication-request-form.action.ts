@@ -1540,7 +1540,8 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
   public execute(): IPartialState {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
-    if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
+    if (medicationRequest.dosageInstruction
+        && medicationRequest.dosageInstruction[this._nDosage]) {
       const dosage = medicationRequest.dosageInstruction[this._nDosage];
 
       if (this._doseQuantityUnit) {
@@ -1572,8 +1573,16 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
             doseQuantity.code = this._doseQuantityUnit.code;
             doseQuantity.system = this._doseQuantityUnit.system;
           }
+          else {
+            dosage.doseAndRate[this._nDoseAndRate].doseQuantity = new QuantityBuilder()
+                .code(this._doseQuantityUnit.code)
+                .system(this._doseQuantityUnit.system)
+                .unit(this._doseQuantityUnit.display)
+                .build();
+          }
         }
-      } else {
+      }
+      else {
         if (dosage.doseAndRate && dosage.doseAndRate[this._nDoseAndRate]) {
           if (!dosage.doseAndRate[this._nDoseAndRate].doseQuantity?.value) {
             delete dosage.doseAndRate[this._nDoseAndRate].doseQuantity;
