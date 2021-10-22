@@ -282,15 +282,15 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           next: (valueSets: ValueSet[]) => valueSets.forEach((valueSet: ValueSet) => {
             if (valueSet.name === 'UCUMCodesForTime' && valueSet.expansion?.contains) {
               valueSet.expansion.contains.forEach(
-                (valueSetContains) => state.durationUnitArray.push(valueSetContains));
+                valueSetContains => state.durationUnitArray.push(valueSetContains));
             }
             else if (valueSet.name === 'FrTreatmentIntent' && valueSet.expansion?.contains) {
               valueSet.expansion.contains.forEach(
-                (valueSetContains) => state.treatmentIntent.push(valueSetContains));
+                valueSetContains => state.treatmentIntent.push(valueSetContains));
             }
             else if (valueSet.name === 'EventTiming' && valueSet.expansion?.contains) {
               valueSet.expansion.contains.forEach(
-                (valueSetContains) => state.whenArray.push(valueSetContains));
+                valueSetContains => state.whenArray.push(valueSetContains));
             }
           }),
           error: err => console.error('error', err),
@@ -309,10 +309,20 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         if (state.medicationRequest?.dosageInstruction) {
           const observables = new Array<Observable<Parameters>>();
           const amount = (medication.amount?.numerator) ? medication.amount.numerator : undefined;
-          state.medicationRequest.dosageInstruction.forEach((dosage) => {
+          state.medicationRequest.dosageInstruction.forEach(dosage => {
+            let doseQuantity;
+            if (dosage?.doseAndRate && dosage?.doseAndRate.length > 0) {
+              doseQuantity = dosage.doseAndRate[0]?.doseQuantity;
+            }
             observables.push(
               this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-                medicationKnowledgeId, medicationKnowledgeCode, medication.form, amount, medication.ingredient, dosage?.route
+                  medicationKnowledgeId,
+                  medicationKnowledgeCode,
+                  medication.form,
+                  amount,
+                  medication.ingredient,
+                  dosage?.route,
+                  doseQuantity
               )
                 .pipe(
                   retry({count: 3, delay: 1000})

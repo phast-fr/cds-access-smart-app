@@ -124,14 +124,16 @@ export class PhastCioDcService {
     doseForm?: CodeableConcept,
     amount?: Quantity,
     ingredient?: MedicationIngredient[],
-    intendedRoute?: CodeableConcept
+    intendedRoute?: CodeableConcept,
+    doseQuantity?: Quantity
   ): Observable<Parameters> {
     const input = new MedicationKnowledgeLookupBuilder(mkId, mkCode)
-      .doseForm(doseForm)
-      .amount(amount)
-      .ingredient(ingredient)
-      .intendedRoute(intendedRoute)
-      .build();
+        .doseForm(doseForm)
+        .amount(amount)
+        .ingredient(ingredient)
+        .intendedRoute(intendedRoute)
+        .doseQuantity(doseQuantity)
+        .build();
 
     return this._fhirClient.operation<Parameters>(
         environment.cio_dc_url,
@@ -264,6 +266,20 @@ export class MedicationKnowledgeLookupBuilder {
     if (amount && this._parameters.parameter && this._parameters.parameter[1]) {
       const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
       medicationKnowledge.amount = amount;
+    }
+    return this;
+  }
+
+  public doseQuantity(doseQuantity: Quantity | undefined): this {
+    if (doseQuantity && this._parameters.parameter) {
+      this._parameters.parameter.push({
+        name: 'unit-code',
+        valueCoding: {
+          code: doseQuantity.code,
+          system: doseQuantity.system,
+          display: doseQuantity.unit
+        }
+      });
     }
     return this;
   }
