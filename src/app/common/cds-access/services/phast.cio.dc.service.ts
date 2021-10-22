@@ -271,7 +271,7 @@ export class MedicationKnowledgeLookupBuilder {
   }
 
   public doseQuantity(doseQuantity: Quantity | undefined): this {
-    if (doseQuantity && this._parameters.parameter) {
+    if (doseQuantity && doseQuantity.code && this._parameters.parameter) {
       this._parameters.parameter.push({
         name: 'unit-code',
         valueCoding: {
