@@ -12,10 +12,10 @@
           <mat-card-subtitle class="header-patient-info">
             <div fxLayout="row" class="header-patient-info-row">
               <div fxFlex="50%" class="header-info dob">
-                <span>DDN : </span><span>{{(patient$ | async).birthDate | date:'dd/MM/yyyy'}}</span>
+                <span>DDN : </span><span>{{(patient$ | async)?.birthDate | date:'dd/MM/yyyy'}}</span>
               </div>
               <div fxFlex="50%" class="header-info age">
-                <span>Age : </span><span>{{(patient$ | async).birthDate | age}}</span>
+                <span>Age : </span><span>{{(patient$ | async)?.birthDate | age}}</span>
               </div>
             </div>
             <div fxLayout="row" class="header-patient-info-row">
@@ -23,7 +23,7 @@
                 <span>MRN : </span><span></span>
               </div>
               <div fxFlex="50%" class="header-info gender">
-                <span>Sexe : </span><span>{{(patient$ | async).gender | titlecase}}</span>
+                <span>Sexe : </span><span>{{(patient$ | async)?.gender | titlecase}}</span>
               </div>
             </div>
           </mat-card-subtitle>
