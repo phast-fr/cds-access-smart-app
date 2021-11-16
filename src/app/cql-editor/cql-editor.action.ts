@@ -62,7 +62,7 @@ export class CqlEditorActionOnChangeContentLibrary implements IAction {
       contentCql.data = Base64.encode(this._data);
     }
     else {
-      console.log('not implemented (create library');
+      console.log('not implemented (create library)');
     }
 
     return new CqlEditorStateOnChangeContentLibrary(this._library);
@@ -84,7 +84,7 @@ export class CqlEditorActionOnRunLibrary implements IAction {
   readonly type = 'OnRunLibrary';
 
   constructor(private _context: SmartContext,
-              private _patient: Patient,
+              private _patient: Patient | null | undefined,
               private _data: string) {
   }
 

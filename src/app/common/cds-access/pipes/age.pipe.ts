@@ -36,7 +36,11 @@ import {DateTime} from 'luxon';
 })
 export class AgePipe implements PipeTransform {
 
-  transform(birth: string): string {
+  transform(birth: string | null | undefined): string | null {
+    if (birth == null) {
+      return null;
+    }
+
     const today = DateTime.now();
     const birthdate = DateTime.fromISO(birth);
     const duration = today.diff(birthdate, ['years', 'months', 'days', 'hours']);

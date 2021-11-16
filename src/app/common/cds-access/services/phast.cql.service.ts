@@ -46,7 +46,8 @@ export class PhastCQLService {
         } as Options;
     }
 
-    public $cql(iss: string, token: string, patient: Patient, contentData: string): Observable<OperationOutcome | Bundle & { type: 'collection' }> {
+    public $cql(iss: string, token: string, patient: Patient | null | undefined, contentData: string):
+        Observable<OperationOutcome | Bundle & { type: 'collection' }> {
         const parameters = {
             resourceType : ResourceType.Parameters,
             parameter: [
@@ -56,7 +57,7 @@ export class PhastCQLService {
                 },
                 {
                     name : 'patientId',
-                    valueString : patient.id
+                    valueString : patient?.id
                 },
                 {
                     name: 'context',

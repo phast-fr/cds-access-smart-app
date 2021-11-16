@@ -111,14 +111,12 @@ export class RunnerComponent implements OnInit, OnDestroy, IRender<CqlEditorStat
   public run(): void {
     this.clearOutput();
     if (!this._running$.value) {
-      this._running$.next(true);
-
       if (this._stateService.state) {
         const stateModel = this._stateService.state as StateModel;
         const inputEditor = this.getInputEditor();
         if (stateModel.context
-            && stateModel.patient
             && inputEditor?.value) {
+          this._running$.next(true);
           this._viewModel.dispatchIntent(
               new CqlEditorIntentOnRunLibrary(
                   stateModel.context,

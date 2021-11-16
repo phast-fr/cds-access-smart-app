@@ -86,7 +86,7 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
     return this._cioCdsSource.updateLibraryCQL(library);
   }
 
-  public $cql(iss: string, token: string, patient: Patient, contentData: string): Observable<OperationOutcome | Bundle & { type: 'collection' }> {
+  public $cql(iss: string, token: string, patient: Patient | null | undefined, contentData: string): Observable<OperationOutcome | Bundle & { type: 'collection' }> {
     return this._cqlService.$cql(iss, token, patient, contentData);
   }
 

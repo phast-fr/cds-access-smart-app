@@ -63,7 +63,7 @@ export class CqlEditorStateOnRunLibrary implements IPartialState {
   readonly type = 'OnRunLibrary';
 
   constructor(private _context: SmartContext,
-              private _patient: Patient,
+              private _patient: Patient | null | undefined,
               private _data: string) {
   }
 
@@ -71,7 +71,7 @@ export class CqlEditorStateOnRunLibrary implements IPartialState {
     return this._context;
   }
 
-  public get patient(): Patient {
+  public get patient(): Patient | null | undefined {
     return this._patient;
   }
 
