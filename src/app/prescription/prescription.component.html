@@ -13,6 +13,9 @@
             <button *ngIf="!(cards$ | async) && !drawer.opened" mat-fab disabled>
               <mat-icon>email</mat-icon>
             </button>
+            <button *ngIf="(cards$ | async) && cards.length === 0 && !drawer.opened" mat-fab disabled>
+              <mat-icon>email</mat-icon>
+            </button>
             <button *ngIf="(cards$ | async) && cards.length === 0 && drawer.opened"
                     mat-fab color="primary" (click)="drawer.toggle()">
               <mat-icon>email</mat-icon>

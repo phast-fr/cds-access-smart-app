@@ -39,7 +39,8 @@
   <div class="form-field-row form-control" *ngIf="medicationRequest != null">
     <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
              [disabled]="!(isMedicationRequestAddable$ | async)"> Ajouter </button>
-    <button mat-raised-button color="secondary" (click)="onCDSHelp()"> Aide (CDS) </button>
+    <button mat-raised-button color="secondary" (click)="onCDSHelp()"
+            [disabled]="(onCDSHelp$ | async)"> Aide (CDS) </button>
   </div>
   <mat-autocomplete #autoMedicationKnowledge="matAutocomplete"
                     [displayWith]="displayFn.bind(this)">

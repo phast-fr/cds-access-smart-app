@@ -120,6 +120,10 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     return this._prescriptionState.medicationRequestMode$;
   }
 
+  public get onCDSHelp$(): Observable<boolean> {
+    return this._prescriptionState.onCDSHelp$;
+  }
+
   public get medicationRequest(): MedicationRequest | undefined {
     return this._viewModel.medicationRequest;
   }
@@ -262,6 +266,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
 
   public onCDSHelp(): void {
     if (this._viewModel.medicationRequest) {
+      this._prescriptionState.onCDSHelp = true;
       this._viewModel.dispatchIntent(
         new MedicationFormIntentCdsHelp(this._viewModel.medicationRequest)
       );
@@ -345,7 +350,8 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   }
 
   private updateIsMedicationRequestAddable(): void {
-    const medicationGroupValid = (this._medicationForm?.medicationGroup) ? this._medicationForm.medicationGroup.valid : false;
+    const medicationGroupValid = (this._medicationForm?.medicationGroup) ?
+        this._medicationForm.medicationGroup.valid : false;
     const dosageInstructionValid = (this._dosageInstructionForm?.dosageInstruction) ?
       this._dosageInstructionForm.dosageInstruction.valid : false;
     /*const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?

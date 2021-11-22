@@ -21,13 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {IIntent} from '../../common/cds-access/models/state.model';
 import {
   CodeableConcept, Coding, dateTime, decimal,
   id,
   Medication,
   MedicationKnowledge,
-  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner, Quantity,
+  MedicationRequest, MedicationRequestDispenseRequest, Patient, Practitioner,
   Ratio,
   Reference, UnitsOfTime, ValueSetContains
 } from 'phast-fhir-ts';
