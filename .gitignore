@@ -6,6 +6,7 @@ package-lock.json
 /src/environments/credential.prod.ts
 
 # compiled output
+/.angular
 /dist
 /tmp
 /out-tsc
