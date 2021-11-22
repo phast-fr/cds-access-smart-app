@@ -146,6 +146,22 @@ export class FhirClientService {
     return this._http.get<T>(searchPath, options);
   }
 
+  public postResourceSearch<T>(baseUrl: string, params: SearchParameters, options?: Options): Observable<T> {
+    const searchPath = `${baseUrl}/${params.resourceType}/_search`;
+    if (options?.headers) {
+      options.headers = options?.headers.set('Content-Type', 'application/x-www-form-urlencoded');
+    }
+    else if (options) {
+      options.headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded');
+    }
+    else {
+      options = {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
+      };
+    }
+    return this._http.post<T>(searchPath, params.searchParams.toString(), options);
+  }
+
   private authFromWellKnown(wellKnown: any): SmartOAuthMetadata {
     const {
       authorization_endpoint,

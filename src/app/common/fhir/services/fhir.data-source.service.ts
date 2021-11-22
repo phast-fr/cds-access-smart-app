@@ -33,7 +33,6 @@ import {Bundle, Composition, id, MedicationRequest, OperationOutcome, Patient, P
 import * as lodash from 'lodash';
 import {ReferenceBuilder} from '../builders/fhir.resource.builder';
 import {FhirTypeGuard} from '../utils/fhir.type.guard';
-import {OperationOutcomeIssue} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 @Injectable()
 export class FhirDataSourceService {
@@ -135,6 +134,30 @@ export class FhirDataSourceService {
       );
     }
     return undefined;
+  }
+
+  public postResourceSearch(path: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
+      if (this._baseUrl) {
+          const resourceTypeSearch = path.split('?');
+          const resourceType = resourceTypeSearch[0];
+          const search = resourceTypeSearch[1];
+
+          const searchParams = new URLSearchParams();
+          search.split('&').forEach(part => {
+              const keyValue = part.split('=');
+              const key = keyValue[0];
+              searchParams.set(key, keyValue[1]);
+          });
+          return this._fhirClient.postResourceSearch<OperationOutcome | Bundle & { type: 'searchset' }>(
+              this._baseUrl,
+              {
+                  resourceType,
+                  searchParams
+              },
+              this._options
+          );
+      }
+      return undefined;
   }
 
   public patientSearch(name?: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> | undefined {
