@@ -140,15 +140,22 @@ export class PrescriptionStateService {
                       resource: lMedicationRequest
                     }],
                   });
-                  lMedicationRequest.medicationReference.reference =
-                      `Medication/${lMedicationRequest.medicationReference.reference.slice(1)}`;
-                  context.draftOrders.entry.push(...
-                      lMedicationRequest.contained.map<BundleEntry>((value: Resource) => {
-                        return { resource: value } as BundleEntry;
-                  }));
-                  context.draftOrders.total = context.draftOrders.entry.length;
-                  lMedicationRequest.contained.length = 0;
-                  delete lMedicationRequest.contained;
+
+                  if (lMedicationRequest?.medicationReference?.reference != null) {
+                    lMedicationRequest.medicationReference.reference =
+                        `Medication/${lMedicationRequest.medicationReference.reference.slice(1)}`;
+                  }
+
+                  if (context.draftOrders.entry != null
+                      && lMedicationRequest.contained != null) {
+                    context.draftOrders.entry.push(...
+                        lMedicationRequest.contained.map<BundleEntry>((value: Resource) => {
+                          return { resource: value } as BundleEntry;
+                        }));
+                    context.draftOrders.total = context.draftOrders.entry.length;
+                    lMedicationRequest.contained.length = 0;
+                    delete lMedicationRequest.contained;
+                  }
                   hook = new OrderSelectHook(hookInstance, prefetch, context);
                 }
                 else {
