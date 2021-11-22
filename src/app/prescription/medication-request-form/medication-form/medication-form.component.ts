@@ -159,7 +159,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       case 'AddMedication':
         if (state.medicationRequest?.contained) {
           this._medicationGroup$.next(
-            this.addMedication(0, state.medicationRequest.contained[0])
+              this.addMedication(0, state.medicationRequest.contained[0])
           );
         }
         break;
@@ -169,9 +169,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       case 'ValueChangesMedication':
       case 'ValueChangesDosageInstruction':
         if (state.medicationRequest?.contained) {
-          this._medicationGroup$.next(
-            this.updateMedication(0, state.medicationRequest.contained[0])
-          );
+          this.updateMedication(0, state.medicationRequest.contained[0]);
         }
         break;
       case 'AddMedicationRequest':

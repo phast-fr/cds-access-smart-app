@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
@@ -164,10 +165,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         }
         break;
       case 'RemoveMedication':
-        if (state.medicationRequest && this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
+        if (!state.medicationRequest && !this.dosageInstruction) {
           this._dosageInstruction$.next(false);
         }
         break;
@@ -180,21 +178,12 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
             )
           );
         }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
-        }
         break;
       case 'RemoveDosageInstruction':
         if (state.nDosage) {
           this.dosageInstruction?.removeAt(state.nDosage);
         }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
+        if (!this.dosageInstruction) {
           this._dosageInstruction$.next(false);
         }
         break;
@@ -203,23 +192,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           const addTimeOfDay = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
           addTimeOfDay.push(this.addTimeOfDay(state.nDosage, addTimeOfDay.length));
         }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
-        }
         break;
       case 'RemoveTimeOfDay':
         if (typeof state.nDosage === 'number' && typeof state.index === 'number') {
           const removeTimeOfDay = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'timeOfDay']) as FormArray;
           removeTimeOfDay.removeAt(state.index);
-        }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
         }
         break;
       case 'AddWhen':
@@ -227,23 +204,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           const addWhen = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'when']) as FormArray;
           addWhen.push(this.addWhen(state.nDosage, addWhen.length));
         }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
-        }
         break;
       case 'RemoveWhen':
         if (typeof state.nDosage === 'number' && typeof state.index === 'number') {
           const removeWhen = this.dosageInstruction?.at(state.nDosage).get(['timing', 'repeat', 'when']) as FormArray;
           removeWhen.removeAt(state.index);
-        }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
         }
         break;
       case 'AddDoseAndRate':
@@ -256,23 +221,11 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
             )
           );
         }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
-        }
         break;
       case 'RemoveDoseAndRate':
         if (typeof state.nDosage === 'number' && typeof state.index === 'number') {
           const removeDoseAndRate = this.dosageInstruction?.at(state.nDosage).get('doseAndRate') as FormArray;
           removeDoseAndRate.removeAt(state.index);
-        }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
         }
         break;
       case 'ValueChangesDosageInstruction':
@@ -281,12 +234,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
             state.medicationRequest.dosageInstruction[state.nDosage],
             this.dosageInstruction?.at(state.nDosage) as FormGroup
           );
-        }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
         }
         break;
       case 'ValueChangesMedication':
@@ -297,12 +244,6 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
               this.dosageInstruction?.at(nDosage) as FormGroup
             );
           });
-        }
-        if (this.dosageInstruction) {
-          this._dosageInstruction$.next(this.dosageInstruction);
-        }
-        else {
-          this._dosageInstruction$.next(false);
         }
         break;
       case 'AddMedicationRequest':

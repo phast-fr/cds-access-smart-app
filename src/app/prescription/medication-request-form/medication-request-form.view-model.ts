@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import { Injectable } from '@angular/core';
 import {BehaviorSubject, forkJoin, Observable, Subject, switchMap} from 'rxjs';
 import {filter, map, retry} from 'rxjs/operators';

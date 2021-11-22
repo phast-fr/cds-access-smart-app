@@ -21,9 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {AbstractControl, FormBuilder, FormControl, FormGroup} from '@angular/forms';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
+import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup} from '@angular/forms';
+import {BehaviorSubject, Observable, Subject, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, map, switchMap, takeUntil, tap} from 'rxjs/operators';
 
 import * as lodash from 'lodash';
@@ -56,6 +57,8 @@ const MEDICINES_ICON = '<svg width="48" height="48" viewBox="0 0 48 48" fill="no
   '<path fill-rule="evenodd" clip-rule="evenodd" d="M24.7494 30.2858L20.283 32.3675C18.2808 33.3012 17.4146 35.6811 18.3482 37.6832C19.2819 39.6854 21.6618 40.5516 23.664 39.618L28.1304 37.5362L24.7494 30.2858ZM25.7168 27.6279L30.7882 38.5036L24.5092 41.4306C21.5059 42.8311 17.9361 41.5317 16.5356 38.5285C15.1352 35.5252 16.4345 31.9554 19.4378 30.5549L25.7168 27.6279Z" fill="#333333"/>' +
   '</svg>';
 
+type ControlType = 'medication' | 'dosageInstruction' | 'dispenseRequest';
+
 @Component({
   selector: 'app-medication-request-form',
   templateUrl: './medication-request-form.component.html',
@@ -75,6 +78,10 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   private readonly _isMedicationAddable$: BehaviorSubject<boolean>;
 
   private readonly _isMedicationRequestAddable$: BehaviorSubject<boolean>;
+
+  private readonly _formStatusListener$: Subscription;
+
+  private readonly _subscriptionMap: Map<ControlType, Array<Subscription>>;
 
   @ViewChild(MedicationFormComponent)
   private _medicationForm?: MedicationFormComponent;
@@ -102,6 +109,8 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
       medicationKnowledge: [undefined],
       requestMode: ['dc']
     }));
+    this._formStatusListener$ = new Subscription();
+    this._subscriptionMap = new Map<ControlType, Array<Subscription>>();
   }
 
   public get isLoading$(): Observable<boolean> {
@@ -157,35 +166,65 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     if (this._medicationForm) {
       this._medicationForm.medicationGroup$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          filter(medicationForm => medicationForm !== false)
+            takeUntil(this._unsubscribeTrigger$),
+            filter(medication => medication instanceof FormGroup),
+            map(medication => medication as FormGroup)
         )
         .subscribe({
-          next: () => this.updateIsMedicationRequestAddable(),
+          next: (medication) => this.addFormGroupStatusListener('medication', medication),
           error: err => console.error('error', err)
         });
+      this._medicationForm.medicationGroup$
+          .pipe(
+              takeUntil(this._unsubscribeTrigger$),
+              filter(medication => medication === false)
+          )
+          .subscribe({
+            next: () => this.removeFormGroupStatusListener('medication'),
+            error: err => console.error('error', err)
+          });
     }
     if (this._dosageInstructionForm) {
       this._dosageInstructionForm.dosageInstruction$
         .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          filter(dosageInstruction => dosageInstruction !== false)
+            takeUntil(this._unsubscribeTrigger$),
+            filter(dosageInstruction => dosageInstruction instanceof FormArray),
+            map(dosageInstruction => dosageInstruction as FormArray)
         )
         .subscribe({
-          next: () => this.updateIsMedicationRequestAddable(),
+          next: (dosageInstruction) => this.addFormGroupStatusListener('dosageInstruction', dosageInstruction),
           error: err => console.error('error', err)
         });
+      this._dosageInstructionForm.dosageInstruction$
+          .pipe(
+              takeUntil(this._unsubscribeTrigger$),
+              filter(dosageInstruction => dosageInstruction === false)
+          )
+          .subscribe({
+            next: () => this.removeFormGroupStatusListener('dosageInstruction'),
+            error: err => console.error('error', err)
+          });
     }
     if (this._dispenseRequestForm) {
       this._dispenseRequestForm.dispenseRequestGroup$
-        .pipe(
-          takeUntil(this._unsubscribeTrigger$),
-          filter(dispenseRequest => dispenseRequest !== false)
-        )
-        .subscribe({
-          next: () => this.updateIsMedicationRequestAddable(),
-          error: err => console.error('error', err)
-        });
+          .pipe(
+              takeUntil(this._unsubscribeTrigger$),
+              filter(dispenseRequest => dispenseRequest instanceof FormGroup),
+              map(dispenseRequest => dispenseRequest as FormGroup)
+          )
+          .subscribe({
+            next: (dispenseRequest) => this.addFormGroupStatusListener('dispenseRequest', dispenseRequest),
+            error: err => console.error('error', err)
+          });
+      this._dispenseRequestForm.dispenseRequestGroup$
+          .pipe(
+              takeUntil(this._unsubscribeTrigger$),
+              filter(dispenseRequest => dispenseRequest === false)
+          )
+          .subscribe({
+            next: () => this.removeFormGroupStatusListener('dispenseRequest'),
+            error: err => console.error('error', err)
+          });
     }
   }
 
@@ -194,6 +233,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     this._unsubscribeTrigger$.complete();
 
     this._loading$.complete();
+    this._formStatusListener$.unsubscribe();
   }
 
   public render(state: MedicationRequestFormState): void {
@@ -305,7 +345,9 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
               this._medicationKnowledgeArray.length = 0;
               this._loading$.next(true);
             }),
-          switchMap(value => this._viewModel.searchMedicationKnowledge(value, this.medicationRequestGroup.get('requestMode')?.value)
+          switchMap(value => this._viewModel.searchMedicationKnowledge(
+              value, this.medicationRequestGroup.get('requestMode')?.value
+          )
             .pipe(
               tap(() => this._loading$.next(false))
             )),
@@ -347,6 +389,34 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
           error: err => console.error('error', err)
         });
     }
+  }
+
+  private addFormGroupStatusListener(controlType: ControlType, control: AbstractControl): void {
+    const subscription = control.statusChanges
+        .subscribe({
+          next: status => this.onChangeFormStatus(control, status),
+          error: err => console.error('error', err)
+        });
+    this._formStatusListener$.add(subscription);
+    if (this._subscriptionMap.has(controlType)) {
+      const subscriptions = this._subscriptionMap.get(controlType);
+      if (subscriptions) {
+        subscriptions.push(subscription);
+      }
+    }
+    else {
+      this._subscriptionMap.set(controlType, new Array<Subscription>(subscription));
+    }
+  }
+
+  private removeFormGroupStatusListener(controlType: ControlType): void {
+    if (this._subscriptionMap.has(controlType)) {
+      this._subscriptionMap.delete(controlType);
+    }
+  }
+
+  private onChangeFormStatus(control: AbstractControl, status: string/*: FormControlStatus*/): void {
+    this.updateIsMedicationRequestAddable();
   }
 
   private updateIsMedicationRequestAddable(): void {
