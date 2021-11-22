@@ -471,7 +471,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           offset: [dosage.timing?.repeat?.offset, Validators.pattern( /\d/ )]
         })
       }),
-      doseAndRate: this._fb.array([])
+      doseAndRate: this._fb.array([], Validators.required)
     });
 
     const routeControl = dosageInstructionGroup.get('route');
@@ -986,7 +986,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     const options = {emitEvent: false};
     const doseAndRateGroup = this._fb.group({
       doseQuantity: this._fb.group({
-        value: [undefined, Validators.pattern( /\d/ )],
+        value: [undefined, [Validators.required, Validators.pattern( /\d/ )]],
         unit: [undefined]
       }),
       rateRatio: this._fb.group({

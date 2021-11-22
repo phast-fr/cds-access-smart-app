@@ -254,6 +254,9 @@
                        [formControl]="toFormControl(dosageAndRate.get(['doseQuantity', 'unit']))"
                        [matAutocomplete]="autoUnit"/>
               </mat-form-field>
+              <mat-error *ngIf="toFormControl(dosageAndRate.get(['doseQuantity', 'value'])).errors?.required">
+                La dose est obligatoire et doit être au format numérique
+              </mat-error>
               <mat-form-field appearance="fill" class="dose-and-rate-value">
                 <mat-label> Débit numérateur </mat-label>
                 <input type="text"
@@ -293,6 +296,9 @@
                     matTooltipPosition="right"
                     aria-label="Ajouter une nouvelle instruction de dose"
                     (click)="onAddDoseAndRate(nDosage)"> + </button>
+            <mat-error *ngIf="toFormControl(dosageInstructionGroup.get('doseAndRate')).errors?.required">
+              Une dose minimum est obligatoire
+            </mat-error>
           </mat-card-footer>
         </mat-card>
       </div>
