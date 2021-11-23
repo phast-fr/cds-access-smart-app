@@ -22,30 +22,20 @@
  * SOFTWARE.
  */
 
-import {firstValueFrom, of} from 'rxjs';
-import {catchError} from 'rxjs/operators';
-
 import * as lodash from 'lodash';
-
 import {IPartialState, IReducer} from '../common/cds-access/models/state.model';
-
 import {
   CqlEditorState,
   CqlEditorStateOnChangeContentLibrary,
   CqlEditorStateOnChangeLibrary, CqlEditorStateOnRunLibrary,
   CqlEditorStateOnSaveLibrary, CqlEditorStateOnSearchLibrary
 } from './cql-editor.state';
-import {CqlEditorViewModel} from './cql-editor.view-model';
 import {FhirTypeGuard} from '../common/fhir/utils/fhir.type.guard';
-import {Bundle, Library, Parameters} from 'phast-fhir-ts';
-
+import {Bundle, Parameters} from 'phast-fhir-ts';
 
 export class CqlEditorReducer implements IReducer<CqlEditorState> {
 
-  constructor(private _viewModel: CqlEditorViewModel) {
-  }
-
-  public async reduce(state: CqlEditorState, partialState: IPartialState): Promise<CqlEditorState> {
+  public reduce(state: CqlEditorState, partialState: IPartialState): CqlEditorState {
     let newState: CqlEditorState;
     if (!state) {
       newState = new CqlEditorState(partialState.type);
@@ -65,14 +55,16 @@ export class CqlEditorReducer implements IReducer<CqlEditorState> {
         newState = this.onChangeContentLibrary(newState, partialState as CqlEditorStateOnChangeContentLibrary);
         break;
       case 'OnSaveLibrary':
-        newState = await this.onSaveLibrary(newState, partialState as CqlEditorStateOnSaveLibrary);
+        newState = this.onSaveLibrary(newState, partialState as CqlEditorStateOnSaveLibrary);
         break;
       case 'OnRunLibrary':
-        newState = await this.onRunLibrary(newState, partialState as CqlEditorStateOnRunLibrary);
+        newState = this.onRunLibrary(newState, partialState as CqlEditorStateOnRunLibrary);
         break;
       case 'OnSearchLibrary':
-        newState = await this.onSearchLibrary(newState, partialState as CqlEditorStateOnSearchLibrary);
+        newState = this.onSearchLibrary(newState, partialState as CqlEditorStateOnSearchLibrary);
         break;
+      case 'OnError':
+        // TODO
       default:
         break;
     }
@@ -83,7 +75,6 @@ export class CqlEditorReducer implements IReducer<CqlEditorState> {
                           partialState: CqlEditorStateOnChangeLibrary): CqlEditorState {
     newState.library = partialState.library;
     newState.isDirty = false;
-
     return newState;
   }
 
@@ -91,77 +82,32 @@ export class CqlEditorReducer implements IReducer<CqlEditorState> {
                                  partialState: CqlEditorStateOnChangeContentLibrary): CqlEditorState {
     newState.library = partialState.library;
     newState.isDirty = true;
-
     return newState;
   }
 
-  private async onSaveLibrary(newState: CqlEditorState,
-                              partialState: CqlEditorStateOnSaveLibrary): Promise<CqlEditorState> {
-    const library = await firstValueFrom(this._viewModel.updateLibrary(partialState.library)
-        .pipe(
-            catchError((err: any) => {
-              console.error('error', err);
-              newState.error = err;
-              newState.oValue += '>> Library Service update failed: ' + err + '\n';
-              return of('Error: ' + err);
-            })
-        )
-    );
-
-    if (FhirTypeGuard.isLibrary(library)) {
-      newState.library = library as Library;
-    }
+  private onSaveLibrary(newState: CqlEditorState,
+                        partialState: CqlEditorStateOnSaveLibrary): CqlEditorState {
+    newState.library = partialState.library;
     newState.isDirty = false;
-
     return newState;
   }
 
-  private async onRunLibrary(newState: CqlEditorState,
-                             partialState: CqlEditorStateOnRunLibrary): Promise<CqlEditorState> {
-    const bundle = await firstValueFrom(
-        this._viewModel.$cql(partialState.context.iss, partialState.context.access_token, partialState.patient, partialState.data)
-        .pipe(
-            catchError((err: any) => {
-              console.error('error', err);
-              newState.error = err;
-              newState.oValue += '>> Engine Service call failed: ' + err + '\n';
-              return of('Error: ' + err);
-            })
-        )
-    );
-
-    if (FhirTypeGuard.isBundle(bundle)) {
-      this.processBundle(newState, bundle as Bundle);
-    }
+  private onRunLibrary(newState: CqlEditorState,
+                       partialState: CqlEditorStateOnRunLibrary): CqlEditorState {
+    this.processBundle(newState, partialState.bundle);
     newState.isRunning = false;
-
     return newState;
   }
 
-  private async onSearchLibrary(newState: CqlEditorState,
-                                partialState: CqlEditorStateOnSearchLibrary): Promise<CqlEditorState> {
-    const bundle = await firstValueFrom(
-        this._viewModel.searchLibraryCQL(partialState.value)
-        .pipe(
-            catchError((err: any) => {
-              console.error('error', err);
-              newState.error = err;
-              newState.oValue += '>> Search Service call failed: ' + err + '\n';
-              return of('Error: ' + err);
-            })
-        )
-    );
-
+  private onSearchLibrary(newState: CqlEditorState,
+                          partialState: CqlEditorStateOnSearchLibrary): CqlEditorState {
     newState.libraries.length = 0;
-    if (FhirTypeGuard.isBundle(bundle)) {
-      bundle.entry?.forEach(entry => {
-        if (FhirTypeGuard.isLibrary(entry.resource)) {
-          newState.libraries.push(entry.resource);
-        }
-      });
-    }
+    partialState.value.entry?.forEach(entry => {
+      if (FhirTypeGuard.isLibrary(entry.resource)) {
+        newState.libraries.push(entry.resource);
+      }
+    });
     newState.isSearching = false;
-
     return newState;
   }
 

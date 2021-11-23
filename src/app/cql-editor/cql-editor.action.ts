@@ -21,18 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {Attachment, Library, Patient} from 'phast-fhir-ts';
 
 import {IAction, IPartialState} from '../common/cds-access/models/state.model';
 
 import {
   CqlEditorStateOnChangeContentLibrary,
-  CqlEditorStateOnChangeLibrary,
+  CqlEditorStateOnChangeLibrary, CqlEditorStateOnError,
   CqlEditorStateOnRunLibrary,
   CqlEditorStateOnSaveLibrary, CqlEditorStateOnSearchLibrary
 } from './cql-editor.state';
 import {Base64} from 'js-base64';
 import {SmartContext} from '../common/fhir/smart/models/fhir.smart.context.model';
+import {firstValueFrom, of} from 'rxjs';
+import {catchError} from 'rxjs/operators';
+import {FhirTypeGuard} from '../common/fhir/utils/fhir.type.guard';
+import {CqlEditorViewModel} from './cql-editor.view-model';
 
 export class CqlEditorActionOnChangeLibrary implements IAction {
   readonly type = 'OnChangeLibrary';
@@ -40,7 +45,7 @@ export class CqlEditorActionOnChangeLibrary implements IAction {
   constructor(private _library: Library) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     return new CqlEditorStateOnChangeLibrary(this._library);
   }
 }
@@ -52,7 +57,7 @@ export class CqlEditorActionOnChangeContentLibrary implements IAction {
               private _data: string) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     if (!this._library.content) {
       this._library.content = new Array<Attachment>();
     }
@@ -72,34 +77,76 @@ export class CqlEditorActionOnChangeContentLibrary implements IAction {
 export class CqlEditorActionOnSaveLibrary implements IAction {
   readonly type = 'OnSaveLibrary';
 
-  constructor(private _library: Library) {
+  constructor(private _viewModel: CqlEditorViewModel,
+              private _library: Library) {
   }
 
-  public execute(): IPartialState {
-    return new CqlEditorStateOnSaveLibrary(this._library);
+  public async execute(): Promise<IPartialState> {
+    const library = await firstValueFrom(this._viewModel.updateLibrary(this._library)
+        .pipe(
+            catchError((err: any) => {
+              console.error('error', err);
+              const errorState = new CqlEditorStateOnError(err, `>> Library Service update failed: ${err}\n`);
+              return of(errorState);
+            })
+        )
+    );
+    if (FhirTypeGuard.isLibrary(library)) {
+      return new CqlEditorStateOnSaveLibrary(library);
+    }
+    return library;
   }
 }
 
 export class CqlEditorActionOnRunLibrary implements IAction {
   readonly type = 'OnRunLibrary';
 
-  constructor(private _context: SmartContext,
+  constructor(private _viewModel: CqlEditorViewModel,
+              private _context: SmartContext,
               private _patient: Patient | null | undefined,
               private _data: string) {
   }
 
-  public execute(): IPartialState {
-    return new CqlEditorStateOnRunLibrary(this._context, this._patient, this._data);
+  public async execute(): Promise<IPartialState> {
+    const bundle = await firstValueFrom(
+        this._viewModel.$cql(this._context.iss, this._context.access_token, this._patient, this._data)
+            .pipe(
+                catchError((err: any) => {
+                  console.error('error', err);
+                  const errorState = new CqlEditorStateOnError(err, `>> Engine Service call failed: ${err}\n`);
+                  return of(errorState);
+                })
+            )
+    );
+
+    if (FhirTypeGuard.isBundle(bundle)) {
+      return new CqlEditorStateOnRunLibrary(bundle);
+    }
+    return bundle as IPartialState;
   }
 }
 
 export class CqlEditorActionOnSearchLibrary implements IAction {
   readonly type = 'OnSearchLibrary';
 
-  constructor(private _value: string) {
+  constructor(private _viewModel: CqlEditorViewModel,
+              private _value: string) {
   }
 
-  public execute(): IPartialState {
-    return new CqlEditorStateOnSearchLibrary(this._value);
+  public async execute(): Promise<IPartialState> {
+    const bundle = await firstValueFrom(
+        this._viewModel.searchLibraryCQL(this._value)
+            .pipe(
+                catchError((err: any) => {
+                  console.error('error', err);
+                  const errorState = new CqlEditorStateOnError(err, `>> Search Service call failed: ${err}\n`);
+                  return of(errorState);
+                })
+            )
+    );
+    if (FhirTypeGuard.isBundle(bundle)) {
+      return new CqlEditorStateOnSearchLibrary(bundle);
+    }
+    return bundle as IPartialState;
   }
 }

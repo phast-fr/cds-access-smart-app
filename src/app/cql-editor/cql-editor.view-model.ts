@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import { Injectable } from '@angular/core';
 import {BehaviorSubject, Observable, Subject, switchMap} from 'rxjs';
 import {filter, map} from 'rxjs/operators';
@@ -58,7 +59,7 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
               private _cqlService: PhastCQLService) {
     this._intents$ = new Subject<IIntent>();
     this._state$ = new BehaviorSubject<CqlEditorState>(new CqlEditorState('init'));
-    this._reducer = new CqlEditorReducer(this);
+    this._reducer = new CqlEditorReducer();
     this.handlerIntent();
   }
 
@@ -78,7 +79,7 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
     return undefined;
   }
 
-  public searchLibraryCQL(filter?: string | undefined): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
+  public searchLibraryCQL(filter?: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
     return this._cioCdsSource.searchLibraryCQL(filter);
   }
 
@@ -86,7 +87,8 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
     return this._cioCdsSource.updateLibraryCQL(library);
   }
 
-  public $cql(iss: string, token: string, patient: Patient | null | undefined, contentData: string): Observable<OperationOutcome | Bundle & { type: 'collection' }> {
+  public $cql(iss: string, token: string, patient: Patient | null | undefined, contentData: string)
+      : Observable<OperationOutcome | Bundle & { type: 'collection' }> {
     return this._cqlService.$cql(iss, token, patient, contentData);
   }
 
@@ -96,8 +98,8 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
         map(intent => this.intentToAction(intent)),
         filter(action => !!action),
         map(action => action as IAction),
-        map(action => action.execute()),
-        switchMap(partialState => this._reducer.reduce(this._state$.value as CqlEditorState, partialState))
+        switchMap(action => action.execute()),
+        map(partialState => this._reducer.reduce(this._state$.value as CqlEditorState, partialState))
       )
       .subscribe({
         next: state => this.emitState(state as CqlEditorState),
@@ -121,11 +123,13 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
         break;
       case 'OnSaveLibrary':
         action = new CqlEditorActionOnSaveLibrary(
+            this,
             (intent as CqlEditorIntentOnSaveLibrary).library
         );
         break;
       case 'OnRunLibrary':
         action = new CqlEditorActionOnRunLibrary(
+            this,
             (intent as CqlEditorIntentOnRunLibrary).context,
             (intent as CqlEditorIntentOnRunLibrary).patient,
             (intent as CqlEditorIntentOnRunLibrary).data
@@ -133,6 +137,7 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
         break;
       case 'OnSearchLibrary':
         action = new CqlEditorActionOnSearchLibrary(
+            this,
             (intent as CqlEditorIntentOnSearchLibrary).value
         );
         break;

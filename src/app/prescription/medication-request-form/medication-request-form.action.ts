@@ -68,7 +68,7 @@ export class MedicationFormActionAddMedicationRequest implements IAction {
   constructor(private _medicationRequest: MedicationRequest) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     return new MedicationFormStateAddMedicationRequest();
   }
 }
@@ -79,7 +79,7 @@ export class MedicationFormActionCdsHelp implements IAction {
   constructor(private _medicationRequest: MedicationRequest) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     return new MedicationFormStateCdsHelp();
   }
 }
@@ -94,7 +94,7 @@ export class MedicationFormActionAddMedication implements IAction {
               private _practitioner: Practitioner) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     let medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     const medication = new MedicationBuilder(this._medicationId)
@@ -222,7 +222,7 @@ export class MedicationFormActionRemoveMedication implements IAction {
               private _nMedication: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     if (this._nMedication === 0) {
       return new MedicationFormStateRemoveMedication(null, this._nMedication);
     }
@@ -258,7 +258,7 @@ export class MedicationFormActionValueChangesMedicationAmount implements IAction
               private _amountValue: Quantity | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     if (medicationRequest.contained) {
       const medication = medicationRequest.contained.find(
@@ -288,7 +288,7 @@ export class MedicationFormActionValueChangesMedicationForm implements IAction {
               private _formValue: CodeableConcept | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.contained) {
@@ -327,7 +327,7 @@ export class MedicationFormActionValueChangesMedicationIngredientStrength implem
               private _strengthValue: Ratio | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.contained) {
@@ -367,7 +367,7 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthValue i
               private _strengthValue: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.contained) {
@@ -425,7 +425,7 @@ export class MedicationFormActionValueChangesMedicationIngredientStrengthUnit im
               private _strengthUnit: Coding | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.contained) {
@@ -486,7 +486,7 @@ export class MedicationFormActionAddDosageInstruction implements IAction {
   constructor(private _medicationRequest: MedicationRequest) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     if (!medicationRequest.dosageInstruction) {
       medicationRequest.dosageInstruction = new Array<Dosage>();
@@ -523,7 +523,7 @@ export class MedicationFormActionRemoveDosageInstruction implements IAction {
               private _nDosage: number) {
   }
 
-  execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     if (medicationRequest.dosageInstruction) {
       if (medicationRequest.dosageInstruction[this._nDosage]) {
@@ -547,7 +547,7 @@ export class MedicationFormActionValueChangesDosageInstructionRoute implements I
               private _medication: Medication) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.contained
@@ -589,7 +589,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationValu
               private _nDosage: number,
               private _boundsDurationValue: decimal) { }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
       const dosage = medicationRequest.dosageInstruction[this._nDosage];
@@ -678,7 +678,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit
               private _boundsDurationUnit: ValueSetContains | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -751,7 +751,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart 
               private _boundsPeriodStart: string) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -853,7 +853,7 @@ export class MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd im
               private _boundsPeriodEnd: string) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -943,7 +943,7 @@ export class MedicationFormActionValueChangesDosageInstructionDurationValue impl
               private _durationValue: decimal) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -986,7 +986,7 @@ export class MedicationFormActionValueChangesDosageInstructionDurationUnit imple
               private _durationUnit: ValueSetContains | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1030,7 +1030,7 @@ export class MedicationFormActionValueChangesDosageInstructionFrequencyValue imp
               private _frequencyValue: decimal) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1073,7 +1073,7 @@ export class MedicationFormActionValueChangesDosageInstructionPeriodValue implem
               private _periodValue: decimal) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1120,7 +1120,7 @@ export class MedicationFormActionValueChangesDosageInstructionPeriodUnit impleme
               private _periodUnit: ValueSetContains | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1162,7 +1162,7 @@ export class MedicationFormActionAddTimeOfDay implements IAction {
   constructor(private _nDosage: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     return new MedicationFormStateAddTimeOfDay(this._nDosage);
   }
 }
@@ -1175,7 +1175,7 @@ export class MedicationFormActionRemoveTimeOfDay implements IAction {
               private _nTimeOfDay: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1204,7 +1204,7 @@ export class MedicationFormActionValueChangesDosageInstructionTimeOfDayValue imp
               private _timeOfDayValue: time) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1256,7 +1256,7 @@ export class MedicationFormActionValueChangesDosageInstructionDayOfWeek implemen
               private _dayOfWeek: Array<{ name: string, checked: boolean }>) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1306,7 +1306,7 @@ export class MedicationFormActionAddWhen implements IAction {
   constructor(private _nDosage: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     return new MedicationFormStateAddWhen(this._nDosage);
   }
 }
@@ -1319,7 +1319,7 @@ export class MedicationFormActionRemoveWhen implements IAction {
               private _nWhen: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1348,7 +1348,7 @@ export class MedicationFormActionValueChangesDosageInstructionWhenValue implemen
               private _whenValue: ValueSetContains | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1399,7 +1399,7 @@ export class MedicationFormActionValueChangesDosageInstructionOffsetValue implem
               private _offsetValue: decimal) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1439,7 +1439,7 @@ export class MedicationFormActionAddDoseAndRate implements IAction {
   constructor(private _nDosage: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     return new MedicationFormStateAddDoseAndRate(this._nDosage);
   }
 }
@@ -1452,7 +1452,7 @@ export class MedicationFormActionRemoveDoseAndRate implements IAction {
               private _nDoseAndRate: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1480,7 +1480,7 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityValue 
               private _doseQuantityValue: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1537,7 +1537,7 @@ export class MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit i
               private _doseQuantityUnit: Coding | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction
@@ -1612,7 +1612,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioNumerator
               private _rateRatioNumeratorValue: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1699,7 +1699,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioNumerator
               private _rateRatioNumeratorUnit: Coding | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1801,7 +1801,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioDenominat
               private _rateRatioDenominatorValue: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1891,7 +1891,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateRatioDenominat
               private _rateRatioDenominatorUnit: Coding | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -1994,7 +1994,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateQuantityValue 
               private _rateQuantityValue: number) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
@@ -2050,7 +2050,7 @@ export class MedicationFormActionValueChangesDosageInstructionRateQuantityUnit i
               private _rateQuantityUnit: Coding) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     if (medicationRequest.dosageInstruction && medicationRequest.dosageInstruction[this._nDosage]) {
       const dosage = medicationRequest.dosageInstruction[this._nDosage];
@@ -2114,7 +2114,7 @@ export class MedicationFormActionValueChangesDispenseRequest implements IAction 
               private _medicationDispense: MedicationRequestDispenseRequest) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
     const medicationDispense = lodash.cloneDeep(this._medicationDispense);
 
@@ -2153,7 +2153,7 @@ export class MedicationFormActionValueChangesTreatmentIntent implements IAction 
               private _treatmentIntent: ValueSetContains | null) {
   }
 
-  public execute(): IPartialState {
+  public async execute(): Promise<IPartialState> {
     const medicationRequest = lodash.cloneDeep(this._medicationRequest);
 
     if (this._treatmentIntent) {

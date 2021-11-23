@@ -48,7 +48,7 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
   constructor(private _viewModel: MedicationRequestFormViewModel) {
   }
 
-  public async reduce(state: MedicationRequestFormState, partialState: IPartialState): Promise<MedicationRequestFormState> {
+  public reduce(state: MedicationRequestFormState, partialState: IPartialState): MedicationRequestFormState {
     let newState: MedicationRequestFormState;
     if (!state) {
       newState = new MedicationRequestFormState(partialState.type);

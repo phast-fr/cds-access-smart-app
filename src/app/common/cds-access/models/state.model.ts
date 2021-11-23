@@ -41,7 +41,7 @@ export interface IRender<T> {
  * Implemented by the classes having to start from the (old) state and from a partial state, to create a new state
  */
 export interface IReducer<T extends IState> {
-  reduce(state: T, partialState: IPartialState): Promise<T>;
+  reduce(state: T, partialState: IPartialState): T;
 }
 
 /**
@@ -76,7 +76,7 @@ export interface IIntent {
 export interface IAction {
   readonly type: string;
 
-  execute(): IPartialState;
+  execute(): Promise<IPartialState>;
 }
 
 /**

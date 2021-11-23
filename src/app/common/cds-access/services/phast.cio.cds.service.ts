@@ -56,7 +56,7 @@ export class PhastCioCdsService {
     } as Options;
   }
 
-  public searchLibraryCQL(filter?: string | undefined, sortActive?: string, sortDirection?: string,
+  public searchLibraryCQL(filter?: string, sortActive?: string, sortDirection?: string,
                           page?: number, pageSize?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
     const searchParams = new URLSearchParams({
       _count: (pageSize) ? pageSize.toString() : PhastCioCdsService.DEFAULT_PAGE_SIZE.toString()/*,

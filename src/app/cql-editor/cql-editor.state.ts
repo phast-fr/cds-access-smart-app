@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import {Library, Patient} from 'phast-fhir-ts';
+import {Bundle, Library, Patient} from 'phast-fhir-ts';
 
 import {IPartialState, IState} from '../common/cds-access/models/state.model';
 import {SmartContext} from '../common/fhir/smart/models/fhir.smart.context.model';
@@ -62,28 +62,34 @@ export class CqlEditorStateOnSaveLibrary implements IPartialState {
 export class CqlEditorStateOnRunLibrary implements IPartialState {
   readonly type = 'OnRunLibrary';
 
-  constructor(private _context: SmartContext,
-              private _patient: Patient | null | undefined,
-              private _data: string) {
+  constructor(private _bundle: Bundle) {
   }
 
-  public get context(): SmartContext {
-    return this._context;
-  }
-
-  public get patient(): Patient | null | undefined {
-    return this._patient;
-  }
-
-  public get data(): string {
-    return this._data;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 }
 
 export class CqlEditorStateOnSearchLibrary implements IPartialState {
   readonly type = 'OnSearchLibrary';
 
-  constructor(private _value: string) {
+  constructor(private _value: Bundle) {
+  }
+
+  public get value(): Bundle {
+    return this._value;
+  }
+}
+
+export class CqlEditorStateOnError implements IPartialState {
+  readonly type = 'OnError';
+
+  constructor(private _err: any,
+              private _value: string) {
+  }
+
+  public get err(): any {
+    return this._err;
   }
 
   public get value(): string {

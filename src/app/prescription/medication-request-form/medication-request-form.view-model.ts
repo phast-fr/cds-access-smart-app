@@ -652,8 +652,8 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
             map(intent => this.intentToAction(intent)),
             filter(action => !!action),
             map(action => action as IAction),
-            map(action => action.execute()),
-            switchMap(partialState => this._reducer.reduce(this._state$.value as MedicationRequestFormState, partialState))
+            switchMap(action => action.execute()),
+            map(partialState => this._reducer.reduce(this._state$.value as MedicationRequestFormState, partialState))
         )
         .subscribe({
           next: state => this.emitState(state as MedicationRequestFormState),
