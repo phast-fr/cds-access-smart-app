@@ -180,6 +180,9 @@ export class FhirSmartService {
     if (context.intent) {
       sessionStorage.setItem('intent', context.intent);
     }
+    if (context.service_id) {
+      sessionStorage.setItem('service_id', context.service_id);
+    }
 
     const user = this.getUser<SmartUser>(context.id_token);
     const state = new StateModel();
@@ -274,6 +277,10 @@ export class FhirSmartService {
       const intent = sessionStorage.getItem('intent');
       if (intent) {
         context.intent = intent;
+      }
+      const serviceId = sessionStorage.getItem('service_id');
+      if (serviceId) {
+        context.service_id = serviceId;
       }
 
       const state = new StateModel();

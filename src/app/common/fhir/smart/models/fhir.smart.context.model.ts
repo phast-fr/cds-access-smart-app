@@ -34,4 +34,5 @@ export interface SmartContext {
   need_patient_banner: boolean;
   refresh_token?: string;
   intent?: string;
+  service_id?: string;
 }
