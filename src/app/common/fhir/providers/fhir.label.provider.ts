@@ -242,7 +242,6 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
       }
       if (ratio.denominator?.unit
         && ratio.denominator?.unit !== '1') {
-        labelComposite.push('/');
         labelComposite.push(ratio.denominator?.unit);
       }
     }
