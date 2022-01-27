@@ -11,12 +11,12 @@ export const environment = {
   production: true,
   version: env.npm_package_version,
   client_id: credential.client_id,
-  scope: new Map<string, string>([
-    ['prescription', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
-    ['formulary', 'online_access profile openid fhirUser launch user/*.*'],
-    ['dispense', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
-    ['cql-editor', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*']
-  ]),
+  scope: {
+    prescription: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
+    formulary: 'online_access profile openid fhirUser launch user/*.*',
+    dispense: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
+    'cql-editor': 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'
+  },
   display_language: 'fr-FR',
   cds_hooks_url: 'https://cds-access.phast.fr:8443/cql-cds-hooks',
   cio_dc_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',

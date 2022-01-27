@@ -35,7 +35,7 @@ const setEnv = () => {
     /*require('dotenv').config({
         path: 'src/environments/.env.ts'
     });*/
-// `environment.ts` file structure
+// `environmentDev.ts` file structure
     const envConfigFile = `export const environment = {
   npm_package_version: '${appVersion}',
   client_id: '${process.env.client_id}',
