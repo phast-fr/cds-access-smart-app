@@ -12,7 +12,7 @@
     "lint": "ng lint",
     "e2e": "ng e2e",
     "config:ci": "ts-node src/environments/set-env.ts",
-    "build:ci": "npm run config && ng build",
+    "build:ci": "npm run config:ci && ng build",
     "test:ci": "ng test --watch=false --code-coverage --source-map true"
   },
   "private": true,
