@@ -5,7 +5,7 @@
 // Note that as usual, any environment variables you expose through it will end up in your
 // bundle, and you should not use it for any sensitive information like passwords or keys.
 import {env} from './.env';
-import {credential} from './credential';
+import {credential} from './credential.dev';
 
 /**
  * Scope list
@@ -88,12 +88,12 @@ export const environment = {
   production: false,
   version: env.npm_package_version,
   client_id: credential.client_id,
-  scope: new Map<string, string>([
-    ['prescription', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
-    ['formulary', 'online_access profile openid fhirUser launch user/*.*'],
-    ['dispense', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'],
-    ['cql-editor', 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*']
-  ]),
+  scope: {
+    prescription: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
+    formulary: 'online_access profile openid fhirUser launch user/*.*',
+    dispense: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
+    'cql-editor': 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'
+  },
   display_language: 'fr-FR',
   cds_hooks_url: 'http://localhost:9200',
   cio_dc_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',

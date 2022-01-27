@@ -2,7 +2,6 @@
 
 src/environments/credential.dev.ts
 src/environments/credential.prod.ts
-src/environments/environment.ts
 
 # compiled output
 /.angular
