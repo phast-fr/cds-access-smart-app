@@ -1,6 +1,7 @@
 # CDS-ACCESS Smart on FHIR App
 
-[![MIT License][license-image]][license]![build](https://github.com/phast-fr/cds-access-smart-app/actions/workflows/ci.yml/badge.svg)
+[![MIT License][license-image]][license]
+![build](https://github.com/phast-fr/cds-access-smart-app/actions/workflows/main.yml/badge.svg)
 
 Smart on FHIR App is a part of CDS ACCESS project which aims to facilitate the integration of CDS in the hospital.  
 
