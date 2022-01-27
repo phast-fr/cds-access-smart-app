@@ -83,9 +83,11 @@ export class FhirSmartService {
         next: metadata => {
           let params = new HttpParams()
             .set('response_type', 'code')
-            .set('client_id', environment.client_id.get(context) as string)
+              // @ts-ignore
+            .set('client_id', environment.client_id[context])
             .set('launch', launch)
-            .set('scope', environment.scope.get(context) as string)
+              // @ts-ignore
+            .set('scope', environment.scope[context])
             .set('state', state)
             .set('aud', iss);
 
@@ -115,7 +117,8 @@ export class FhirSmartService {
             if (context) {
               let body = new HttpParams()
                 .set('grant_type', 'authorization_code')
-                .set('client_id', environment.client_id.get(context) as string)
+                  // @ts-ignore
+                .set('client_id', environment.client_id[context])
                 .set('code', code)
                 .set('state', state);
 

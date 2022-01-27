@@ -50,6 +50,12 @@ const setEnv = () => {
   fhir_date_format: 'yyyy-MM-dd\\'T\\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
   drug_formulary_resource_type: 'MedicationKnowledge',
+  scope: {
+    prescription: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
+    formulary: 'online_access profile openid fhirUser launch user/*.*',
+    dispense: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
+    'cql-editor': 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'
+  },
   production: true
 };
 `;
