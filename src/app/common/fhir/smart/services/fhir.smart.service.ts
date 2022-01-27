@@ -154,7 +154,8 @@ export class FhirSmartService {
               const body = new HttpParams()
                 .set('grant_type', 'refresh_token')
                 .set('refresh_token', refreshToken)
-                .set('scope', environment.scope.get(context) as string);
+                  // @ts-ignore
+                .set('scope', environment.scope[context]);
 
               this.doPostToken(metadata.tokenUrl.href, body.toString());
             }
