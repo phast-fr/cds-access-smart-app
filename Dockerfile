@@ -1,4 +1,4 @@
-FROM nginx:1.21.3-alpine
+FROM nginx:1.21.5-alpine
 
 MAINTAINER David Ouagne <david.ouagne@gmail.com>
 
