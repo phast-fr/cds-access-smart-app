@@ -32,9 +32,9 @@ const setEnv = () => {
 // Load node modules
     const colors = require('colors');
     const appVersion = require('../../package.json').version;
-    require('dotenv').config({
+    /*require('dotenv').config({
         path: 'src/environments/.env'
-    });
+    });*/
 // `environment.ts` file structure
     const envConfigFile = `export const environment = {
   npm_package_version: '${appVersion}',
