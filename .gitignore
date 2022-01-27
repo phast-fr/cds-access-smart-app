@@ -4,7 +4,7 @@ src/environments/credential.ts
 src/environments/credential.prod.ts
 src/environments/environment.ts
 src/environments/environment.prod.ts
-src/environments/.env
+src/environments/.env.ts
 
 # compiled output
 /.angular
