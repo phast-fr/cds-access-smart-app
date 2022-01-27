@@ -46,20 +46,14 @@ import { FlexLayoutModule } from '@angular/flex-layout';
 
 import { DispenseRoutingModule } from './dispense-routing.module';
 
-import {DialogOverviewExampleDialogComponent, DispenseComponent} from './dispense.component';
-import { DispenseTableComponent } from './dispense-table/dispense-table.component';
-import {DispenseStateService} from './dispense-state.service';
-import {DialogSelectedSpecialiteComponent} from './dispense-dialog/dialog-selected-specialite.component';
 import {MatDialogModule} from '@angular/material/dialog';
 import {FhirModule} from '../common/fhir/fhir.module';
 import {CdsAccessModule} from '../common/cds-access/cds-access.module';
+import {DispenseComponent} from './dispense.component';
 
 @NgModule({
   declarations: [
-    DispenseComponent,
-    DispenseTableComponent,
-    DialogSelectedSpecialiteComponent,
-    DialogOverviewExampleDialogComponent
+    DispenseComponent
   ],
   imports: [
     CommonModule,
@@ -87,9 +81,6 @@ import {CdsAccessModule} from '../common/cds-access/cds-access.module';
     FormsModule,
     CdsAccessModule,
     FhirModule
-  ],
-  providers: [
-    DispenseStateService
   ],
   bootstrap: [DispenseComponent]
 })
