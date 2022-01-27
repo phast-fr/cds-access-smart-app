@@ -21,15 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/operators';
 
 import {nanoid} from 'nanoid';
+import * as hash from 'object-hash';
 import {
   CodeableConcept,
-  Coding, id,
+  Coding,
   Medication,
   MedicationIngredient, Quantity,
   Ratio,
@@ -85,43 +87,30 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
   }
 
   public get amountList(): Array<Quantity> {
-    if (this._viewModel.amountMap && this._viewModel.medication?.id) {
-      const map = this._viewModel.amountMap.get(this._viewModel.medication.id);
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: Quantity, b: Quantity) => {
-          return a?.value === b?.value
-            && a?.code === b?.code;
-        };
-        return Utils.intersect<CodeableConcept>(input[0], input, comparator);
+    if (this._viewModel.amountMap && this._viewModel.medication?.code) {
+      const array = this._viewModel.amountMap.get(hash(this._viewModel.medication.code));
+      if (array) {
+        return array;
       }
     }
     return new Array<Quantity>();
   }
 
   public get formList(): Array<CodeableConcept> {
-    if (this._viewModel.formMap && this._viewModel.medication?.id) {
-      const map = this._viewModel.formMap.get(this._viewModel.medication.id);
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: CodeableConcept, b: CodeableConcept) => {
-          return a.text === b.text;
-        };
-        return Utils.intersect<CodeableConcept>(input[0], input, comparator);
+    if (this._viewModel.formMap && this._viewModel.medication?.code) {
+      const array = this._viewModel.formMap.get(hash(this._viewModel.medication.code));
+      if (array) {
+        return array;
       }
     }
     return new Array<CodeableConcept>();
   }
 
-  public strengthList(itemCodeableConcept: id): Array<Ratio> {
+  public strengthList(itemCodeableConcept: CodeableConcept): Array<Ratio> {
     if (this._viewModel.strengthMap) {
-      const map = this._viewModel.strengthMap.get(itemCodeableConcept);
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: Ratio, b: Ratio) => {
-          return a.numerator?.value === b.numerator?.value;
-        };
-        return Utils.intersect<Ratio>(input[0], input, comparator);
+      const array = this._viewModel.strengthMap.get(hash(itemCodeableConcept));
+      if (array) {
+        return array;
       }
     }
     return new Array<Ratio>();
@@ -636,7 +625,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
           const medication = value as Medication;
           if (medication.ingredient) {
             medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
-              if (ingredient.itemCodeableConcept?.text && this.strengthList(ingredient.itemCodeableConcept.text).length === 0) {
+              if (ingredient.itemCodeableConcept && this.strengthList(ingredient.itemCodeableConcept).length === 0) {
                 ingredientFormArray.at(nIngredient).disable(options);
               }
               else if (ingredient.itemCodeableConcept) {

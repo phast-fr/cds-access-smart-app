@@ -27,13 +27,10 @@ import {HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
 
 import {
-  Bundle,
-  CodeableConcept,
-  MedicationIngredient,
-  MedicationKnowledge,
-  OperationOutcome,
-  Parameters,
-  id, Composition, ParametersParameter, Quantity
+    Bundle,
+    OperationOutcome,
+    Parameters,
+    id, Composition, ParametersParameter, MedicationRequest, Dosage, Medication, MedicationIngredient
 } from 'phast-fhir-ts';
 
 import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
@@ -118,29 +115,18 @@ export class PhastCioDcService {
     );
   }
 
-  postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-    mkId: id,
-    mkCode: CodeableConcept,
-    doseForm?: CodeableConcept,
-    amount?: Quantity,
-    ingredient?: MedicationIngredient[],
-    intendedRoute?: CodeableConcept,
-    doseQuantity?: Quantity
+  postMedicationKnowledgeLookup(
+    medicationRequest: MedicationRequest | undefined
   ): Observable<Parameters> {
-    const input = new MedicationKnowledgeLookupBuilder(mkId, mkCode)
-        .doseForm(doseForm)
-        .amount(amount)
-        .ingredient(ingredient)
-        .intendedRoute(intendedRoute)
-        .doseQuantity(doseQuantity)
+    const input = new MedicationKnowledgeLookupBuilder()
+        .withMedicationRequest(medicationRequest)
         .build();
 
     return this._fhirClient.operation<Parameters>(
         environment.cio_dc_url,
         {
-          name: '$lookup?with-related-medication-knowledge=true',
+          name: '$lookup2?',
           resourceType: 'MedicationKnowledge',
-          id: mkId,
           method: 'post',
           input
         },
@@ -173,7 +159,6 @@ export class PhastCioDcService {
 
   private search<T>(resourceType: string, searchParams: URLSearchParams, columnNameToFilter?: string,
                     filter?: string | undefined, sortActive?: string, sortDirection?: string, page?: number): Observable<T> {
-
     if (sortActive) {
       if (sortDirection && sortDirection === 'desc') {
         searchParams.set('_sort', '-' + sortActive);
@@ -212,76 +197,77 @@ export class PhastCioDcService {
 export class MedicationKnowledgeLookupBuilder {
   private readonly _parameters: Parameters;
 
-  constructor(mkId: id, mkCode: CodeableConcept) {
+  constructor() {
     this._parameters = {
       resourceType: 'Parameters',
       parameter: new Array<ParametersParameter>(
         {
           name: 'with-related-medication-knowledge',
           valueBoolean: false
-        },
-        {
-          name: 'medicationKnowledge',
-          resource: {
-            resourceType: 'MedicationKnowledge',
-            id: mkId,
-            code: mkCode,
-            status: 'active',
-            doseForm: undefined,
-            ingredient: new Array<MedicationIngredient>(),
-            intendedRoute: new Array<CodeableConcept>()
-          } as MedicationKnowledge
         }
       ),
     };
   }
 
-  public doseForm(doseForm: CodeableConcept | undefined): this {
-    if (doseForm && this._parameters.parameter && this._parameters.parameter[1]) {
-      const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      medicationKnowledge.doseForm = doseForm;
-    }
-    return this;
-  }
+  public withMedicationRequest(medicationRequest: MedicationRequest | undefined): this {
+      const part: ParametersParameter[] = [];
+      medicationRequest?.dosageInstruction?.forEach(((dosage: Dosage, indexDosage: number) => {
+          part.push({
+              name: 'identifier',
+              valueString: `MedicationRequest.dosageInstruction[${indexDosage}]`
+          });
 
-  public ingredient(ingredient: MedicationIngredient[] | undefined): this {
-    if (ingredient && this._parameters.parameter && this._parameters.parameter[1]) {
-      const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      ingredient.forEach(element => {
-        medicationKnowledge.ingredient?.push(element);
-      });
-    }
-    return this;
-  }
+          if (dosage.route !== undefined) {
+              part.push({
+                  name: 'Route',
+                  valueCodeableConcept: dosage.route
+              });
+          }
 
-  public intendedRoute(intendedRoute: CodeableConcept | undefined): this {
-    if (intendedRoute && this._parameters.parameter && this._parameters.parameter[1]) {
-      const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      medicationKnowledge.intendedRoute?.push(intendedRoute);
-    }
-    return this;
-  }
+          medicationRequest?.contained?.forEach((medication: Medication) => {
+              const medPart = {
+                  name: 'medication',
+                  part: [
+                      {
+                          name: 'code',
+                          valueCodeableConcept: medication.code
+                      }
+                  ] as ParametersParameter[]
+              } as ParametersParameter;
 
-  public amount(amount: Quantity | undefined): this {
-    if (amount && this._parameters.parameter && this._parameters.parameter[1]) {
-      const medicationKnowledge = this._parameters.parameter[1].resource as MedicationKnowledge;
-      medicationKnowledge.amount = amount;
-    }
-    return this;
-  }
-
-  public doseQuantity(doseQuantity: Quantity | undefined): this {
-    if (doseQuantity && doseQuantity.code && this._parameters.parameter) {
-      this._parameters.parameter.push({
-        name: 'unit-code',
-        valueCoding: {
-          code: doseQuantity.code,
-          system: doseQuantity.system,
-          display: doseQuantity.unit
-        }
-      });
-    }
-    return this;
+              if (medication.form) {
+                  medPart.part?.push({
+                      name: 'form',
+                      valueCodeableConcept: medication.form
+                  });
+              }
+              if (medication.amount) {
+                  medPart.part?.push({
+                      name: 'amount',
+                      valueRatio: medication.amount
+                  });
+              }
+              if (medication.ingredient) {
+                  medPart.part?.push({
+                      name: 'ingredient',
+                      part: medication.ingredient?.map((ingredient: MedicationIngredient) => {
+                          return {
+                              name: 'item',
+                              valueCodeableConcept: ingredient.itemCodeableConcept
+                          } as ParametersParameter;
+                      })
+                  });
+              }
+              part.push(medPart);
+          });
+      }));
+      this._parameters.parameter?.push(
+          {
+            name: 'item',
+            part
+          }
+      );
+      return this;
   }
 
   public build(): object {

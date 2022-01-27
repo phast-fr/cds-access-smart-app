@@ -23,6 +23,7 @@
  */
 
 import * as lodash from 'lodash';
+import * as hash from 'object-hash';
 import {IPartialState, IReducer} from '../../common/cds-access/models/state.model';
 import {
   MedicationFormStateAddMedication,
@@ -42,6 +43,7 @@ import {
   MedicationFormStateAddWhen, MedicationFormStateRemoveWhen
 } from './medication-request-form.state';
 import {MedicationRequestFormViewModel} from './medication-request-form.view-model';
+import {Medication} from 'phast-fhir-ts';
 
 export class MedicationRequestFormReducer implements IReducer<MedicationRequestFormState>{
 
@@ -120,9 +122,9 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
 
   private addMedication(newState: MedicationRequestFormState, partialState: MedicationFormStateAddMedication): void {
     newState.medicationRequest = partialState.medicationRequest;
-    if (newState?.medication?.id) {
+    if (newState?.medication?.code) {
       newState.medicationKnowledgeMap.set(
-        newState.medication.id, partialState.medicationKnowledge
+        hash(newState.medication.code), partialState.medicationKnowledge
       );
     }
 
@@ -149,18 +151,18 @@ export class MedicationRequestFormReducer implements IReducer<MedicationRequestF
         }
       }
       else if (partialState.nMedication !== 0 && contained.length === 3) {
-        const medicationDelete = contained[partialState.nMedication];
-        if (medicationDelete?.id) {
-          newState.medicationKnowledgeMap.delete(medicationDelete.id);
+        const medicationDelete = contained[partialState.nMedication] as Medication;
+        if (medicationDelete?.code) {
+          newState.medicationKnowledgeMap.delete(hash(medicationDelete.code));
         }
 
         newState.nMedicationArray.push(partialState.nMedication);
         newState.nMedicationArray.push(0);
       }
       else {
-        const medicationDelete = contained[partialState.nMedication];
-        if (medicationDelete?.id) {
-          newState.medicationKnowledgeMap.delete(medicationDelete.id);
+        const medicationDelete = contained[partialState.nMedication] as Medication;
+        if (medicationDelete?.code) {
+          newState.medicationKnowledgeMap.delete(hash(medicationDelete.code));
         }
         newState.nMedicationArray.push(partialState.nMedication);
       }

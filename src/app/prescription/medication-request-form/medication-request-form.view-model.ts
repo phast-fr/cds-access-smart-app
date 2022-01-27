@@ -31,7 +31,7 @@ import {
   Bundle,
   CodeableConcept, Coding, Dosage,
   id,
-  Medication, MedicationIngredient,
+  Medication,
   MedicationKnowledge, MedicationRequest, OperationOutcome,
   Parameters, ParametersParameter, Quantity,
   Ratio,
@@ -185,7 +185,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get amountMap(): Map<id, Map<number, Array<Quantity>>> | undefined {
+  public get amountMap(): Map<string, Array<Quantity>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
       return state.amountMap;
@@ -193,7 +193,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get formMap(): Map<id, Map<number, Array<CodeableConcept>>> | undefined {
+  public get formMap(): Map<id, Array<CodeableConcept>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
       return state.formMap;
@@ -201,7 +201,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get strengthMap(): Map<id, Map<number, Array<Ratio>>> | undefined {
+  public get strengthMap(): Map<string, Array<Ratio>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
       return state.strengthMap;
@@ -277,7 +277,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
       forkJoin(tioObservable)
         .pipe(
-          map(value => value as ValueSet[])
+            map(value => value as ValueSet[])
         )
         .subscribe({
           next: (valueSets: ValueSet[]) => valueSets.forEach((valueSet: ValueSet) => {
@@ -299,97 +299,29 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         });
     }
 
-    const medication = state.medication;
-    if (medication?.id) {
-      const medicationId = medication?.id;
-      state.loadingCIOList = true;
-      const medicationKnowledge = state.medicationKnowledgeMap.get(medication.id);
-      if (medicationKnowledge?.id && medicationKnowledge?.code) {
-        const medicationKnowledgeId = medicationKnowledge.id;
-        const medicationKnowledgeCode = medicationKnowledge.code;
-        if (state.medicationRequest?.dosageInstruction) {
-          const observables = new Array<Observable<Parameters>>();
-          const amount = (medication.amount?.numerator) ? medication.amount.numerator : undefined;
-          state.medicationRequest.dosageInstruction.forEach(dosage => {
-            let doseQuantity;
-            if (dosage?.doseAndRate && dosage?.doseAndRate.length > 0) {
-              doseQuantity = dosage.doseAndRate[0]?.doseQuantity;
-            }
-            observables.push(
-              this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-                  medicationKnowledgeId,
-                  medicationKnowledgeCode,
-                  medication.form,
-                  amount,
-                  medication.ingredient,
-                  dosage?.route,
-                  doseQuantity
-              )
-                .pipe(
-                  retry({count: 3, delay: 1000})
-                )
-            );
-          });
-          forkJoin(observables)
-            .subscribe({
-              next: parameters => parameters.forEach((parameter, nDosage) =>
-                this.buildList(state, medicationId, nDosage, parameter)),
-              error: err => console.error('error', err),
-              complete: () => state.loadingCIOList = false
-            });
-        }
-        else {
-          this._cioDcSource.postMedicationKnowledgeLookupByRouteCodeAndFormCodeAndIngredient(
-            medicationKnowledgeId, medicationKnowledgeCode, medication.form, medication.amount, medication.ingredient
-          )
-            .pipe(
-              retry({count: 3, delay: 1000})
-            )
-            .subscribe({
-              next: parameters => this.buildList(state, medicationId, 0, parameters),
-              error: err => console.error('error', err),
-              complete: () => state.loadingCIOList = false
-            });
-        }
-      }
-    }
+    this._cioDcSource.postMedicationKnowledgeLookup(state.medicationRequest)
+        .pipe(
+            retry({count: 3, delay: 1000})
+        )
+        .subscribe({
+          next: parameters => this.buildList(state, parameters),
+          error: err => console.error('error', err),
+          complete: () => state.loadingCIOList = false
+        });
   }
 
   public clearList(state: MedicationRequestFormState): void {
-    if (state.medication?.id && state.medicationRequest?.dosageInstruction) {
-      const medicationId = state.medication.id;
+    if (state.medication?.code && state.medicationRequest?.dosageInstruction) {
+      const medicationKey = hash(state.medication?.code);
       state.medicationRequest.dosageInstruction.forEach((dosage: Dosage, nDosage: number) => {
-        const amountsForMed = state.amountMap.get(medicationId);
-        if (amountsForMed) {
-          const amounts = amountsForMed.get(nDosage);
-          if (amounts) {
-            amounts.length = 0;
-          }
-        }
-
-        const formForMed = state.formMap.get(medicationId);
-        if (formForMed) {
-          const forms = formForMed.get(nDosage);
-          if (forms) {
-            forms.length = 0;
-          }
-        }
+        state.amountMapClear(medicationKey);
+        state.formMapClear(medicationKey);
 
         if (state.medication?.ingredient) {
-          state.medication.ingredient.forEach((ingredient: MedicationIngredient) => {
-            if (ingredient.itemCodeableConcept?.text) {
-              const strengthForIngredient = state.strengthMap.get(ingredient.itemCodeableConcept.text);
-              if (strengthForIngredient) {
-                const strengths = strengthForIngredient.get(nDosage);
-                if (strengths) {
-                  strengths.length = 0;
-                }
-              }
-            }
-          });
+          state.strengthMapClear(state.medication.ingredient);
         }
 
-        const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationId);
+        const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
         if (doseAndRateUnitForMed) {
           const doseAndRateUnit = doseAndRateUnitForMed.get(nDosage);
           if (doseAndRateUnit) {
@@ -397,45 +329,19 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
           }
         }
 
-        const routes = state.routeMap.get(nDosage);
-        if (routes) {
-          routes.length = 0;
-        }
+        state.routeMapClear(nDosage);
       });
     }
-    else if (state.medication?.id) {
-      const medicationId = state.medication.id;
-      const amountsForMed = state.amountMap.get(medicationId);
-      if (amountsForMed) {
-        const amounts = amountsForMed.get(0);
-        if (amounts) {
-          amounts.length = 0;
-        }
-      }
-
-      const formForMed = state.formMap.get(medicationId);
-      if (formForMed) {
-        const forms = formForMed.get(0);
-        if (forms) {
-          forms.length = 0;
-        }
-      }
+    else if (state.medication?.code) {
+      const medicationKey = hash(state.medication.code);
+      state.amountMapClear(medicationKey);
+      state.formMapClear(medicationKey);
 
       if (state.medication?.ingredient) {
-        state.medication.ingredient.forEach((ingredient: MedicationIngredient) => {
-          if (ingredient.itemCodeableConcept?.text) {
-            const strengthForIngredient = state.strengthMap.get(ingredient.itemCodeableConcept.text);
-            if (strengthForIngredient) {
-              const strengths = strengthForIngredient.get(0);
-              if (strengths) {
-                strengths.length = 0;
-              }
-            }
-          }
-        });
+        state.strengthMapClear(state.medication.ingredient);
       }
 
-      const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationId);
+      const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
       if (doseAndRateUnitForMed) {
         const doseAndRateUnit = doseAndRateUnitForMed.get(0);
         if (doseAndRateUnit) {
@@ -443,138 +349,85 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         }
       }
 
-      const routes = state.routeMap.get(0);
-      if (routes) {
-        routes.length = 0;
-      }
+      state.routeMapClear(0);
     }
   }
 
-  public buildList(state: MedicationRequestFormState, medicationId: id, nDosage: number, parameters: Parameters): void {
+  public buildList(state: MedicationRequestFormState, parameters: Parameters): void {
     if (parameters.parameter) {
       parameters.parameter.forEach(parameter => {
-        switch (parameter.name) {
-          case 'amount':
-            const amountsForMed = state.amountMap.get(medicationId);
-            if (amountsForMed) {
-              const amounts = amountsForMed.get(nDosage);
-              if (amounts) {
-                this.addUniqueQuantity(amounts, parameter);
-              }
-            }
-            break;
-          case 'intendedRoute':
-            const routes = state.routeMap.get(nDosage);
-            if (routes) {
-              this.addUniqueCodeableConcept(routes, parameter);
-            }
-            break;
-          case 'doseForm':
-            const formsForMed = state.formMap.get(medicationId);
-            if (formsForMed) {
-              const forms = formsForMed.get(nDosage);
-              if (forms) {
-                this.addUniqueCodeableConcept(forms, parameter);
-              }
-            }
-            break;
-          case 'Composition':
-            if (parameter.part) {
-              parameter.part.forEach(ingredient => {
-                if (ingredient.name === 'ingredient' && ingredient.part) {
-                  const strength = ingredient.part[0];
-                  const item = ingredient.part[1];
-                  if (item.valueCodeableConcept?.text) {
-                    const strengthForIngredient = state.strengthMap.get(item.valueCodeableConcept.text);
-                    if (strengthForIngredient) {
-                      const strengths = strengthForIngredient.get(nDosage);
-                      if (strengths) {
-                        this.addUniqueRatio(strengths, strength);
-                      }
+        let nDosage = -1;
+        parameter.part?.forEach((item: ParametersParameter) => {
+          switch (item.name) {
+            case 'identifier':
+              nDosage++;
+              break;
+            case 'medication':
+              let code: CodeableConcept | undefined;
+              item.part?.forEach(item2 => {
+                switch (item2.name) {
+                  case 'code':
+                    code = item2.valueCodeableConcept;
+                    break;
+                  case 'amount':
+                    if (code && item2.valueQuantity) {
+                      state.amountMapAddRatio(hash(code), item2.valueQuantity);
                     }
-                  }
+                    break;
+                  case 'intendedRoute':
+                    if (item2.valueCodeableConcept) {
+                      state.routeMapAddCodeableConcept(nDosage, item2.valueCodeableConcept);
+                    }
+                    break;
+                  case 'doseForm':
+                    if (code && item2.valueCodeableConcept) {
+                      state.formMapAddCodeableConcept(hash(code), item2.valueCodeableConcept);
+                    }
+                    break;
+                  case 'Composition':
+                    item2.part?.forEach(item3 => {
+                      switch (item3.name) {
+                        case 'ingredient':
+                          if (item3.part
+                              && item3.part[0] && item3.part[0].valueRatio
+                              && item3.part[1] && item3.part[1].valueCodeableConcept) {
+                            state.strengthMapAddRatio(
+                                hash(item3.part[1].valueCodeableConcept),
+                                item3.part[0].valueRatio
+                            );
+                          }
+                          break;
+                      }
+                    });
+                    break;
                 }
               });
-            }
-            break;
-          case 'unite':
-            const doseAndRateForMed = state.doseAndRateUnitMap.get(medicationId);
-            if (doseAndRateForMed) {
-              const doseAndRates = doseAndRateForMed.get(nDosage);
-              if (doseAndRates) {
-                this.addUniqueCoding(doseAndRates, parameter);
-              }
-            }
-            break;
-          default:
-            // relatedMedicationKnowledge
-            break;
-        }
+              break;
+            default:
+              console.log('not supported item', item);
+              break;
+          }
+        });
       });
     }
   }
 
   public addList(state: MedicationRequestFormState, nDosage: number): void {
-    if (state.medication?.id) {
-      const medicationId = state.medication.id;
+    if (state.medication?.code) {
+      const medicationKey = hash(state.medication.code);
 
-      let amountForMed = state.amountMap.get(medicationId);
-      if (!amountForMed) {
-        amountForMed = new Map<number, Array<Ratio>>();
-        state.amountMap.set(medicationId, amountForMed);
-      }
+      state.amountMapAdd(medicationKey);
+      state.formMapAdd(medicationKey);
 
-      const amounts = amountForMed.get(nDosage);
-      if (!amounts) {
-        amountForMed.set(nDosage, new Array<Ratio>());
-      }
-      else {
-        amounts.length = 0;
-      }
-
-      if (!state.formMap.get(medicationId)) {
-        state.formMap.set(medicationId, new Map<number, Array<CodeableConcept>>());
-      }
-
-      let formForMed = state.formMap.get(medicationId);
-      if (!formForMed) {
-        formForMed = new Map<number, Array<CodeableConcept>>();
-        state.formMap.set(medicationId, formForMed);
-      }
-
-      const forms = formForMed.get(nDosage);
-      if (!forms) {
-        formForMed.set(nDosage, new Array<CodeableConcept>());
-      }
-      else {
-        forms.length = 0;
-      }
-
-      const medicationKnowledge = state.medicationKnowledgeMap.get(medicationId);
+      const medicationKnowledge = state.medicationKnowledgeMap.get(medicationKey);
       if (medicationKnowledge?.ingredient) {
-        medicationKnowledge.ingredient.forEach((ingredient: MedicationIngredient) => {
-          if (ingredient.itemCodeableConcept?.text) {
-            let strengthForIngredient = state.strengthMap.get(ingredient.itemCodeableConcept.text);
-            if (!strengthForIngredient) {
-              strengthForIngredient = new Map<number, Array<Ratio>>();
-              state.strengthMap.set(ingredient.itemCodeableConcept.text, strengthForIngredient);
-            }
-
-            const strengths = strengthForIngredient.get(nDosage);
-            if (!strengths) {
-              strengthForIngredient.set(nDosage, new Array<Ratio>());
-            }
-            else {
-              strengths.length = 0;
-            }
-          }
-        });
+        state.strengthMapAdd(medicationKnowledge.ingredient);
       }
 
-      let doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationId);
+      let doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
       if (!doseAndRateUnitForMed) {
         doseAndRateUnitForMed = new Map<number, Array<Coding>>();
-        state.doseAndRateUnitMap.set(medicationId, doseAndRateUnitForMed);
+        state.doseAndRateUnitMap.set(medicationKey, doseAndRateUnitForMed);
       }
 
       const doseAndRateUnits = doseAndRateUnitForMed.get(nDosage);
@@ -586,47 +439,20 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       }
     }
 
-    if (!state.routeMap.has(nDosage)) {
-      state.routeMap.set(nDosage, new Array<CodeableConcept>());
-    }
-    else {
-      const routes = state.routeMap.get(nDosage);
-      if (routes) {
-        routes.length = 0;
-      }
-    }
+    state.routeMapAdd(nDosage);
   }
 
   public removeList(state: MedicationRequestFormState, nDosage: number): void {
-    if (state.medication?.id) {
-      const medicationId = state.medication.id;
-
-      const amountForMed = state.amountMap.get(medicationId);
-      if (amountForMed) {
-        if (amountForMed.has(nDosage)) {
-          amountForMed.delete(nDosage);
-        }
-      }
-
-      const formForMed = state.formMap.get(medicationId);
-      if (formForMed) {
-        if (formForMed.has(nDosage)) {
-          formForMed.delete(nDosage);
-        }
-      }
+    if (state.medication?.code) {
+      const medicationKey = hash(state.medication.code);
+      state.amountMapRemove(medicationKey);
+      state.formMapMapRemove(medicationKey);
 
       if (state.medication?.ingredient) {
-        state.medication.ingredient.forEach(ingredient => {
-          if (ingredient.itemCodeableConcept?.text) {
-            const strengthForMed = state.strengthMap.get(ingredient.itemCodeableConcept.text);
-            if (strengthForMed) {
-              strengthForMed.delete(nDosage);
-            }
-          }
-        });
+        state.strengthMapRemove(state.medication.ingredient);
       }
 
-      const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationId);
+      const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
       if (doseAndRateUnitForMed) {
         if (doseAndRateUnitForMed.has(nDosage)) {
           doseAndRateUnitForMed.delete(nDosage);
@@ -634,9 +460,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
       }
     }
 
-    if (state.routeMap.get(nDosage)) {
-      state.routeMap.delete(nDosage);
-    }
+    state.routeMapRemove(nDosage);
   }
 
   public searchMedicationKnowledge(value: string, option: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
@@ -960,77 +784,5 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
 
   private emitState(newSate: MedicationRequestFormState): void {
     this._state$.next(newSate);
-  }
-
-  private addUniqueCodeableConcept(uniqueCodeableConceptArray: Array<CodeableConcept>, parameter: ParametersParameter): void {
-    if (parameter.valueCodeableConcept) {
-      const valueCodeableConcept = parameter.valueCodeableConcept;
-      const valueCodeableConceptHash = hash(valueCodeableConcept);
-      let isExist = false;
-      uniqueCodeableConceptArray.forEach((value: CodeableConcept) => {
-        const refHash = hash(value);
-        if (valueCodeableConceptHash === refHash) {
-          isExist = true;
-          return;
-        }
-      });
-      if (!isExist) {
-          uniqueCodeableConceptArray.push(valueCodeableConcept);
-      }
-    }
-  }
-
-  private addUniqueCoding(uniqueCodingArray: Array<Coding>, parameter: ParametersParameter): void {
-    if (parameter.valueCoding) {
-      const valueCoding = parameter.valueCoding;
-      const valueHash = hash(valueCoding);
-      let isExist = false;
-      uniqueCodingArray.forEach((value: Coding) => {
-        const refHash = hash(value);
-        if (valueHash === refHash) {
-          isExist = true;
-          return;
-        }
-      });
-      if (!isExist) {
-        uniqueCodingArray.push(valueCoding);
-      }
-    }
-  }
-
-  private addUniqueRatio(uniqueRatioArray: Array<Ratio>, parameter: ParametersParameter): void {
-    if (parameter.valueRatio) {
-      const valueRatio = parameter.valueRatio;
-      const valueHash = hash(valueRatio);
-      let isExist = false;
-      uniqueRatioArray.forEach((value: Ratio) => {
-        const refHash = hash(value);
-        if (valueHash === refHash) {
-          isExist = true;
-          return;
-        }
-      });
-      if (!isExist) {
-        uniqueRatioArray.push(valueRatio);
-      }
-    }
-  }
-
-  private addUniqueQuantity(uniqueQuantityArray: Array<Quantity>, parameter: ParametersParameter): void {
-    if (parameter.valueQuantity) {
-      const valueQuantity = parameter.valueQuantity;
-      const valueHash = hash(valueQuantity);
-      let isExist = false;
-      uniqueQuantityArray.forEach((value: Quantity) => {
-        const refHash = hash(value);
-        if (valueHash === refHash) {
-          isExist = true;
-          return;
-        }
-      });
-      if (!isExist) {
-        uniqueQuantityArray.push(valueQuantity);
-      }
-    }
   }
 }

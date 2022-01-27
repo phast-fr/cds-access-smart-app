@@ -115,7 +115,9 @@ export class PrescriptionStateService {
               let serviceId = 'fr.phast.cds';
               if (this._stateService.state) {
                 const stateModel = this._stateService.state as StateModel;
-                serviceId = stateModel.context.service_id;
+                if (stateModel.context?.service_id !== undefined) {
+                  serviceId = stateModel.context.service_id;
+                }
               }
               const servicesFiltered = services.services.filter((serv: Service) => serv.id === serviceId);
               const service = servicesFiltered[0];

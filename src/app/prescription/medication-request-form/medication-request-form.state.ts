@@ -21,18 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {BehaviorSubject, Observable} from 'rxjs';
 
 import {IPartialState, IState} from '../../common/cds-access/models/state.model';
 import {
   CodeableConcept, Coding,
-  id,
-  Medication,
+  Medication, MedicationIngredient,
   MedicationKnowledge,
   MedicationRequest, Quantity,
   Ratio,
   ValueSetContains
 } from 'phast-fhir-ts';
+import * as hash from 'object-hash';
 
 export class MedicationFormStateAddMedicationRequest implements IPartialState {
   readonly type = 'AddMedicationRequest';
@@ -266,17 +267,17 @@ export class MedicationRequestFormState implements IState {
 
   private _autoIncrement: number;
 
-  private readonly _medicationKnowledgeMap: Map<id, MedicationKnowledge>;
+  private readonly _medicationKnowledgeMap: Map<string, MedicationKnowledge>;
 
   private readonly _routeMap: Map<number, Array<CodeableConcept>>;
 
-  private readonly _amountMap: Map<id, Map<number, Array<Quantity>>>;
+  private readonly _amountMap: Map<string, Array<Ratio>>;
 
-  private readonly _formMap: Map<id, Map<number, Array<CodeableConcept>>>;
+  private readonly _formMap: Map<string, Array<CodeableConcept>>;
 
-  private readonly _strengthMap: Map<string, Map<number, Array<Ratio>>>;
+  private readonly _strengthMap: Map<string, Array<Ratio>>;
 
-  private readonly _doseAndRateUnitMap: Map<id, Map<number, Array<Coding>>>;
+  private readonly _doseAndRateUnitMap: Map<string, Map<number, Array<Coding>>>;
 
   private readonly _treatmentIntentArray: Array<ValueSetContains>;
 
@@ -289,12 +290,12 @@ export class MedicationRequestFormState implements IState {
     this._loadingTIOList$ = new BehaviorSubject<boolean>(false);
     this._nMedicationArray = new Array<number>();
     this._autoIncrement = 1;
-    this._medicationKnowledgeMap = new Map<id, MedicationKnowledge>();
+    this._medicationKnowledgeMap = new Map<string, MedicationKnowledge>();
     this._routeMap = new Map<number, Array<CodeableConcept>>();
-    this._amountMap = new Map<id, Map<number, Array<Ratio>>>();
-    this._formMap = new Map<id, Map<number, Array<CodeableConcept>>>();
-    this._strengthMap = new Map<string, Map<number, Array<Ratio>>>();
-    this._doseAndRateUnitMap = new Map<id, Map<number, Array<Coding>>>();
+    this._amountMap = new Map<string, Array<Ratio>>();
+    this._formMap = new Map<string, Array<CodeableConcept>>();
+    this._strengthMap = new Map<string, Array<Ratio>>();
+    this._doseAndRateUnitMap = new Map<string, Map<number, Array<Coding>>>();
     this._treatmentIntentArray = new Array<ValueSetContains>();
     this._durationUnitArray = new Array<ValueSetContains>();
     this._whenArray = new Array<ValueSetContains>();
@@ -358,23 +359,23 @@ export class MedicationRequestFormState implements IState {
     return ++this._autoIncrement;
   }
 
-  public get medicationKnowledgeMap(): Map<id, MedicationKnowledge> {
+  public get medicationKnowledgeMap(): Map<string, MedicationKnowledge> {
     return this._medicationKnowledgeMap;
   }
 
-  public get amountMap(): Map<id, Map<number, Array<Quantity>>> {
+  public get amountMap(): Map<string, Array<Quantity>> {
     return this._amountMap;
   }
 
-  public get formMap(): Map<id, Map<number, Array<CodeableConcept>>> {
+  public get formMap(): Map<string, Array<CodeableConcept>> {
     return this._formMap;
   }
 
-  public get strengthMap(): Map<string, Map<number, Array<Ratio>>> {
+  public get strengthMap(): Map<string, Array<Ratio>> {
     return this._strengthMap;
   }
 
-  public get doseAndRateUnitMap(): Map<id, Map<number, Array<Coding>>> {
+  public get doseAndRateUnitMap(): Map<string, Map<number, Array<Coding>>> {
     return this._doseAndRateUnitMap;
   }
 
@@ -392,5 +393,143 @@ export class MedicationRequestFormState implements IState {
 
   public get whenArray(): Array<ValueSetContains> {
     return this._whenArray;
+  }
+
+  public amountMapAdd(medicationKey: string): void {
+    if (!this._amountMap.has(medicationKey)) {
+      this._amountMap.set(medicationKey, new Array<Ratio>());
+    }
+    this.amountMapClear(medicationKey);
+  }
+
+  public amountMapAddRatio(medicationKey: string, amount: Ratio): void {
+    let amounts = this._amountMap.get(medicationKey);
+    if (!amounts) {
+      amounts = new Array<CodeableConcept>();
+      this._amountMap.set(medicationKey, amounts);
+    }
+    amounts.push(amount);
+  }
+
+  public amountMapRemove(medicationKey: string): void {
+    if (this._amountMap.has(medicationKey)) {
+      this._amountMap.delete(medicationKey);
+    }
+  }
+
+  public amountMapClear(medicationKey: string): void {
+    const amounts = this._amountMap.get(medicationKey);
+    if (amounts) {
+      amounts.length = 0;
+    }
+  }
+
+  public formMapAdd(medicationKey: string): void {
+    if (!this._formMap.has(medicationKey)) {
+      const newFormArray = new Array<CodeableConcept>();
+      this._formMap.set(medicationKey, newFormArray);
+    }
+    else {
+      this.formMapClear(medicationKey);
+    }
+  }
+
+  public formMapAddCodeableConcept(medicationKey: string, form: CodeableConcept): void {
+    let forms = this._formMap.get(medicationKey);
+    if (!forms) {
+      forms = new Array<CodeableConcept>();
+      this._formMap.set(medicationKey, forms);
+    }
+    forms.push(form);
+  }
+
+  public formMapMapRemove(medicationKey: string): void {
+    if (this._formMap.has(medicationKey)) {
+      this._formMap.delete(medicationKey);
+    }
+  }
+
+  public formMapClear(medicationKey: string): void {
+    const forms = this._formMap.get(medicationKey);
+    if (forms) {
+      forms.length = 0;
+    }
+  }
+
+  public strengthMapAdd(ingredients: MedicationIngredient[]): void {
+    ingredients.forEach((ingredient: MedicationIngredient) => {
+      if (ingredient.itemCodeableConcept) {
+        let strengths = this._strengthMap.get(hash(ingredient.itemCodeableConcept));
+        if (!strengths) {
+          strengths = new Array<Ratio>();
+          this._strengthMap.set(hash(ingredient.itemCodeableConcept), strengths);
+        }
+        else {
+          strengths.length = 0;
+        }
+      }
+    });
+  }
+
+  public strengthMapAddRatio(ingredientKey: string, strength: Ratio): void {
+    let strengths = this._strengthMap.get(ingredientKey);
+    if (!strengths) {
+      strengths = new Array<Ratio>();
+      this._strengthMap.set(ingredientKey, strengths);
+    }
+    strengths.push(strength);
+  }
+
+  public strengthMapRemove(ingredients: MedicationIngredient[]): void {
+    ingredients.forEach((ingredient: MedicationIngredient) => {
+      if (ingredient.itemCodeableConcept) {
+        if (this._strengthMap.has(hash(ingredient.itemCodeableConcept))) {
+          this._strengthMap.delete(hash(ingredient.itemCodeableConcept));
+        }
+      }
+    });
+  }
+
+  public strengthMapClear(ingredients: MedicationIngredient[]): void {
+    ingredients.forEach((ingredient: MedicationIngredient) => {
+      if (ingredient.itemCodeableConcept) {
+        const strengths = this._strengthMap.get(hash(ingredient.itemCodeableConcept));
+        if (strengths) {
+          strengths.length = 0;
+        }
+      }
+    });
+  }
+
+  public routeMapAdd(nDosage: number): void {
+    if (!this._routeMap.has(nDosage)) {
+      const routes = new Array<CodeableConcept>();
+      this._routeMap.set(nDosage, routes);
+    }
+    else {
+      this.routeMapClear(nDosage);
+    }
+  }
+
+  public routeMapAddCodeableConcept(nDosage: number, route: CodeableConcept): void {
+    let routes = this._routeMap.get(nDosage);
+    if (!routes) {
+      routes = new Array<CodeableConcept>();
+      this._routeMap.set(nDosage, routes);
+    }
+    routes.push(route);
+  }
+
+  public routeMapRemove(nDosage: number): void {
+    if (this._routeMap.has(nDosage)) {
+      this._routeMap.delete(nDosage);
+    }
+  }
+
+  public routeMapClear(nDosage: number): void {
+    const routes = this._routeMap.get(nDosage);
+    if (routes) {
+      routes.length = 0;
+    }
   }
 }

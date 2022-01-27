@@ -29,7 +29,7 @@
         <mat-autocomplete #autoDosage="matAutocomplete" [displayWith]="displayFnRatio.bind(this)">
           <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
           <ng-container *ngIf="!(isLoadingList$ | async)">
-            <mat-option *ngFor="let dosageRatio of strengthList(ingredientGroup.get('itemCodeableConcept').value.text);
+            <mat-option *ngFor="let dosageRatio of strengthList(ingredientGroup.get('itemCodeableConcept').value);
             trackBy: trackByRatio" [value]="dosageRatio">
               {{ dosageRatio | ratio }}
             </mat-option>
