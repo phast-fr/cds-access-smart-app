@@ -19,7 +19,7 @@
     ]
   },
   "angularCompilerOptions": {
-    "types" : ["node"],
+    "types" : ["node","jest"],
     "enableI18nLegacyMessageIdFormat": false
   }
 }
