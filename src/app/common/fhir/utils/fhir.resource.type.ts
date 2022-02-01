@@ -33,4 +33,5 @@ export enum ResourceType {
     MedicationRequest = 'MedicationRequest',
     MedicationKnowledge = 'MedicationKnowledge',
     Medication = 'Medication',
+    OperationOutcome = 'OperationOutcome'
 }

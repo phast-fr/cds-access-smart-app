@@ -37,6 +37,7 @@ import {TableElement} from '../../common/cds-access/models/core.model';
 import {FhirLabelProviderFactory} from '../../common/fhir/providers/fhir.label.provider.factory';
 import {FhirDataSourceService} from '../../common/fhir/services/fhir.data-source.service';
 import {MedicationRequest, OperationOutcome, Resource} from 'phast-fhir-ts';
+import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
 
 @Component({
   selector: 'app-medication-request-table',
@@ -103,12 +104,14 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
         case 'name':
           const provider = this._labelProviderFactory.getProvider(item.resource);
           if (provider) {
-            return provider.getText(item.resource);
+            const text = provider.getText(item.resource);
+            if (text) {
+              return text;
+            }
           }
-          break;
+          return 0;
         default:
-          // @ts-ignore
-          return item[property];
+          return 0;
       }
     };
     if (this.sort) {
@@ -194,7 +197,18 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
     forkJoin(observables)
       .subscribe({
         next: values => {
-          console.log('saved', values);
+          values.forEach(value => {
+            if (!value) {
+              console.error('error', 'undefined value');
+            }
+            else if (FhirTypeGuard.isMedicationRequest(value)) {
+              console.log('result', value);
+            }
+            else if (FhirTypeGuard.isOperationOutcome(value)) {
+              console.error('error', value);
+            }
+          });
+
           this._medicationRequestDataSource.data.length = 0;
           this._medicationRequestDataSource._updateChangeSubscription();
 

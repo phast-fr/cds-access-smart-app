@@ -31,7 +31,7 @@ import {
   Practitioner,
   MedicationRequest,
   MedicationKnowledge,
-  Medication
+  Medication, OperationOutcome
 } from 'phast-fhir-ts';
 import {ResourceType} from './fhir.resource.type';
 
@@ -86,6 +86,12 @@ export class FhirTypeGuard {
   }
 
   static isMedication(x: unknown | null): x is Medication {
+    return x != null
+        && (x as Medication).resourceType !== undefined
+        && (x as Medication).resourceType === ResourceType.Medication;
+  }
+
+  static isOperationOutcome(x: unknown | null): x is OperationOutcome {
     return x != null
         && (x as Medication).resourceType !== undefined
         && (x as Medication).resourceType === ResourceType.Medication;

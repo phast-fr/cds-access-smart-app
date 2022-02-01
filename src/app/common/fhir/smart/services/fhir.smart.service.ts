@@ -63,12 +63,22 @@ export class FhirSmartService {
   }
 
   public launch(context: string, iss: string, launch: string, redirectUri?: string): void {
+    if (!context) {
+      console.error('context cannot be undefined');
+      return;
+    }
+    if (context !== 'prescription' && context !== 'formulary'
+        && context !== 'dispense' && context !== 'cql-editor') {
+      console.error('context is not supported', context);
+      return;
+    }
     sessionStorage.clear();
     sessionStorage.setItem('context', context);
+    this.setBaseUrl(iss);
+    sessionStorage.setItem('launch', launch);
     if (redirectUri) {
       sessionStorage.setItem('redirect_uri', redirectUri);
     }
-    this.setBaseUrl(iss);
 
     const state = nanoid(16);
 
@@ -83,10 +93,8 @@ export class FhirSmartService {
         next: metadata => {
           let params = new HttpParams()
             .set('response_type', 'code')
-              // @ts-ignore
             .set('client_id', environment.client_id[context])
             .set('launch', launch)
-              // @ts-ignore
             .set('scope', environment.scope[context])
             .set('state', state)
             .set('aud', iss);
@@ -115,19 +123,21 @@ export class FhirSmartService {
           next: metadata => {
             const context = sessionStorage.getItem('context');
             if (context) {
-              let body = new HttpParams()
-                .set('grant_type', 'authorization_code')
-                  // @ts-ignore
-                .set('client_id', environment.client_id[context])
-                .set('code', code)
-                .set('state', state);
+              if (context === 'prescription' || context === 'formulary'
+                  || context === 'dispense' || context === 'cql-editor') {
+                let body = new HttpParams()
+                    .set('grant_type', 'authorization_code')
+                    .set('client_id', environment.client_id[context])
+                    .set('code', code)
+                    .set('state', state);
 
-              const redirectUri = sessionStorage.getItem('redirect_uri');
-              if (redirectUri) {
-                body = body.set('redirect_uri', redirectUri);
+                const redirectUri = sessionStorage.getItem('redirect_uri');
+                if (redirectUri) {
+                  body = body.set('redirect_uri', redirectUri);
+                }
+
+                this.doPostToken(metadata.tokenUrl.href, body.toString());
               }
-
-              this.doPostToken(metadata.tokenUrl.href, body.toString());
             }
           },
           error: err => console.error('error', err)
@@ -135,9 +145,13 @@ export class FhirSmartService {
     }
   }
 
+  public isSupportedRefreshToken(): boolean {
+    return !!sessionStorage.getItem('refresh_token');
+  }
+
   public refreshContext(): void {
     const refreshToken = sessionStorage.getItem('refresh_token');
-    if (refreshToken == null || refreshToken === '') { return; }
+    if (!refreshToken) { return; }
     const options = {
       headers: new HttpHeaders()
         .set('Accept', 'application/fhir+json,application/json')
@@ -150,11 +164,11 @@ export class FhirSmartService {
         .subscribe({
           next: metadata => {
             const context = sessionStorage.getItem('context');
-            if (context) {
+            if (context === 'prescription' || context === 'formulary'
+                || context === 'dispense' || context === 'cql-editor') {
               const body = new HttpParams()
                 .set('grant_type', 'refresh_token')
                 .set('refresh_token', refreshToken)
-                  // @ts-ignore
                 .set('scope', environment.scope[context]);
 
               this.doPostToken(metadata.tokenUrl.href, body.toString());
@@ -248,7 +262,12 @@ export class FhirSmartService {
 
   public loadContext(): void {
     if (this.isTokenExpired()) {
-      this.refreshContext();
+      if (this.isSupportedRefreshToken()) {
+        this.refreshContext();
+      }
+      else {
+        this.launch(sessionStorage['context'], sessionStorage['iss'], sessionStorage['launch'], sessionStorage['redirect_uri']);
+      }
     }
     else {
       const context = {} as SmartContext;
@@ -401,16 +420,16 @@ export class FhirSmartService {
   }
 
   private doPostToken(url: string, body: string): void {
-      this._http.post<SmartContext>(url, body, {
-        headers: new HttpHeaders()
-          .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
-          .set('Accept', 'application/json')
-      }).subscribe({
-        next: context => {
-          console.log('smart context', context);
-          this.saveContext(context);
-        },
-        error: err => console.error('error', err)
-      });
+    this._http.post<SmartContext>(url, body, {
+      headers: new HttpHeaders()
+        .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
+        .set('Accept', 'application/json')
+    }).subscribe({
+      next: context => {
+        console.log('smart context', context);
+        this.saveContext(context);
+      },
+      error: err => console.error('error', err)
+    });
   }
 }

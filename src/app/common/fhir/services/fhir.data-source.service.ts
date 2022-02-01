@@ -25,7 +25,7 @@
 import { Injectable } from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
 import {Observable, of, switchMap} from 'rxjs';
-import {filter, map} from 'rxjs/operators';
+import {catchError, filter, map} from 'rxjs/operators';
 
 import { FhirSmartService } from '../smart/services/fhir.smart.service';
 import {FhirClientService, Options} from './fhir.client.service';
@@ -269,12 +269,21 @@ export class FhirDataSourceService {
   public resourceSave(resource: Resource): Observable<OperationOutcome | Resource> | undefined {
     if (this._baseUrl) {
       return this._fhirClient.create<OperationOutcome | Resource>(
-        this._baseUrl,
-          {
+        this._baseUrl, {
             resourceType: resource.resourceType,
             input: resource
           },
           this._options
+      ).pipe(
+          catchError((err, caught) =>
+              of({
+                  issue: [{
+                      severity: err.severity,
+                      code: err.code,
+                      diagnostics: err.error()
+                  }]
+              } as OperationOutcome)
+          )
       );
     }
     return undefined;
