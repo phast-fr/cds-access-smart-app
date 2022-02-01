@@ -72,6 +72,10 @@ export class FhirSmartService {
       console.error('context is not supported', context);
       return;
     }
+    if (!environment.client_id[context]) {
+      console.error('client_id is not supported for context', context);
+      return;
+    }
     sessionStorage.clear();
     sessionStorage.setItem('context', context);
     this.setBaseUrl(iss);
