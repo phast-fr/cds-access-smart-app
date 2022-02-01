@@ -38,7 +38,7 @@ const setEnv = () => {
 // `environmentDev.ts` file structure
     const envConfigFile = `export const environment = {
   npm_package_version: '${appVersion}',
-  client_id: '${process.env.client_id}',
+  client_id: ${process.env.client_id},
   cio_dc_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',
   cio_dc_credential: '${process.env.cio_dc_credential}',
   tio_url: 'https://recette.phast.fr/resources-server_Atelier/api/FHIR',
