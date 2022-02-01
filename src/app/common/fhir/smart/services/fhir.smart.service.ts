@@ -72,7 +72,8 @@ export class FhirSmartService {
       console.error('context is not supported', context);
       return;
     }
-    if (!environment?.client_id[context]) {
+    if (environment.client_id.hasOwnProperty(context)
+        && !environment.client_id[context]) {
       console.error('client_id is not supported for context', context);
       return;
     }
