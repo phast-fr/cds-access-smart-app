@@ -72,11 +72,15 @@ export class FhirSmartService {
       console.error('context is not supported', context);
       return;
     }
-    if (environment?.client_id?.hasOwnProperty(context)
-        && !environment.client_id[context]) {
+    if (!environment.client_id) {
+      console.error('client_id is undefined');
+      return;
+    }
+    if (!environment.client_id[context]) {
       console.error('client_id is not supported for context', context);
       return;
     }
+    const clientId = environment.client_id[context];
     sessionStorage.clear();
     sessionStorage.setItem('context', context);
     this.setBaseUrl(iss);
@@ -98,7 +102,7 @@ export class FhirSmartService {
         next: metadata => {
           let params = new HttpParams()
             .set('response_type', 'code')
-            .set('client_id', environment.client_id[context])
+            .set('client_id', clientId)
             .set('launch', launch)
             .set('scope', environment.scope[context])
             .set('state', state)
@@ -115,6 +119,21 @@ export class FhirSmartService {
   }
 
   public retrieveContext(code: string, state: string): void {
+    const context = sessionStorage['context'];
+    if (typeof context !== 'string') {
+      console.error('context is not string type', context);
+      return;
+    }
+    if (context !== 'prescription' && context !== 'formulary'
+        && context !== 'dispense' && context !== 'cql-editor') {
+      console.error('context is not supported', context);
+      return;
+    }
+    if (!environment.client_id) {
+      console.error('client_id is undefined');
+      return;
+    }
+    const clientId = environment.client_id[context];
     const options = {
       headers: new HttpHeaders()
         .set('Accept', 'application/fhir+json,application/json')
@@ -126,23 +145,19 @@ export class FhirSmartService {
       this._fhirClient.smartAuthMetadata(baseUrl, options)
         .subscribe({
           next: metadata => {
-            const context = sessionStorage.getItem('context');
             if (context) {
-              if (context === 'prescription' || context === 'formulary'
-                  || context === 'dispense' || context === 'cql-editor') {
-                let body = new HttpParams()
-                    .set('grant_type', 'authorization_code')
-                    .set('client_id', environment.client_id[context])
-                    .set('code', code)
-                    .set('state', state);
+              let body = new HttpParams()
+                  .set('grant_type', 'authorization_code')
+                  .set('client_id', clientId)
+                  .set('code', code)
+                  .set('state', state);
 
-                const redirectUri = sessionStorage.getItem('redirect_uri');
-                if (redirectUri) {
-                  body = body.set('redirect_uri', redirectUri);
-                }
-
-                this.doPostToken(metadata.tokenUrl.href, body.toString());
+              const redirectUri = sessionStorage.getItem('redirect_uri');
+              if (redirectUri) {
+                body = body.set('redirect_uri', redirectUri);
               }
+
+              this.doPostToken(metadata.tokenUrl.href, body.toString());
             }
           },
           error: err => console.error('error', err)
