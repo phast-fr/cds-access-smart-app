@@ -1,6 +1,6 @@
-FROM nginx:1.21.5-alpine
+FROM nginx:1.21.6-alpine
 
-MAINTAINER David Ouagne <david.ouagne@gmail.com>
+MAINTAINER David Ouagne <david.ouagne@phast.fr>
 
 ENV TZ=Europe/Paris
 
