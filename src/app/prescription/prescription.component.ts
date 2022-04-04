@@ -25,7 +25,7 @@
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {BehaviorSubject, Observable} from 'rxjs';
-import {filter, map, takeUntil, tap} from 'rxjs/operators';
+import {filter, map, takeUntil} from 'rxjs/operators';
 
 import {StateService} from '../common/cds-access/services/state.service';
 import {FhirSmartService} from '../common/fhir/smart/services/fhir.smart.service';
@@ -49,10 +49,12 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
 
   private readonly _cards: Array<CardReadable>;
 
-  constructor(route: ActivatedRoute,
-              smartService: FhirSmartService,
-              private _stateService: StateService,
-              private _prescriptionState: PrescriptionStateService) {
+  constructor(
+      route: ActivatedRoute,
+      smartService: FhirSmartService,
+      private _stateService: StateService,
+      private _prescriptionState: PrescriptionStateService
+  ) {
     super(route, smartService);
     this._loading$ = new BehaviorSubject<boolean>(true);
     this._needBanner$ = new BehaviorSubject<boolean>(false);

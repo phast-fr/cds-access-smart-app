@@ -43,7 +43,9 @@ import {
 })
 export class PersonNamePipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(person: Patient | Practitioner): string | undefined {
@@ -56,7 +58,9 @@ export class PersonNamePipe implements PipeTransform {
 })
 export class MedicationRequestPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(medicationRequest: MedicationRequest): string | undefined {
@@ -69,7 +73,9 @@ export class MedicationRequestPipe implements PipeTransform {
 })
 export class MedicationKnowledgePipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(medicationKnowledge: MedicationKnowledge): string | undefined {
@@ -82,7 +88,9 @@ export class MedicationKnowledgePipe implements PipeTransform {
 })
 export class MedicationPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(medication: Medication): string | undefined {
@@ -95,7 +103,9 @@ export class MedicationPipe implements PipeTransform {
 })
 export class CompositionPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(composition: Composition): string | undefined {
@@ -108,7 +118,9 @@ export class CompositionPipe implements PipeTransform {
 })
 export class SnomedPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(medication: Medication): string | undefined {
@@ -122,7 +134,9 @@ export class SnomedPipe implements PipeTransform {
 })
 export class CodeableConceptPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(codeableConcept: CodeableConcept): string | undefined {
@@ -135,7 +149,9 @@ export class CodeableConceptPipe implements PipeTransform {
 })
 export class QuantityPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(quantity: Quantity): string | undefined {
@@ -148,7 +164,9 @@ export class QuantityPipe implements PipeTransform {
 })
 export class RatioPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(ratio: Ratio): string | undefined {
@@ -161,7 +179,9 @@ export class RatioPipe implements PipeTransform {
 })
 export class ReferencePipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(reference: Reference): string | undefined {
@@ -174,7 +194,9 @@ export class ReferencePipe implements PipeTransform {
 })
 export class CodingPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(coding: Coding): string | undefined {
@@ -187,7 +209,9 @@ export class CodingPipe implements PipeTransform {
 })
 export class ValueSetContainsPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(valueSetContains: ValueSetContains): string | undefined {
@@ -200,7 +224,9 @@ export class ValueSetContainsPipe implements PipeTransform {
 })
 export class LibraryPipe implements PipeTransform {
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory) {
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory
+  ) {
   }
 
   public transform(library: Library): string | undefined {

@@ -68,9 +68,11 @@ export class FormularyTableComponent implements OnInit, OnDestroy  {
   @ViewChild('inputFilter')
   inputFilter?: ElementRef;
 
-  constructor(private _formularyState: FormularyStateService,
-              private _dataSource: FhirDataSourceService,
-              private _cioDcSource: PhastCioDcService) {
+  constructor(
+      private _formularyState: FormularyStateService,
+      private _dataSource: FhirDataSourceService,
+      private _cioDcSource: PhastCioDcService
+  ) {
     this._unsubscribeTrigger$ = new Subject<void>();
     this._tableDataSource = new MedicationKnowledgeDataSource(this._cioDcSource);
     this._selection = new SelectionModel<id>(true);
