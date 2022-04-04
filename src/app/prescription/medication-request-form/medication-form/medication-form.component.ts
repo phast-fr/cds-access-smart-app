@@ -34,8 +34,7 @@ import {
   Coding,
   Medication,
   MedicationIngredient, Quantity,
-  Ratio,
-  Reference
+  Ratio
 } from 'phast-fhir-ts';
 
 import {IRender} from '../../../common/cds-access/models/state.model';
@@ -49,8 +48,8 @@ import {
   MedicationFormIntentValueChangesMedicationIngredientStrengthValue
 } from '../medication-request-form.intent';
 import {MedicationRequestFormState} from '../medication-request-form.state';
-import {Utils} from '../../../common/cds-access/utils/utils';
 import {FhirLabelProviderFactory} from '../../../common/fhir/providers/fhir.label.provider.factory';
+import {FhirTypeGuard} from '../../../common/fhir/utils/fhir.type.guard';
 
 @Component({
   selector: 'app-medication-form',
@@ -86,9 +85,9 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return this._viewModel.isLoadingCIOList$;
   }
 
-  public get amountList(): Array<Quantity> {
-    if (this._viewModel.amountMap && this._viewModel.medication?.code) {
-      const array = this._viewModel.amountMap.get(hash(this._viewModel.medication.code));
+  public amountList(medicationCode: CodeableConcept): Array<Quantity> {
+    if (this._viewModel.amountMap) {
+      const array = this._viewModel.amountMap.get(hash(medicationCode));
       if (array) {
         return array;
       }
@@ -96,9 +95,9 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return new Array<Quantity>();
   }
 
-  public get formList(): Array<CodeableConcept> {
-    if (this._viewModel.formMap && this._viewModel.medication?.code) {
-      const array = this._viewModel.formMap.get(hash(this._viewModel.medication.code));
+  public formList(medicationCode: CodeableConcept): Array<CodeableConcept> {
+    if (this._viewModel.formMap) {
+      const array = this._viewModel.formMap.get(hash(medicationCode));
       if (array) {
         return array;
       }
@@ -146,20 +145,24 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
   public render(state: MedicationRequestFormState): void {
     switch (state.type) {
       case 'AddMedication':
-        if (state.medicationRequest?.contained) {
-          this._medicationGroup$.next(
-              this.addMedication(0, state.medicationRequest.contained[0])
-          );
-        }
+        this._medicationGroup$.next(
+            this.addMedication(
+                0,
+                state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+                    .map(entry => entry.resource as Medication)[0]
+            )
+        );
         break;
       case 'RemoveMedication':
         this._medicationGroup$.next(false);
         break;
       case 'ValueChangesMedication':
       case 'ValueChangesDosageInstruction':
-        if (state.medicationRequest?.contained) {
-          this.updateMedication(0, state.medicationRequest.contained[0]);
-        }
+        this.updateMedication(
+            0,
+            state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+                .map(entry => entry.resource as Medication)[0]
+        );
         break;
       case 'AddMedicationRequest':
         this._medicationGroup$.next(false);
@@ -203,60 +206,63 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
     return ac.get('track-id')?.value;
   }
 
-  public doseAndRateUnitList(reference: Reference): Array<Coding> {
-    if (this._viewModel.doseAndRateUnitMap && reference.reference) {
-      const map = this._viewModel.doseAndRateUnitMap.get(reference.reference.substring(1));
-      if (map) {
-        const input = Array.from(map.values());
-        const comparator = (a: Coding, b: Coding) => {
-          return a.code === b.code && a.system === b.system;
-        };
-        return Utils.intersect<Coding>(input[0], input, comparator);
-      }
+  // TODO explore this for medication compound
+  /*public get unitArray(): Array<Coding> {
+    if (this._viewModel.doseUnitMap) {
+      return this._viewModel.doseUnitMap;
     }
     return new Array<Coding>();
-  }
+  }*/
 
   public onRemoveMedication(nMedication: number): void {
-    if (this._viewModel.medicationRequest) {
+    if (this._viewModel.bundle) {
       this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveMedication(this._viewModel.medicationRequest, nMedication)
+        new MedicationFormIntentRemoveMedication(this._viewModel.bundle, nMedication)
       );
     }
   }
 
   public onRemoveIngredient(nIngredient: number): void {
-    if (this._viewModel.medicationRequest) {
+    if (this._viewModel.bundle) {
       this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveIngredient(this._viewModel.medicationRequest, nIngredient)
+        new MedicationFormIntentRemoveIngredient(this._viewModel.bundle, nIngredient)
       );
     }
   }
 
-  private addMedication(nMedication: number, medication: Medication): FormGroup {
-    const medicationGroup = this._fb.group({
-      'track-id': nanoid(16),
-      medication: [medication],
-      ingredient: this._fb.array([]),
-      amount: [medication.amount],
-      form: [medication.form]
-    });
-    this.setUpAmount(medication, medicationGroup);
-    this.setUpForm(medication, medicationGroup);
-    this.setUpList();
-
-    if (medication.ingredient) {
-      const ingredientArray = medicationGroup.get('ingredient') as FormArray;
-      medication.ingredient.forEach(ingredient => {
-        if (ingredient.itemCodeableConcept) {
-          ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
-        }
-        else if (ingredient.itemReference) {
-          ingredientArray.push(this.addIngredientReference(medication, ingredient));
-        }
+  private addMedication(nMedication: number, medication: Medication | undefined): FormGroup {
+    if (medication) {
+      const medicationGroup = this._fb.group({
+        'track-id': nanoid(16),
+        medication: [medication],
+        ingredient: this._fb.array([]),
+        amount: [medication.amount],
+        form: [medication.form]
       });
+      this.setUpAmount(medication, medicationGroup);
+      this.setUpForm(medication, medicationGroup);
+      this.setUpList();
+
+      if (medication.ingredient) {
+        const ingredientArray = medicationGroup.get('ingredient') as FormArray;
+        medication.ingredient.forEach(ingredient => {
+          if (ingredient.itemCodeableConcept) {
+            ingredientArray.push(this.addIngredientCodeableConcept(nMedication, medication, ingredient));
+          }
+          else if (ingredient.itemReference) {
+            ingredientArray.push(this.addIngredientReference(medication, ingredient));
+          }
+        });
+      }
+      return medicationGroup;
     }
-    return medicationGroup;
+    return this._fb.group({
+      'track-id': nanoid(16),
+      medication: [undefined],
+      ingredient: this._fb.array([]),
+      amount: [undefined],
+      form: [undefined]
+    });
   }
 
   private setUpAmount(medication: Medication, medicationGroup: FormGroup): void {
@@ -278,10 +284,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         )
         .subscribe({
           next: () => {
-            if (this._viewModel.medicationRequest) {
+            if (this._viewModel.bundle) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationAmount(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   null
                 )
@@ -296,10 +302,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         )
         .subscribe({
           next: value => {
-            if (this._viewModel.medicationRequest) {
+            if (this._viewModel.bundle) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationAmount(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   value
                 )
@@ -330,10 +336,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         )
         .subscribe({
           next: () => {
-            if (this._viewModel.medicationRequest) {
+            if (this._viewModel.bundle) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationForm(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   null
                 )
@@ -348,10 +354,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         )
         .subscribe({
           next: value => {
-            if (this._viewModel.medicationRequest) {
+            if (this._viewModel.bundle) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationForm(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   value
                 )
@@ -380,7 +386,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
 
   }
 
-  private updateMedication(_: number, medication: Medication): FormGroup | boolean {
+  private updateMedication(_: number, medication: Medication | undefined): FormGroup | boolean {
     if (this._medicationGroup$.value) {
       const options = {emitEvent: false};
       const medicationGroup = this._medicationGroup$.value as FormGroup;
@@ -404,7 +410,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         }
       }
 
-      if (medication.ingredient) {
+      if (medication && medication.ingredient) {
         const ingredientArray = medicationGroup.get('ingredient') as FormArray;
         medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
           if (ingredient.itemCodeableConcept) {
@@ -460,10 +466,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         .subscribe({
           next: () => {
             const itemCodeableConceptControl = ingredientGroup.get('itemCodeableConcept');
-            if (this._viewModel.medicationRequest && itemCodeableConceptControl) {
+            if (this._viewModel.bundle && itemCodeableConceptControl) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationIngredientStrength(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   itemCodeableConceptControl.value,
                   null
@@ -480,10 +486,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         .subscribe({
           next: value => {
             const itemCodeableConceptControl = ingredientGroup.get('itemCodeableConcept');
-            if (this._viewModel.medicationRequest && itemCodeableConceptControl) {
+            if (this._viewModel.bundle && itemCodeableConceptControl) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationIngredientStrength(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   itemCodeableConceptControl.value,
                   value
@@ -525,10 +531,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         .subscribe({
           next: strengthValue => {
             const itemReferenceControl = ingredientGroup.get('itemReference');
-            if (this._viewModel.medicationRequest && itemReferenceControl) {
+            if (this._viewModel.bundle && itemReferenceControl) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationIngredientStrengthValue(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   itemReferenceControl.value,
                   strengthValue
@@ -558,10 +564,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         .subscribe({
           next: () => {
             const itemReferenceControl = ingredientGroup.get('itemReference');
-            if (this._viewModel.medicationRequest && itemReferenceControl) {
+            if (this._viewModel.bundle && itemReferenceControl) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   itemReferenceControl.value,
                   null
@@ -578,10 +584,10 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
         .subscribe({
           next: strengthUnit => {
             const itemReferenceControl = ingredientGroup.get('itemReference');
-            if (this._viewModel.medicationRequest && itemReferenceControl) {
+            if (this._viewModel.bundle && itemReferenceControl) {
               this._viewModel.dispatchIntent(
                 new MedicationFormIntentValueChangesMedicationIngredientStrengthUnit(
-                  this._viewModel.medicationRequest,
+                  this._viewModel.bundle,
                   medication,
                   itemReferenceControl.value,
                   strengthUnit
@@ -603,8 +609,7 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       if (formControl) {
         if (this.formList.length === 0) {
           formControl.disable(options);
-        }
-        else {
+        } else {
           formControl.enable(options);
         }
       }
@@ -613,28 +618,25 @@ export class MedicationFormComponent implements OnInit, OnDestroy, IRender<Medic
       if (amountControl) {
         if (this.amountList.length === 0) {
           amountControl.disable(options);
-        }
-        else {
+        } else {
           amountControl.enable(options);
         }
       }
 
-      if (this._viewModel.medicationRequest?.contained) {
-        const ingredientFormArray = medicationGroup.get('ingredient') as FormArray;
-        this._viewModel.medicationRequest.contained.forEach((value) => {
-          const medication = value as Medication;
-          if (medication.ingredient) {
-            medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
-              if (ingredient.itemCodeableConcept && this.strengthList(ingredient.itemCodeableConcept).length === 0) {
-                ingredientFormArray.at(nIngredient).disable(options);
-              }
-              else if (ingredient.itemCodeableConcept) {
-                ingredientFormArray.at(nIngredient).enable(options);
-              }
-            });
-          }
-        });
-      }
+      const ingredientFormArray = medicationGroup.get('ingredient') as FormArray;
+      this._viewModel.bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+          .map(entry => entry.resource as Medication)
+          .forEach(medication => {
+            if (medication.ingredient) {
+              medication.ingredient.forEach((ingredient: MedicationIngredient, nIngredient: number) => {
+                if (ingredient.itemCodeableConcept && this.strengthList(ingredient.itemCodeableConcept).length === 0) {
+                  ingredientFormArray.at(nIngredient).disable(options);
+                } else if (ingredient.itemCodeableConcept) {
+                  ingredientFormArray.at(nIngredient).enable(options);
+                }
+              });
+            }
+          });
     }
   }
 }

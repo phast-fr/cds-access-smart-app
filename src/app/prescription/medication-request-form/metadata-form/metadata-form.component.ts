@@ -35,6 +35,7 @@ import {
   MedicationFormIntentValueChangesTreatmentIntent
 } from '../medication-request-form.intent';
 import {code, CodeableConcept, MedicationRequest, ValueSetContains} from 'phast-fhir-ts';
+import {FhirTypeGuard} from '../../../common/fhir/utils/fhir.type.guard';
 
 @Component({
   selector: 'app-metadata-form',
@@ -48,9 +49,11 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
 
   private readonly _metadataGroup$: BehaviorSubject<FormGroup | boolean>;
 
-  constructor(private _fb: FormBuilder,
-              private _labelProviderFactory: FhirLabelProviderFactory,
-              private _viewModel: MedicationRequestFormViewModel) {
+  constructor(
+      private _fb: FormBuilder,
+      private _labelProviderFactory: FhirLabelProviderFactory,
+      private _viewModel: MedicationRequestFormViewModel
+  ) {
     this._unsubscribeTrigger$ = new Subject<void>();
     this._metadataGroup$ = new BehaviorSubject<FormGroup | boolean>(false);
   }
@@ -94,16 +97,19 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
   }
 
   public render(state: MedicationRequestFormState): void {
+    const medicationRequest = state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+        .map(entry => entry.resource as MedicationRequest)
+        .reduce((_, current: MedicationRequest) => current);
     switch (state.type) {
       case 'AddMedication':
-        if (state.medicationRequest) {
+        if (medicationRequest) {
           this._metadataGroup$.next(
-            this.addMedication(state.medicationRequest)
+            this.addMedication(medicationRequest)
           );
         }
         break;
       case 'RemoveMedication':
-        if (state.medicationRequest && this.metadataGroup) {
+        if (medicationRequest && this.metadataGroup) {
           this._metadataGroup$.next(this.metadataGroup);
         }
         else {
@@ -177,10 +183,10 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
           )
           .subscribe({
             next: value => {
-              if (this._viewModel.medicationRequest) {
+              if (this._viewModel.bundle) {
                 this._viewModel.dispatchIntent(
                   new MedicationFormIntentValueChangesTreatmentIntent(
-                    this._viewModel.medicationRequest,
+                    this._viewModel.bundle,
                     value
                   )
                 );
@@ -196,10 +202,10 @@ export class MetadataFormComponent implements OnInit, OnDestroy, IRender<Medicat
           )
           .subscribe({
             next: () => {
-              if (this._viewModel.medicationRequest) {
+              if (this._viewModel.bundle) {
                 this._viewModel.dispatchIntent(
                   new MedicationFormIntentValueChangesTreatmentIntent(
-                    this._viewModel.medicationRequest,
+                    this._viewModel.bundle,
                     null
                   )
                 );

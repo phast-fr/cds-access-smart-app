@@ -5,7 +5,7 @@
   </mat-form-field>
 </div>
 <div fxLayout="row">
-  <mat-table matSort fxFlex="100%" [dataSource]="medicationRequestDataSource">
+  <mat-table matSort fxFlex="100%" [dataSource]="bundleDataSource">
 
     <!-- Checkbox Column -->
     <ng-container matColumnDef="select">
@@ -28,14 +28,14 @@
 
     <!-- Position Column -->
     <ng-container matColumnDef="position">
-      <mat-header-cell mat-sort-header fxFlex="15%" *matHeaderCellDef> No. </mat-header-cell>
-      <mat-cell fxFlex="15%" *matCellDef="let element"> {{element.position}} </mat-cell>
+      <mat-header-cell mat-sort-header="position" fxFlex="15%" *matHeaderCellDef> No. </mat-header-cell>
+      <mat-cell fxFlex="15%" *matCellDef="let element"> {{ element.position }} </mat-cell>
     </ng-container>
 
     <!-- Name Column -->
     <ng-container matColumnDef="name">
-      <mat-header-cell mat-sort-header *matHeaderCellDef> Libellé </mat-header-cell>
-      <mat-cell *matCellDef="let element"> {{toTableElement(element).resource | medicationRequest}} </mat-cell>
+      <mat-header-cell mat-sort-header="name" *matHeaderCellDef> Libellé </mat-header-cell>
+      <mat-cell *matCellDef="let element"> {{ toTableElement(element).resource | medicationRequest }} </mat-cell>
     </ng-container>
 
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
@@ -48,5 +48,5 @@
 <button mat-raised-button color="primary" [disabled]="saving$ | async" (click)="onSave()"> Enregister </button>
 
 <mat-menu #actionMenu="matMenu">
-  <button mat-menu-item (click)="onDeleteMedicationRequest()"> Supprimer </button>
+  <button mat-menu-item (click)="onDelete()"> Supprimer </button>
 </mat-menu>

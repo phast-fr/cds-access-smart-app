@@ -35,6 +35,7 @@ import {
 
 import {FhirClientService, Options} from '../../fhir/services/fhir.client.service';
 import {environment} from '../../../../environments/environment';
+import {FhirTypeGuard} from '../../fhir/utils/fhir.type.guard';
 
 /**
  * @ngModule CdsAccessModule
@@ -116,19 +117,27 @@ export class PhastCioDcService {
   }
 
   postMedicationKnowledgeLookup(
-    medicationRequest: MedicationRequest | undefined
+    bundle: Bundle | undefined
   ): Observable<Parameters> {
-    const input = new MedicationKnowledgeLookupBuilder()
-        .withMedicationRequest(medicationRequest)
-        .build();
+      const medicationRequest = bundle?.entry?.filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+          .map(entry => entry.resource as MedicationRequest)
+          .reduce((_, current) => current);
 
-    return this._fhirClient.operation<Parameters>(
+      const inputBuilder = new MedicationKnowledgeLookupBuilder()
+          .withMedicationRequest(
+              medicationRequest
+          );
+      bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+          .map(entry => entry.resource as Medication)
+          .forEach(medication => inputBuilder.withMedication(medication));
+
+      return this._fhirClient.operation<Parameters>(
         environment.cio_dc_url,
         {
           name: '$lookup2?',
           resourceType: 'MedicationKnowledge',
           method: 'post',
-          input
+          input: inputBuilder.build()
         },
         this._options
     );
@@ -195,7 +204,10 @@ export class PhastCioDcService {
 }
 
 export class MedicationKnowledgeLookupBuilder {
+
   private readonly _parameters: Parameters;
+
+  private readonly _part: ParametersParameter[];
 
   constructor() {
     this._parameters = {
@@ -207,70 +219,71 @@ export class MedicationKnowledgeLookupBuilder {
         }
       ),
     };
+    this._part = [];
   }
 
   public withMedicationRequest(medicationRequest: MedicationRequest | undefined): this {
-      const part: ParametersParameter[] = [];
       medicationRequest?.dosageInstruction?.forEach(((dosage: Dosage, indexDosage: number) => {
-          part.push({
+          this._part.push({
               name: 'identifier',
               valueString: `MedicationRequest.dosageInstruction[${indexDosage}]`
           });
 
-          if (dosage.route !== undefined) {
-              part.push({
+          if (dosage.route) {
+              this._part.push({
                   name: 'Route',
                   valueCodeableConcept: dosage.route
               });
           }
-
-          medicationRequest?.contained?.forEach((medication: Medication) => {
-              const medPart = {
-                  name: 'medication',
-                  part: [
-                      {
-                          name: 'code',
-                          valueCodeableConcept: medication.code
-                      }
-                  ] as ParametersParameter[]
-              } as ParametersParameter;
-
-              if (medication.form) {
-                  medPart.part?.push({
-                      name: 'form',
-                      valueCodeableConcept: medication.form
-                  });
-              }
-              if (medication.amount) {
-                  medPart.part?.push({
-                      name: 'amount',
-                      valueRatio: medication.amount
-                  });
-              }
-              if (medication.ingredient) {
-                  medPart.part?.push({
-                      name: 'ingredient',
-                      part: medication.ingredient?.map((ingredient: MedicationIngredient) => {
-                          return {
-                              name: 'item',
-                              valueCodeableConcept: ingredient.itemCodeableConcept
-                          } as ParametersParameter;
-                      })
-                  });
-              }
-              part.push(medPart);
-          });
       }));
-      this._parameters.parameter?.push(
-          {
-            name: 'item',
-            part
-          }
-      );
       return this;
   }
 
-  public build(): object {
-    return this._parameters;
+  public withMedication(medication: Medication): this {
+      const medPart = {
+          name: 'medication',
+          part: [
+              {
+                  name: 'code',
+                  valueCodeableConcept: medication.code
+              }
+          ] as ParametersParameter[]
+      } as ParametersParameter;
+
+      if (medication.form) {
+          medPart.part?.push({
+              name: 'form',
+              valueCodeableConcept: medication.form
+          });
+      }
+      if (medication.amount) {
+          medPart.part?.push({
+              name: 'amount',
+              valueRatio: medication.amount
+          });
+      }
+      if (medication.ingredient) {
+          medPart.part?.push({
+              name: 'ingredient',
+              part: medication.ingredient?.map((ingredient: MedicationIngredient) => {
+                  return {
+                      name: 'item',
+                      valueCodeableConcept: ingredient.itemCodeableConcept
+                  } as ParametersParameter;
+              })
+          });
+      }
+      this._part.push(medPart);
+      return this;
+  }
+
+  public build(): Parameters {
+      this._parameters.parameter?.push(
+          {
+              name: 'item',
+              part: this._part
+          }
+      );
+      return this._parameters;
   }
 }

@@ -36,8 +36,8 @@
   <app-medication-form></app-medication-form>
   <app-metadata-form></app-metadata-form>
   <app-dosage-instruction-form></app-dosage-instruction-form>
-  <div class="form-field-row form-control" *ngIf="medicationRequest != null">
-    <button mat-raised-button color="primary" (click)="onAddMedicationRequest()"
+  <div class="form-field-row form-control" *ngIf="bundle != null">
+    <button mat-raised-button color="primary" (click)="onAddBundle()"
              [disabled]="!(isMedicationRequestAddable$ | async)"> Ajouter </button>
     <button mat-raised-button color="secondary" (click)="onCDSHelp()"
             [disabled]="(onCDSHelp$ | async)"> Aide (CDS) </button>

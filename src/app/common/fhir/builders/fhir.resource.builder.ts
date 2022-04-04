@@ -31,20 +31,23 @@ import {
   MedicationRequestIntent,
   MedicationRequestStatus, Period, positiveInt, Quantity, Ratio,
   Reference,
-  Resource, time, Timing, TimingRepeat, UnitsOfTime, unsignedInt, uri, ValueSetContains
+  time, Timing, TimingRepeat, UnitsOfTime, unsignedInt, uri, ValueSetContains
 } from 'phast-fhir-ts';
-import {EventTiming} from 'phast-fhir-ts/lib/hl7/r4/fhir';
+import {canonical, EventTiming} from 'phast-fhir-ts/lib/hl7/r4/fhir';
 
 export class MedicationRequestBuilder {
 
-  private readonly _resource: MedicationRequest;
+  private readonly _medicationRequest: MedicationRequest;
 
-  constructor(status: MedicationRequestStatus,
-              intent: MedicationRequestIntent,
-              subject: Reference) {
-    this._resource = {
+  constructor(
+      theId: id,
+      status: MedicationRequestStatus,
+      intent: MedicationRequestIntent,
+      subject: Reference
+  ) {
+    this._medicationRequest = {
       resourceType: 'MedicationRequest',
-      contained: new Array<Resource>(),
+      id: theId,
       status,
       intent,
       subject
@@ -53,20 +56,20 @@ export class MedicationRequestBuilder {
 
   public intent(intent: MedicationRequestIntent): this {
     if (intent) {
-      this._resource.intent = intent;
+      this._medicationRequest.intent = intent;
     }
     return this;
   }
 
   public subject(subject: Reference): this {
     if (subject) {
-      this._resource.subject = subject;
+      this._medicationRequest.subject = subject;
     }
     return this;
   }
 
   public build(): MedicationRequest {
-    return this._resource;
+    return this._medicationRequest;
   }
 }
 
@@ -79,6 +82,13 @@ export class MedicationBuilder {
       resourceType: 'Medication',
       id: medicationId
     } as Medication;
+  }
+
+  public profile(profile: canonical): this {
+    this._medication.meta = {
+      profile: [profile]
+    };
+    return this;
   }
 
   public code(medicationCode: CodeableConcept | undefined): this {

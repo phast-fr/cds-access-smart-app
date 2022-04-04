@@ -24,6 +24,7 @@
 
 import {ILabelProvider, ITermLabelProvider} from '../../cds-access/models/core.model';
 import {
+  Bundle,
   CodeableConcept,
   Coding,
   Composition, Library,
@@ -40,7 +41,7 @@ export class NamedResourceLabelProvider implements ILabelProvider<Patient | Prac
   constructor() {
   }
 
-  getText(namedResource: Patient | Practitioner | undefined | null): string | undefined {
+  public getText(namedResource: Patient | Practitioner | undefined | null): string | undefined {
     if (namedResource?.name) {
       if (namedResource.name.length > 0) {
         const name = namedResource.name[0];
@@ -61,7 +62,7 @@ export class MedicationKnowledgeLabelProvider implements ILabelProvider<Medicati
   constructor() {
   }
 
-  getText(medicationKnowledge: MedicationKnowledge | undefined | null): string | undefined {
+  public getText(medicationKnowledge: MedicationKnowledge | undefined | null): string | undefined {
     if (medicationKnowledge) {
       if (medicationKnowledge.code) {
         const codeableConcept = medicationKnowledge.code;
@@ -74,38 +75,29 @@ export class MedicationKnowledgeLabelProvider implements ILabelProvider<Medicati
 
 export class MedicationRequestLabelProvider implements ILabelProvider<MedicationRequest> {
 
-  constructor(private _factory: FhirLabelProviderFactory) {
+  constructor() {
   }
 
-  getText(medicationRequest: MedicationRequest | undefined | null): string | undefined {
-    let labelComposed: string | undefined;
-    if (medicationRequest?.medicationReference?.reference) {
-      const medicationId = medicationRequest.medicationReference.reference.substring(1);
-      if (medicationRequest.contained) {
-        const medication = medicationRequest.contained.find(value => value.id === medicationId);
-        const labelProvider = this._factory.getProvider(medication);
-        if (labelProvider) {
-          labelComposed = labelProvider.getText(medication);
-        }
-      }
-    }
+  public getText(medicationRequest: MedicationRequest | undefined | null): string | undefined {
     if (medicationRequest?.dosageInstruction
       && medicationRequest?.dosageInstruction.length > 0
       && medicationRequest?.dosageInstruction[0].route != null) {
-      labelComposed += ' ' + medicationRequest.dosageInstruction[0].route.text;
+      return medicationRequest.dosageInstruction[0].route.text;
     }
-    return labelComposed;
+    return '';
   }
 }
 
 export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
 
-  constructor(private _factory: FhirLabelProviderFactory) {
+  constructor(
+      private _factory: FhirLabelProviderFactory
+  ) {
   }
 
-  getText(medication: Medication | undefined | null): string | undefined {
-    if (medication?.code?.text) {
-      return medication.code.text;
+  public getText(medication: Medication | undefined | null): string | undefined {
+    if (medication?.code) {
+      return this._factory.getProvider('fhir.CodeableConcept')?.getText(medication.code);
     }
     return undefined;
     /*
@@ -165,7 +157,7 @@ export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
     */
   }
 
-  getTerm(medication: Medication | undefined | null, system: string): string | undefined {
+  public getTerm(medication: Medication | undefined | null, system: string): string | undefined {
     let labelComposed = this.getText(medication);
     if (medication?.code?.coding) {
       const x = medication.code.coding.find(e => e.system === system);
@@ -179,9 +171,10 @@ export class MedicationLabelProvider implements ITermLabelProvider<Medication> {
 
 export class CompositionLabelProvider implements ILabelProvider<Composition> {
 
-  constructor() {}
+  constructor() {
+  }
 
-  getText(composition: Composition | undefined | null): string | undefined {
+  public getText(composition: Composition | undefined | null): string | undefined {
     if (!composition) { return undefined; }
     return composition.title;
   }
@@ -192,7 +185,7 @@ export class CodeableConceptLabelProvider implements ILabelProvider<CodeableConc
   constructor() {
   }
 
-  getText(codeableConcept: CodeableConcept | undefined | null): string | undefined {
+  public getText(codeableConcept: CodeableConcept | undefined | null): string | undefined {
     if (!codeableConcept) { return undefined; }
     return codeableConcept.text;
   }
@@ -203,7 +196,7 @@ export class CodingLabelProvider implements ILabelProvider<Coding> {
   constructor() {
   }
 
-  getText(coding: Coding | undefined | null): string | undefined {
+  public getText(coding: Coding | undefined | null): string | undefined {
     if (!coding) { return undefined; }
     return coding.display;
   }
@@ -214,7 +207,7 @@ export class QuantityLabelProvider implements ILabelProvider<Quantity> {
   constructor() {
   }
 
-  getText(quantity: Quantity | undefined | null): string | undefined {
+  public getText(quantity: Quantity | undefined | null): string | undefined {
     if (!quantity) { return undefined; }
     return `${quantity.value?.toString()} ${quantity.unit}`;
   }
@@ -225,7 +218,7 @@ export class RatioLabelProvider implements ILabelProvider<Ratio> {
   constructor() {
   }
 
-  getText(ratio: Ratio | undefined | null): string | undefined {
+  public getText(ratio: Ratio | undefined | null): string | undefined {
     if (!ratio) { return undefined; }
     const labelComposite = new Array<string>();
     if (ratio.numerator) {
@@ -254,7 +247,7 @@ export class ReferenceLabelProvider implements ILabelProvider<Reference> {
   constructor() {
   }
 
-  getText(reference: Reference | undefined | null): string | undefined {
+  public getText(reference: Reference | undefined | null): string | undefined {
     if (!reference) { return undefined; }
     if (reference.display) {
       return reference.display;
@@ -268,7 +261,7 @@ export class ParametersParameterLabelProvider implements ILabelProvider<Paramete
   constructor() {
   }
 
-  getText(parametersParameter: ParametersParameter | undefined | null): string | undefined {
+  public getText(parametersParameter: ParametersParameter | undefined | null): string | undefined {
     if (!parametersParameter?.part) { return undefined; }
     const pp = parametersParameter.part.find((e => e.name === 'reference'));
     // console.log(pp);
@@ -286,21 +279,7 @@ export class ValueSetContainsLabelProvider implements ILabelProvider<ValueSetCon
 
   public getText(valueSetContains: ValueSetContains | undefined | null): string | undefined {
     if (! valueSetContains) { return undefined; }
-    let display: string | undefined;
-    switch (valueSetContains.code) {
-      case 'a':
-        display = 'année';
-        break;
-      case '':
-        break;
-      case 'd':
-        display = 'jour';
-        break;
-      default:
-        display = valueSetContains.display;
-        break;
-    }
-    return display;
+    return valueSetContains.display;
   }
 }
 
@@ -312,5 +291,22 @@ export class LibraryLabelProvider {
   public getText(library: Library | undefined | null): string | undefined {
     if (! library) { return undefined; }
     return library.title + ' v' + library.version;
+  }
+}
+
+export class BundleLabelProvider implements ILabelProvider<Bundle> {
+
+  constructor(
+      private _factory: FhirLabelProviderFactory
+  ) {
+  }
+
+  public getText(bundle: Bundle | undefined | null): string | undefined {
+    if (bundle?.entry
+        && bundle?.entry?.length > 1) {
+      const medication = bundle?.entry[1].resource as Medication;
+      const medicationRequest = bundle?.entry[0].resource as MedicationRequest;
+      return `${this._factory.getProvider(medication)?.getText(medication)} ${this._factory.getProvider(medicationRequest)?.getText(medicationRequest)}`;
+    }
   }
 }

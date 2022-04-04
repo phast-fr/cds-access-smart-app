@@ -24,15 +24,14 @@
 
 import { Injectable } from '@angular/core';
 import {HttpHeaders} from '@angular/common/http';
-import {Observable, of, switchMap} from 'rxjs';
+import {find, forkJoin, Observable, of, switchMap} from 'rxjs';
 import {catchError, filter, map} from 'rxjs/operators';
 
 import { FhirSmartService } from '../smart/services/fhir.smart.service';
 import {FhirClientService, Options} from './fhir.client.service';
 import {Bundle, Composition, id, MedicationRequest, OperationOutcome, Patient, Practitioner, Resource} from 'phast-fhir-ts';
-import * as lodash from 'lodash';
-import {ReferenceBuilder} from '../builders/fhir.resource.builder';
 import {FhirTypeGuard} from '../utils/fhir.type.guard';
+import {ReferenceBuilder} from '../builders/fhir.resource.builder';
 
 @Injectable()
 export class FhirDataSourceService {
@@ -41,8 +40,10 @@ export class FhirDataSourceService {
 
   private _baseUrl?: string;
 
-  constructor(private _smartService: FhirSmartService,
-              private _fhirClient: FhirClientService) {
+  constructor(
+      private _smartService: FhirSmartService,
+      private _fhirClient: FhirClientService
+  ) {
     this._smartService.baseUrl$
       .pipe(
         filter(value => value !== false),
@@ -222,70 +223,72 @@ export class FhirDataSourceService {
     return undefined;
   }
 
-  public medicationRequestSave(medicationRequest: MedicationRequest): Observable<OperationOutcome | Resource> | undefined {
-    if (medicationRequest.contained) {
-      const medications = lodash.cloneDeep(medicationRequest.contained);
-      medicationRequest.contained.length = 0;
-      delete medicationRequest.contained;
-      if (medications.length === 1) {
-          const observable = this.resourceSave(medications[0]);
-          if (observable) {
-              return observable
+  public bundleSave(bundle: Bundle): Observable<OperationOutcome[] | Resource[]> {
+      if (!bundle.entry) {
+          throw new Error('bundle entry cannot be undefined');
+      }
+      const medicationRequest = bundle.entry
+          .filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+          .map(entry => entry.resource)
+          .map(resource => resource as MedicationRequest)
+          .reduce((_, current) => current);
+      return forkJoin(
+          bundle.entry
+              .filter(entry => FhirTypeGuard.isMedication(entry.resource))
+              .map(entry => { return {
+                  // tslint:disable-next-line:no-non-null-assertion
+                  localId: entry.resource!!.id!!,
+                  observable: this.resourceSave(entry.resource)
+              }; })
+              .map(result => result.observable
                   .pipe(
+                      // tslint:disable-next-line:no-non-null-assertion
+                      find(() => medicationRequest.medicationReference!!.reference!!.endsWith(result.localId)),
                       switchMap(medication => {
-                          if (FhirTypeGuard.isMedication(medication) && medication.id) {
-                              medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
-                                  .resourceType('Medication')
-                                  .build();
+                          if (!medication || !medication.id) {
+                              return of({
+                                  issue: [{
+                                      severity: 'error',
+                                      code: 'unknown',
+                                      diagnostics: 'medication id is undefined'
+                                  }]
+                              } as OperationOutcome);
                           }
-                          const innerObservable = this.resourceSave(medicationRequest);
-                          if (innerObservable) {
-                              return innerObservable;
-                          }
-                          return of({
-                              issue: [{
-                                  severity: 'error',
-                                  code: 'unknown'
-                              }]
-                          } as OperationOutcome);
+                          medicationRequest.authoredOn = new Date().toISOString();
+                          medicationRequest.medicationReference = new ReferenceBuilder(medication.id)
+                              .resourceType('Medication')
+                              .build();
+                          return this.resourceSave(medicationRequest);
                       })
-                  );
-          }
-      }
-      else {
-        const observables = new Array<Observable<OperationOutcome | Resource>>();
-        // TODO manage compound medication (resolve id from medication tree)
-        medications.forEach(medication => {
-            const observable = this.resourceSave(medication);
-            if (observable) {
-                observables.push(observable);
-            }
-        });
-      }
-    }
-    return undefined;
+                  )
+              )
+      );
   }
 
-  public resourceSave(resource: Resource): Observable<OperationOutcome | Resource> | undefined {
-    if (this._baseUrl) {
+  public resourceSave(resource: Resource | undefined): Observable<OperationOutcome | Resource> {
+      if (!this._baseUrl) {
+          throw new Error('baseUrl cannot be undefined');
+      }
+      if (!resource) {
+          throw new Error('resource cannot be undefined');
+      }
       return this._fhirClient.create<OperationOutcome | Resource>(
-        this._baseUrl, {
+        this._baseUrl,
+          {
             resourceType: resource.resourceType,
             input: resource
           },
           this._options
       ).pipe(
-          catchError((err, caught) =>
+          catchError(err =>
               of({
                   issue: [{
                       severity: err.severity,
                       code: err.code,
-                      diagnostics: err.error()
+                      diagnostics: err
                   }]
               } as OperationOutcome)
           )
       );
-    }
-    return undefined;
   }
 }

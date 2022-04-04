@@ -25,7 +25,6 @@
 import { Injectable } from '@angular/core';
 import {BehaviorSubject, forkJoin, Observable} from 'rxjs';
 
-import * as lodash from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
 import { StateService } from '../common/cds-access/services/state.service';
@@ -34,12 +33,13 @@ import { FhirDataSourceService } from '../common/fhir/services/fhir.data-source.
 import {StateModel} from '../common/cds-access/models/core.model';
 import {Card, Hook, OrderSelectContext, OrderSelectHook, Service} from '../common/fhir/cds-hooks/models/fhir.cdshooks.model';
 import { CardReadable } from './prescription.model';
-import {Bundle, BundleEntry, MedicationRequest, OperationOutcome, Patient, Practitioner, Resource} from 'phast-fhir-ts';
+import {Bundle, MedicationRequest, OperationOutcome, Patient, Practitioner, Resource} from 'phast-fhir-ts';
+import {FhirTypeGuard} from '../common/fhir/utils/fhir.type.guard';
 
 @Injectable()
 export class PrescriptionStateService {
 
-  private readonly _medicationRequest$: BehaviorSubject<MedicationRequest | boolean>;
+  private readonly _bundle$: BehaviorSubject<Bundle | boolean>;
 
   private readonly _cards$: BehaviorSubject<Array<CardReadable> | boolean>;
 
@@ -49,10 +49,12 @@ export class PrescriptionStateService {
 
   private readonly _onCDSHelp$: BehaviorSubject<boolean>;
 
-  constructor(private _stateService: StateService,
-              private _dataSource: FhirDataSourceService,
-              private _cdsHooksService: FhirCdsHooksService) {
-    this._medicationRequest$ = new BehaviorSubject<MedicationRequest | boolean>(false);
+  constructor(
+      private _stateService: StateService,
+      private _dataSource: FhirDataSourceService,
+      private _cdsHooksService: FhirCdsHooksService
+  ) {
+    this._bundle$ = new BehaviorSubject<Bundle | boolean>(false);
     this._cards$ = new BehaviorSubject<Array<CardReadable> | boolean>(false);
     this._medicationRequestMode$ = new BehaviorSubject<string>('dc');
     this._hasMedications$ = new BehaviorSubject<boolean>(false);
@@ -63,8 +65,8 @@ export class PrescriptionStateService {
     return this._cards$.asObservable();
   }
 
-  public get medicationRequest$(): Observable<MedicationRequest | boolean> {
-    return this._medicationRequest$.asObservable();
+  public get bundle$(): Observable<Bundle | boolean> {
+    return this._bundle$.asObservable();
   }
 
   public set medicationRequestMode(mode: string) {
@@ -91,26 +93,14 @@ export class PrescriptionStateService {
     return this._onCDSHelp$;
   }
 
-  public addMedicationRequest(medicationRequest: MedicationRequest): void {
-    if (medicationRequest.dosageInstruction) {
-      medicationRequest.dosageInstruction.forEach((dosage) => {
-        if (dosage?.timing?.repeat?.boundsDuration) {
-          delete dosage.timing.repeat.boundsDuration;
-        }
-      });
-    }
-
-    console.log('Medication Request: ', medicationRequest);
+  public addBundle(bundle: Bundle): void {
     this._cards$.next(false);
-    this._medicationRequest$.next(medicationRequest);
+    this._bundle$.next(bundle);
   }
 
-  public callCdsHooks(medicationRequest: MedicationRequest): void {
-    const lMedicationRequest = lodash.cloneDeep(medicationRequest);
-    if (lMedicationRequest && lMedicationRequest.contained) {
-      this._cdsHooksService.getServices()
-        .subscribe(
-          {
+  public callCdsHooks(bundle: Bundle): void {
+    this._cdsHooksService.getServices()
+          .subscribe({
             next: services => {
               let serviceId = 'fr.phast.cds';
               if (this._stateService.state) {
@@ -121,7 +111,7 @@ export class PrescriptionStateService {
               }
               const servicesFiltered = services.services.filter((serv: Service) => serv.id === serviceId);
               const service = servicesFiltered[0];
-              const prefetch = {} as {[s: string]: Resource};
+              const prefetch = {} as { [s: string]: Resource };
               let practitioner: Practitioner | undefined;
               let patient: Patient | undefined;
               if (this._stateService.state) {
@@ -134,44 +124,36 @@ export class PrescriptionStateService {
                   prefetch['item1'] = patient;
                 }
               }
+              const medicationRequest = bundle.entry?.filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+                  .map(entry => entry.resource as MedicationRequest)
+                  .reduce((_, current: MedicationRequest) => current);
 
               let hook: Hook;
               const hookInstance = uuidv4();
               if (service.hook === 'order-select') {
-                lMedicationRequest.id = 'tmp';
-                if (practitioner?.id && patient?.id && lMedicationRequest?.id) {
-                  const context = new OrderSelectContext(practitioner.id, patient.id, [lMedicationRequest.id], {
-                    resourceType: 'Bundle',
-                    type: 'collection',
-                    entry: [{
-                      resource: lMedicationRequest
-                    }],
-                  });
+                if (practitioner?.id && patient?.id && medicationRequest?.id) {
+                  const context = new OrderSelectContext(
+                        practitioner.id,
+                        patient.id,
+                        [medicationRequest.id],
+                        {
+                          resourceType: 'Bundle',
+                          type: 'collection'
+                        });
 
-                  if (lMedicationRequest?.medicationReference?.reference != null) {
-                    lMedicationRequest.medicationReference.reference =
-                        `Medication/${lMedicationRequest.medicationReference.reference.slice(1)}`;
-                  }
-
-                  if (context.draftOrders.entry != null
-                      && lMedicationRequest.contained != null) {
-                    context.draftOrders.entry.push(...
-                        lMedicationRequest.contained.map<BundleEntry>((value: Resource) => {
-                          return { resource: value } as BundleEntry;
-                        }));
-                    context.draftOrders.total = context.draftOrders.entry.length;
-                    lMedicationRequest.contained.length = 0;
-                    delete lMedicationRequest.contained;
+                  if (bundle.entry) {
+                    context.draftOrders.entry = bundle.entry;
+                    context.draftOrders.total = bundle.entry.length;
                   }
                   hook = new OrderSelectHook(hookInstance, prefetch, context);
                 }
                 else {
-                  console.error('error', 'id is null');
+                  console.error('error:', 'id is null');
                   return;
                 }
               }
               else {
-                console.error('error', 'the hook ' + service.hook + ' is not supported');
+                console.error('error:', 'the hook ' + service.hook + ' is not supported');
                 return;
               }
 
@@ -191,41 +173,38 @@ export class PrescriptionStateService {
                       next: values => {
                         let itemCount = 1;
                         values.forEach(value => {
-                          const bundle = value as Bundle;
-                          if (bundle.total && bundle.total > 0) {
-                            hook.prefetch['item' + ++itemCount] = bundle;
+                          const bundleResponse = value as Bundle;
+                          if (bundleResponse.total && bundleResponse.total > 0) {
+                            hook.prefetch['item' + ++itemCount] = bundleResponse;
                           }
                         });
                         this._cdsHooksService.postHook(service, hook)
                             .subscribe({
-                              next: (cdsCards) => {
-                                this._cards$.next(
+                              next: (cdsCards) => this._cards$.next(
                                     cdsCards.cards.map<CardReadable>((card: Card) => new CardReadable(card))
-                                );
-                                this.onCDSHelp = false;
-                              },
-                              error: err => console.error('error', err)
+                              ),
+                              error: err => this.onError(err),
+                              complete: () => this.onCDSHelp = false
                             });
                       },
-                      error: err => console.error('error', err),
+                      error: err => this.onError(err),
+                      complete: () => this.onCDSHelp = false
                     });
               }
               else {
                 this._cdsHooksService.postHook(service, hook)
                     .subscribe({
-                      next: (cdsCards) => {
-                        this._cards$.next(
-                            cdsCards.cards.map<CardReadable>((card: Card) => new CardReadable(card))
-                        );
-                        this.onCDSHelp = false;
-                      },
-                      error: err => console.error('error', err)
+                      next: (cdsCards) => this._cards$.next(
+                          cdsCards.cards.map<CardReadable>((card: Card) => new CardReadable(card))
+                      ),
+                      error: err => console.error('error:', err),
+                      complete: () => this.onCDSHelp = false
                     });
               }
             },
-            error: err => console.error('error', err)
+            error: err => this.onError(err),
+            complete: () => this.onCDSHelp = false
           });
-    }
   }
 
   private buildPrefetch(patient: Patient | undefined | null, query: string): Observable<OperationOutcome | Resource> | undefined {
@@ -233,5 +212,11 @@ export class PrescriptionStateService {
       return this._dataSource.postResourceSearch(query.replace('{{context.patientId}}', patient.id));
     }
     return undefined;
+  }
+
+  private onError(err?: any): void {
+    this.onCDSHelp = false;
+    console.error('error:', err);
+    // TODO display error for user
   }
 }

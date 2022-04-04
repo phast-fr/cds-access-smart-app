@@ -29,9 +29,8 @@ import {filter, map, retry} from 'rxjs/operators';
 import * as hash from 'object-hash';
 import {
   Bundle,
-  CodeableConcept, Coding, Dosage,
-  id,
-  Medication,
+  CodeableConcept, Coding,
+  id, Medication,
   MedicationKnowledge, MedicationRequest, OperationOutcome,
   Parameters, ParametersParameter, Quantity,
   Ratio,
@@ -127,6 +126,7 @@ import {
   MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorValue,
   MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorUnit, MedicationFormActionValueChangesMedicationAmount
 } from './medication-request-form.action';
+import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
 
 @Injectable()
 export class MedicationRequestFormViewModel implements IViewModel<IIntent, MedicationRequestFormState>{
@@ -169,18 +169,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return new BehaviorSubject<boolean>(false).asObservable();
   }
 
-  public get medicationRequest(): MedicationRequest | undefined {
+  public get bundle(): Bundle | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
-      return state.medicationRequest;
-    }
-    return undefined;
-  }
-
-  public get medication(): Medication | undefined {
-    if (this._state$.value) {
-      const state = this._state$.value;
-      return state.medication;
+      return state.bundle;
     }
     return undefined;
   }
@@ -209,10 +201,10 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     return undefined;
   }
 
-  public get doseAndRateUnitMap(): Map<id, Map<number, Array<Coding>>> | undefined {
+  public get doseUnitMap(): Map<number, Array<Coding>> | undefined {
     if (this._state$.value) {
       const state = this._state$.value;
-      return state.doseAndRateUnitMap;
+      return state.doseUnitMap;
     }
     return undefined;
   }
@@ -281,17 +273,20 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         )
         .subscribe({
           next: (valueSets: ValueSet[]) => valueSets.forEach((valueSet: ValueSet) => {
-            if (valueSet.name === 'UCUMCodesForTime' && valueSet.expansion?.contains) {
-              valueSet.expansion.contains.forEach(
+            if (valueSet.name === 'UCUMCodesForTime') {
+              valueSet.expansion?.contains?.forEach(
                 valueSetContains => state.durationUnitArray.push(valueSetContains));
             }
-            else if (valueSet.name === 'FrTreatmentIntent' && valueSet.expansion?.contains) {
-              valueSet.expansion.contains.forEach(
+            else if (valueSet.name === 'FrTreatmentIntent') {
+              valueSet.expansion?.contains?.forEach(
                 valueSetContains => state.treatmentIntent.push(valueSetContains));
             }
-            else if (valueSet.name === 'EventTiming' && valueSet.expansion?.contains) {
-              valueSet.expansion.contains.forEach(
+            else if (valueSet.name === 'EventTiming') {
+              valueSet.expansion?.contains?.forEach(
                 valueSetContains => state.whenArray.push(valueSetContains));
+            }
+            else {
+              console.error('error:', `this ${valueSet.id} valueset is not supported`);
             }
           }),
           error: err => console.error('error', err),
@@ -299,7 +294,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         });
     }
 
-    this._cioDcSource.postMedicationKnowledgeLookup(state.medicationRequest)
+    this._cioDcSource.postMedicationKnowledgeLookup(state.bundle)
         .pipe(
             retry({count: 3, delay: 1000})
         )
@@ -311,46 +306,25 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
   }
 
   public clearList(state: MedicationRequestFormState): void {
-    if (state.medication?.code && state.medicationRequest?.dosageInstruction) {
-      const medicationKey = hash(state.medication?.code);
-      state.medicationRequest.dosageInstruction.forEach((dosage: Dosage, nDosage: number) => {
+    const medications = state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+        .map(entry => entry.resource as Medication);
+    medications?.forEach(medication => {
+      if (medication.code) {
+        const medicationKey = hash(medication.code);
         state.amountMapClear(medicationKey);
         state.formMapClear(medicationKey);
-
-        if (state.medication?.ingredient) {
-          state.strengthMapClear(state.medication.ingredient);
-        }
-
-        const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
-        if (doseAndRateUnitForMed) {
-          const doseAndRateUnit = doseAndRateUnitForMed.get(nDosage);
-          if (doseAndRateUnit) {
-            doseAndRateUnit.length = 0;
-          }
-        }
-
-        state.routeMapClear(nDosage);
-      });
-    }
-    else if (state.medication?.code) {
-      const medicationKey = hash(state.medication.code);
-      state.amountMapClear(medicationKey);
-      state.formMapClear(medicationKey);
-
-      if (state.medication?.ingredient) {
-        state.strengthMapClear(state.medication.ingredient);
       }
-
-      const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
-      if (doseAndRateUnitForMed) {
-        const doseAndRateUnit = doseAndRateUnitForMed.get(0);
-        if (doseAndRateUnit) {
-          doseAndRateUnit.length = 0;
-        }
+      if (medication.ingredient) {
+        state.strengthMapClear(medication.ingredient);
       }
-
-      state.routeMapClear(0);
-    }
+    });
+    const medicationRequest = state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+        .map(entry => entry.resource as MedicationRequest)
+        .reduce((_, current) => current);
+    medicationRequest?.dosageInstruction?.forEach((_, nDosage) => {
+      state.doseUnitMapClear(nDosage);
+      state.routeMapClear(nDosage);
+    });
   }
 
   public buildList(state: MedicationRequestFormState, parameters: Parameters): void {
@@ -384,6 +358,11 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
                       state.formMapAddCodeableConcept(hash(code), item2.valueCodeableConcept);
                     }
                     break;
+                  case 'unite':
+                    if (item2.valueCoding) {
+                      state.doseUnitMapAddCoding(nDosage, item2.valueCoding);
+                    }
+                    break;
                   case 'Composition':
                     item2.part?.forEach(item3 => {
                       switch (item3.name) {
@@ -413,53 +392,36 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
   }
 
   public addList(state: MedicationRequestFormState, nDosage: number): void {
-    if (state.medication?.code) {
-      const medicationKey = hash(state.medication.code);
-
-      state.amountMapAdd(medicationKey);
-      state.formMapAdd(medicationKey);
-
-      const medicationKnowledge = state.medicationKnowledgeMap.get(medicationKey);
-      if (medicationKnowledge?.ingredient) {
-        state.strengthMapAdd(medicationKnowledge.ingredient);
+    const medications = state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+        .map(entry => entry.resource as Medication);
+    medications?.forEach(medication => {
+      if (medication.code) {
+        const medicationKey = hash(medication.code);
+        state.amountMapAdd(medicationKey);
+        state.formMapAdd(medicationKey);
+        const medicationKnowledge = state.medicationKnowledgeMap.get(medicationKey);
+        if (medicationKnowledge?.ingredient) {
+          state.strengthMapAdd(medicationKnowledge.ingredient);
+        }
       }
-
-      let doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
-      if (!doseAndRateUnitForMed) {
-        doseAndRateUnitForMed = new Map<number, Array<Coding>>();
-        state.doseAndRateUnitMap.set(medicationKey, doseAndRateUnitForMed);
-      }
-
-      const doseAndRateUnits = doseAndRateUnitForMed.get(nDosage);
-      if (!doseAndRateUnits) {
-        doseAndRateUnitForMed.set(nDosage, new Array<Coding>());
-      }
-      else {
-        doseAndRateUnits.length = 0;
-      }
-    }
-
+    });
     state.routeMapAdd(nDosage);
   }
 
   public removeList(state: MedicationRequestFormState, nDosage: number): void {
-    if (state.medication?.code) {
-      const medicationKey = hash(state.medication.code);
-      state.amountMapRemove(medicationKey);
-      state.formMapMapRemove(medicationKey);
+    const medications = state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedication(entry.resource))
+        .map(entry => entry.resource as Medication);
+    medications?.forEach(medication => {
+      if (medication.code) {
+        const medicationKey = hash(medication.code);
+        state.amountMapRemove(medicationKey);
+        state.formMapMapRemove(medicationKey);
 
-      if (state.medication?.ingredient) {
-        state.strengthMapRemove(state.medication.ingredient);
-      }
-
-      const doseAndRateUnitForMed = state.doseAndRateUnitMap.get(medicationKey);
-      if (doseAndRateUnitForMed) {
-        if (doseAndRateUnitForMed.has(nDosage)) {
-          doseAndRateUnitForMed.delete(nDosage);
+        if (medication?.ingredient) {
+          state.strengthMapRemove(medication.ingredient);
         }
       }
-    }
-
+    });
     state.routeMapRemove(nDosage);
   }
 
@@ -490,7 +452,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
     switch (intent.type) {
       case 'AddMedication':
         action = new MedicationFormActionAddMedication(
-          (intent as MedicationFormIntentAddMedication).medicationRequest,
+          (intent as MedicationFormIntentAddMedication).bundle,
           (intent as MedicationFormIntentAddMedication).medicationKnowledge,
           (intent as MedicationFormIntentAddMedication).medicationId,
           (intent as MedicationFormIntentAddMedication).patient,
@@ -499,27 +461,27 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'RemoveMedication':
         action = new MedicationFormActionRemoveMedication(
-          (intent as MedicationFormIntentRemoveMedication).medicationRequest,
+          (intent as MedicationFormIntentRemoveMedication).bundle,
           (intent as MedicationFormIntentRemoveMedication).nMedication
         );
         break;
       case 'ValueChangesMedicationAmount':
         action = new MedicationFormActionValueChangesMedicationAmount(
-          (intent as MedicationFormIntentValueChangesMedicationAmount).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationAmount).bundle,
           (intent as MedicationFormIntentValueChangesMedicationAmount).medication,
           (intent as MedicationFormIntentValueChangesMedicationAmount).amountValue
         );
         break;
       case 'ValueChangesMedicationForm':
         action = new MedicationFormActionValueChangesMedicationForm(
-          (intent as MedicationFormIntentValueChangesMedicationForm).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationForm).bundle,
           (intent as MedicationFormIntentValueChangesMedicationForm).medication,
           (intent as MedicationFormIntentValueChangesMedicationForm).formValue
         );
         break;
       case 'ValueChangesMedicationIngredientStrength':
         action = new MedicationFormActionValueChangesMedicationIngredientStrength(
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).bundle,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).medication,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).itemCodeableConcept,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrength).strengthValue
@@ -527,7 +489,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'ValueChangesMedicationIngredientStrengthValue':
         action = new MedicationFormActionValueChangesMedicationIngredientStrengthValue(
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).bundle,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).medication,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).itemReference,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthValue).strengthValue
@@ -535,7 +497,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'ValueChangesMedicationIngredientStrengthUnit':
         action = new MedicationFormActionValueChangesMedicationIngredientStrengthUnit(
-          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).bundle,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).medication,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).itemReference,
           (intent as MedicationFormIntentValueChangesMedicationIngredientStrengthUnit).strengthUnit
@@ -543,89 +505,88 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'AddDosageInstruction':
         action = new MedicationFormActionAddDosageInstruction(
-          (intent as MedicationFormIntentAddDosageInstruction).medicationRequest
+          (intent as MedicationFormIntentAddDosageInstruction).bundle
         );
         break;
       case 'RemoveDosageInstruction':
         action = new MedicationFormActionRemoveDosageInstruction(
-          (intent as MedicationFormIntentRemoveDosageInstruction).medicationRequest,
+          (intent as MedicationFormIntentRemoveDosageInstruction).bundle,
           (intent as MedicationFormIntentRemoveDosageInstruction).nDosage
         );
         break;
       case 'ValueChangesDosageInstructionRoute':
         action = new MedicationFormActionValueChangesDosageInstructionRoute(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRoute).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).medication
+          (intent as MedicationFormIntentValueChangesDosageInstructionRoute).routeValue
         );
         break;
       case 'ValueChangesDosageInstructionBoundsDurationValue':
         action = new MedicationFormActionValueChangesDosageInstructionBoundsDurationValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue).boundsDurationValue
         );
         break;
       case 'ValueChangesDosageInstructionBoundsDurationUnit':
         action = new MedicationFormActionValueChangesDosageInstructionBoundsDurationUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit).boundsDurationUnit
         );
         break;
       case 'ValueChangesDosageInstructionBoundsPeriodStart':
         action = new MedicationFormActionValueChangesDosageInstructionBoundsPeriodStart(
-          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart).boundsPeriodStart
         );
         break;
       case 'ValueChangesDosageInstructionBoundsPeriodEnd':
         action = new MedicationFormActionValueChangesDosageInstructionBoundsPeriodEnd(
-          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd).boundsPeriodEnd
         );
         break;
       case 'ValueChangesDosageInstructionDurationValue':
         action = new MedicationFormActionValueChangesDosageInstructionDurationValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionDurationValue).durationValue
         );
         break;
       case 'ValueChangesDosageInstructionDurationUnit':
         action = new MedicationFormActionValueChangesDosageInstructionDurationUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionDurationUnit).durationUnit
         );
         break;
       case 'ValueChangesDosageInstructionFrequencyValue':
         action = new MedicationFormActionValueChangesDosageInstructionFrequencyValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionFrequencyValue).frequencyValue
         );
         break;
       case 'ValueChangesDosageInstructionPeriodValue':
         action = new MedicationFormActionValueChangesDosageInstructionPeriodValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionPeriodValue).periodValue
         );
         break;
       case 'ValueChangesDosageInstructionPeriodUnit':
         action = new MedicationFormActionValueChangesDosageInstructionPeriodUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionPeriodUnit).periodUnit
         );
         break;
       case 'ValueChangesDosageInstructionTimeOfDayValue':
         action = new MedicationFormActionValueChangesDosageInstructionTimeOfDayValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).nTimeOfDay,
           (intent as MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue).timeOfDay
@@ -638,21 +599,21 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'RemoveTimeOfDay':
         action = new MedicationFormActionRemoveTimeOfDay(
-          (intent as MedicationFormIntentRemoveTimeOfDay).medicationRequest,
+          (intent as MedicationFormIntentRemoveTimeOfDay).bundle,
           (intent as MedicationFormIntentRemoveTimeOfDay).nDosage,
           (intent as MedicationFormIntentRemoveTimeOfDay).index
         );
         break;
       case 'ValueChangesDosageInstructionDayOfWeekValue':
         action = new MedicationFormActionValueChangesDosageInstructionDayOfWeek(
-          (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionDayOfWeek).dayOfWeek
         );
         break;
       case 'ValueChangesDosageInstructionWhenValue':
         action = new MedicationFormActionValueChangesDosageInstructionWhenValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).nWhen,
           (intent as MedicationFormIntentValueChangesDosageInstructionWhenValue).whenValue
@@ -665,14 +626,14 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'RemoveWhen':
         action = new MedicationFormActionRemoveWhen(
-          (intent as MedicationFormIntentRemoveWhen).medicationRequest,
+          (intent as MedicationFormIntentRemoveWhen).bundle,
           (intent as MedicationFormIntentRemoveWhen).nDosage,
           (intent as MedicationFormIntentRemoveWhen).nWhen
         );
         break;
       case 'ValueChangesDosageInstructionOffsetValue':
         action = new MedicationFormActionValueChangesDosageInstructionOffsetValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionOffsetValue).offsetValue
         );
@@ -684,62 +645,56 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'RemoveDoseAndRate':
         action = new MedicationFormActionRemoveDoseAndRate(
-          (intent as MedicationFormIntentRemoveDoseAndRate).medicationRequest,
+          (intent as MedicationFormIntentRemoveDoseAndRate).bundle,
           (intent as MedicationFormIntentRemoveDoseAndRate).nDosage,
           (intent as MedicationFormIntentRemoveDoseAndRate).index
         );
         break;
       case 'ValueChangesDosageInstructionDoseQuantityValue':
         action = new MedicationFormActionValueChangesDosageInstructionDoseQuantityValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue).doseQuantityValue
         );
         break;
       case 'ValueChangesDosageInstructionDoseQuantityUnit':
         action = new MedicationFormActionValueChangesDosageInstructionDoseQuantityUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit).doseQuantityUnit
         );
         break;
       case 'ValueChangesDosageInstructionRateRatioNumeratorValue':
         action = new MedicationFormActionValueChangesDosageInstructionRateRatioNumeratorValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue).rateRatioNumeratorValue
         );
         break;
       case 'ValueChangesDosageInstructionRateRatioNumeratorUnit':
         action = new MedicationFormActionValueChangesDosageInstructionRateRatioNumeratorUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit).rateRatioNumeratorUnit
         );
         break;
       case 'ValueChangesDosageInstructionRateRatioDenominatorValue':
         action = new MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue).rateRatioDenominatorValue
         );
         break;
       case 'ValueChangesDosageInstructionRateRatioDenominatorUnit':
         action = new MedicationFormActionValueChangesDosageInstructionRateRatioDenominatorUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit).nDosage,
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit).rateRatioDenominatorUnit
         );
         break;
       case 'ValueChangesDosageInstructionRateQuantityValue':
         action = new MedicationFormActionValueChangesDosageInstructionRateQuantityValue(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityValue).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityValue).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityValue).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityValue).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityValue).rateQuantityValue
@@ -747,7 +702,7 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'ValueChangesDosageInstructionRateQuantityUnit':
         action = new MedicationFormActionValueChangesDosageInstructionRateQuantityUnit(
-          (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit).bundle,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit).nDosage,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit).nDoseAndRate,
           (intent as MedicationFormIntentValueChangesDosageInstructionRateQuantityUnit).rateQuantityUnit
@@ -755,23 +710,23 @@ export class MedicationRequestFormViewModel implements IViewModel<IIntent, Medic
         break;
       case 'ValueChangesDispenseRequest':
         action = new MedicationFormActionValueChangesDispenseRequest(
-          (intent as MedicationFormIntentValueChangesDispenseRequest).medicationRequest,
+          (intent as MedicationFormIntentValueChangesDispenseRequest).bundle,
           (intent as MedicationFormIntentValueChangesDispenseRequest).medicationDispense
         );
         break;
       case 'AddMedicationRequest':
         action = new MedicationFormActionAddMedicationRequest(
-          (intent as MedicationFormIntentAddMedicationRequest).medicationRequest
+          (intent as MedicationFormIntentAddMedicationRequest).bundle
         );
         break;
       case 'CdsHelp':
         action = new MedicationFormActionCdsHelp(
-          (intent as MedicationFormIntentCdsHelp).medicationRequest
+          (intent as MedicationFormIntentCdsHelp).bundle
         );
         break;
       case 'ValueChangesTreatmentIntent':
         action = new MedicationFormActionValueChangesTreatmentIntent(
-          (intent as MedicationFormIntentValueChangesTreatmentIntent).medicationRequest,
+          (intent as MedicationFormIntentValueChangesTreatmentIntent).bundle,
           (intent as MedicationFormIntentValueChangesTreatmentIntent).treatmentIntent
         );
         break;

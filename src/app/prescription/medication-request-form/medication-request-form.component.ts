@@ -37,7 +37,7 @@ import {
 import {MedicationRequestFormViewModel} from './medication-request-form.view-model';
 import {MedicationRequestFormState} from './medication-request-form.state';
 import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
-import {Bundle, MedicationKnowledge, MedicationRequest, Patient, Practitioner} from 'phast-fhir-ts';
+import {Bundle, MedicationKnowledge, Patient, Practitioner} from 'phast-fhir-ts';
 import {MatIconRegistry} from '@angular/material/icon';
 import {DomSanitizer} from '@angular/platform-browser';
 import {FhirLabelProviderFactory} from '../../common/fhir/providers/fhir.label.provider.factory';
@@ -92,13 +92,15 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   @ViewChild(DispenseRequestFormComponent)
   private _dispenseRequestForm?: DispenseRequestFormComponent;
 
-  constructor(private _iconRegistry: MatIconRegistry,
-              private _sanitizer: DomSanitizer,
-              private _fb: FormBuilder,
-              private _labelProviderFactory: FhirLabelProviderFactory,
-              private _stateService: StateService,
-              private _prescriptionState: PrescriptionStateService,
-              private _viewModel: MedicationRequestFormViewModel) {
+  constructor(
+      private _iconRegistry: MatIconRegistry,
+      private _sanitizer: DomSanitizer,
+      private _fb: FormBuilder,
+      private _labelProviderFactory: FhirLabelProviderFactory,
+      private _stateService: StateService,
+      private _prescriptionState: PrescriptionStateService,
+      private _viewModel: MedicationRequestFormViewModel
+  ) {
     this._iconRegistry.addSvgIconLiteral('medicines', this._sanitizer.bypassSecurityTrustHtml(MEDICINES_ICON));
     this._unsubscribeTrigger$ = new Subject<void>();
     this._medicationKnowledgeArray = new Array<MedicationKnowledge>();
@@ -133,8 +135,8 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     return this._prescriptionState.onCDSHelp$;
   }
 
-  public get medicationRequest(): MedicationRequest | undefined {
-    return this._viewModel.medicationRequest;
+  public get bundle(): Bundle | undefined {
+    return this._viewModel.bundle;
   }
 
   public get medicationKnowledgeArray(): Array<MedicationKnowledge> {
@@ -197,8 +199,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
         });
       this._dosageInstructionForm.dosageInstruction$
           .pipe(
-              takeUntil(this._unsubscribeTrigger$),
-              filter(dosageInstruction => dosageInstruction === false)
+              takeUntil(this._unsubscribeTrigger$)
           )
           .subscribe({
             next: () => this.removeFormGroupStatusListener('dosageInstruction'),
@@ -286,7 +287,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
       if (patient && practitioner) {
         this._viewModel.dispatchIntent(
           new MedicationFormIntentAddMedication(
-            this._viewModel.medicationRequest, medicationKnowledge, medicationId, patient, practitioner
+            this._viewModel.bundle, medicationKnowledge, medicationId, patient, practitioner
           )
         );
       }
@@ -294,23 +295,23 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     }
   }
 
-  public onAddMedicationRequest(): void {
-    const medicationRequest = lodash.cloneDeep(this._viewModel.medicationRequest);
-    if (medicationRequest) {
+  public onAddBundle(): void {
+    const bundle = lodash.cloneDeep(this._viewModel.bundle);
+    if (bundle) {
       this._viewModel.dispatchIntent(
-        new MedicationFormIntentAddMedicationRequest(medicationRequest)
+        new MedicationFormIntentAddMedicationRequest(bundle)
       );
-      this._prescriptionState.addMedicationRequest(medicationRequest);
+      this._prescriptionState.addBundle(bundle);
     }
   }
 
   public onCDSHelp(): void {
-    if (this._viewModel.medicationRequest) {
+    if (this._viewModel.bundle) {
       this._prescriptionState.onCDSHelp = true;
       this._viewModel.dispatchIntent(
-        new MedicationFormIntentCdsHelp(this._viewModel.medicationRequest)
+        new MedicationFormIntentCdsHelp(this._viewModel.bundle)
       );
-      this._prescriptionState.callCdsHooks(this._viewModel.medicationRequest);
+      this._prescriptionState.callCdsHooks(this._viewModel.bundle);
     }
   }
 
@@ -415,7 +416,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     }
   }
 
-  private onChangeFormStatus(control: AbstractControl, status: string/*: FormControlStatus*/): void {
+  private onChangeFormStatus(_0: AbstractControl, _1: string/*: FormControlStatus*/): void {
     this.updateIsMedicationRequestAddable();
   }
 

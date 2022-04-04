@@ -23,7 +23,7 @@
  */
 
 import {AfterViewInit, ChangeDetectionStrategy, Component, OnInit, ViewChild} from '@angular/core';
-import {BehaviorSubject, forkJoin, Observable} from 'rxjs';
+import {BehaviorSubject, Observable} from 'rxjs';
 import {filter, map} from 'rxjs/operators';
 import {SelectionModel} from '@angular/cdk/collections';
 import {MatTableDataSource} from '@angular/material/table';
@@ -36,7 +36,7 @@ import {PrescriptionStateService} from '../prescription-state.service';
 import {TableElement} from '../../common/cds-access/models/core.model';
 import {FhirLabelProviderFactory} from '../../common/fhir/providers/fhir.label.provider.factory';
 import {FhirDataSourceService} from '../../common/fhir/services/fhir.data-source.service';
-import {MedicationRequest, OperationOutcome, Resource} from 'phast-fhir-ts';
+import {Bundle, MedicationRequest} from 'phast-fhir-ts';
 import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
 
 @Component({
@@ -47,9 +47,9 @@ import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
 })
 export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
 
-  private readonly _medicationRequestDataSource: MatTableDataSource<TableElement<MedicationRequest>>;
+  private readonly _bundleDataSource: MatTableDataSource<TableElement<Bundle>>;
 
-  private readonly _selection: SelectionModel<TableElement<MedicationRequest>>;
+  private readonly _selection: SelectionModel<TableElement<Bundle>>;
 
   private readonly _displayedColumns: Array<string>;
 
@@ -61,24 +61,26 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   @ViewChild(MatSort)
   sort?: MatSort;
 
-  constructor(private _labelProviderFactory: FhirLabelProviderFactory,
-              private _prescriptionState: PrescriptionStateService,
-              private _dataSource: FhirDataSourceService) {
-    this._medicationRequestDataSource = new MatTableDataSource<TableElement<MedicationRequest>>([]);
-    this._selection = new SelectionModel<TableElement<MedicationRequest>>(true, []);
+  constructor(
+      private _labelProviderFactory: FhirLabelProviderFactory,
+      private _prescriptionState: PrescriptionStateService,
+      private _dataSource: FhirDataSourceService
+  ) {
+    this._bundleDataSource = new MatTableDataSource<TableElement<Bundle>>([]);
+    this._selection = new SelectionModel<TableElement<Bundle>>(true, []);
     this._displayedColumns = ['select', 'position', 'name'];
     this._saving$ = new BehaviorSubject<boolean>(false);
   }
 
-  public get medicationRequestDataSource(): MatTableDataSource<TableElement<MedicationRequest>> {
-    return this._medicationRequestDataSource;
+  public get bundleDataSource(): MatTableDataSource<TableElement<Bundle>> {
+    return this._bundleDataSource;
   }
 
   public get displayedColumns(): Array<string> {
     return this._displayedColumns;
   }
 
-  public get selection(): SelectionModel<TableElement<MedicationRequest>> {
+  public get selection(): SelectionModel<TableElement<Bundle>> {
     return this._selection;
   }
 
@@ -87,27 +89,24 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   }
 
   public ngOnInit(): void {
-    this._prescriptionState.medicationRequest$
+    this._prescriptionState.bundle$
       .pipe(
-        filter(medicationRequest => medicationRequest !== false),
-        map(medicationRequest => medicationRequest as MedicationRequest)
+        filter(bundle => bundle !== false),
+        map(bundle => bundle as Bundle)
       )
       .subscribe({
-        next: medicationRequest => this.onAddMedicationRequest(medicationRequest),
+        next: bundle => this.onAdd(bundle),
         error: err => console.error('error', err)
       });
   }
 
   public ngAfterViewInit(): void {
-    this._medicationRequestDataSource.sortingDataAccessor = (item: TableElement<MedicationRequest>, property: string) => {
+    this._bundleDataSource.sortingDataAccessor = (item: TableElement<Bundle>, property: string) => {
       switch (property) {
         case 'name':
-          const provider = this._labelProviderFactory.getProvider(item.resource);
-          if (provider) {
-            const text = provider.getText(item.resource);
-            if (text) {
-              return text;
-            }
+          const text = this._labelProviderFactory.getProvider(item.resource)?.getText(item.resource);
+          if (text) {
+            return text;
           }
           return 0;
         default:
@@ -115,43 +114,40 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
       }
     };
     if (this.sort) {
-      this._medicationRequestDataSource.sort = this.sort;
+      this._bundleDataSource.sort = this.sort;
     }
 
     if (this.paginator) {
-      this._medicationRequestDataSource.paginator = this.paginator;
+      this._bundleDataSource.paginator = this.paginator;
     }
 
-    this._medicationRequestDataSource.filterPredicate = (data: TableElement<MedicationRequest>, filterValue: string) => {
-      const provider = this._labelProviderFactory.getProvider(data.resource);
-      if (provider) {
-        const text = provider.getText(data.resource);
-        if (text) {
-          return text.trim().toUpperCase().indexOf(filterValue.trim().toUpperCase()) >= 0;
-        }
+    this._bundleDataSource.filterPredicate = (data: TableElement<Bundle>, filterValue: string) => {
+      const text = this._labelProviderFactory.getProvider(data.resource)?.getText(data.resource);
+      if (text) {
+        return text.trim().toUpperCase().indexOf(filterValue.trim().toUpperCase()) >= 0;
       }
       return false;
     };
   }
 
-  public onAddMedicationRequest(medicationRequest: MedicationRequest): void {
-    this._medicationRequestDataSource.data.push({
-      position: this._medicationRequestDataSource.data.length + 1,
-      resource: medicationRequest
+  public onAdd(bundle: Bundle): void {
+    this._bundleDataSource.data.push({
+      position: this._bundleDataSource.data.length + 1,
+      resource: bundle
     });
-    this._medicationRequestDataSource._updateChangeSubscription();
+    this._bundleDataSource._updateChangeSubscription();
     if (this.sort) {
-      this._medicationRequestDataSource.sort = this.sort;
+      this._bundleDataSource.sort = this.sort;
     }
 
     if (this.paginator) {
-      this._medicationRequestDataSource.paginator = this.paginator;
+      this._bundleDataSource.paginator = this.paginator;
     }
   }
 
-  public onDeleteMedicationRequest(): void {
-    const elements = this._medicationRequestDataSource.data.slice();
-    elements.forEach(value => {
+  public onDelete(): void {
+    const elements = this._bundleDataSource.data.slice();
+    this._bundleDataSource.data.slice().forEach(value => {
       if (this._selection.isSelected(value)) {
         const indexToRemove = elements.findIndex(
           (elt) => {
@@ -160,85 +156,72 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
             }
           }
         );
-        this._medicationRequestDataSource.data.splice(indexToRemove, 1);
+        this._bundleDataSource.data.splice(indexToRemove, 1);
       }
     });
-    this._medicationRequestDataSource.data.forEach((value: TableElement<MedicationRequest>, index: number) => {
+    this._bundleDataSource.data.forEach((value: TableElement<Bundle>, index: number) => {
       value.position = index + 1;
     });
-    this._medicationRequestDataSource._updateChangeSubscription();
+    this._bundleDataSource._updateChangeSubscription();
 
     if (this.sort) {
-      this._medicationRequestDataSource.sort = this.sort;
+      this._bundleDataSource.sort = this.sort;
     }
 
     if (this.paginator) {
-      this._medicationRequestDataSource.paginator = this.paginator;
+      this._bundleDataSource.paginator = this.paginator;
     }
     this._selection.clear();
   }
 
   public onSave(): void {
     this._saving$.next(true);
-    const observables = new Array<Observable<OperationOutcome | Resource>>();
-    const elements = this._medicationRequestDataSource.data.slice();
-    elements.forEach(value => {
-      const medicationRequest = lodash.cloneDeep(value.resource);
-      if (medicationRequest.medicationCodeableConcept) {
-        delete medicationRequest.medicationCodeableConcept;
-      }
-      const authoredOn = new Date();
-      medicationRequest.authoredOn = authoredOn.toISOString();
-      const observable = this._dataSource.medicationRequestSave(medicationRequest);
-      if (observable) {
-        observables.push(observable);
-      }
-    });
-    forkJoin(observables)
-      .subscribe({
-        next: values => {
-          values.forEach(value => {
-            if (!value) {
-              console.error('error', 'undefined value');
-            }
-            else if (FhirTypeGuard.isMedicationRequest(value)) {
-              console.log('result', value);
-            }
-            else if (FhirTypeGuard.isOperationOutcome(value)) {
-              console.error('error', value);
-            }
+    this._bundleDataSource.data.slice().forEach(value => {
+      this._dataSource.bundleSave(lodash.cloneDeep(value.resource))
+          .subscribe({
+            next: results => {
+              results.forEach(result => {
+                if (!result) {
+                  console.error('error:', 'undefined value');
+                }
+                else if (FhirTypeGuard.isMedicationRequest(result)) {
+                  console.log('result:', result);
+                }
+                else if (FhirTypeGuard.isOperationOutcome(result)) {
+                  console.error('error:', result);
+                }
+              });
+
+              this._bundleDataSource.data.length = 0;
+              this._bundleDataSource._updateChangeSubscription();
+
+              if (this.sort) {
+                this._bundleDataSource.sort = this.sort;
+              }
+
+              if (this.paginator) {
+                this._bundleDataSource.paginator = this.paginator;
+              }
+              this._selection.clear();
+            },
+            error: err => console.error('error:', err),
+            complete: () => this._saving$.next(false)
           });
-
-          this._medicationRequestDataSource.data.length = 0;
-          this._medicationRequestDataSource._updateChangeSubscription();
-
-          if (this.sort) {
-            this._medicationRequestDataSource.sort = this.sort;
-          }
-
-          if (this.paginator) {
-            this._medicationRequestDataSource.paginator = this.paginator;
-          }
-          this._selection.clear();
-        },
-        error: err => console.error('error', err),
-        complete: () => this._saving$.next(false)
-      });
+    });
   }
 
   public applyFilter(event: Event): void {
-    const filterValue = (event.target as HTMLInputElement).value;
-    this._medicationRequestDataSource.filter = filterValue.trim().toUpperCase();
+    this._bundleDataSource.filter = (event.target as HTMLInputElement).value.trim().toUpperCase();
 
-    if (this._medicationRequestDataSource.paginator) {
-      this._medicationRequestDataSource.paginator.firstPage();
+    if (this._bundleDataSource.paginator) {
+      this._bundleDataSource.paginator.firstPage();
     }
   }
 
   /** Whether the number of selected elements matches the total number of rows. */
   public isAllSelected(): boolean {
     const numSelected = this._selection.selected.length;
-    const numRows = this._medicationRequestDataSource.data.length;
+    const numRows = this._bundleDataSource.data.length;
     return numSelected === numRows;
   }
 
@@ -246,11 +229,11 @@ export class MedicationRequestTableComponent implements OnInit, AfterViewInit {
   public masterToggle(): void {
     this.isAllSelected() ?
       this._selection.clear() :
-      this._medicationRequestDataSource.data.forEach(row => this._selection.select(row));
+      this._bundleDataSource.data.forEach(row => this._selection.select(row));
   }
 
   /** The label for the checkbox on the passed row */
-  public checkboxLabel(row?: TableElement<MedicationRequest>): string {
+  public checkboxLabel(row?: TableElement<Bundle>): string {
     if (!row) {
       return `${this.isAllSelected() ? 'select' : 'deselect'} all`;
     }

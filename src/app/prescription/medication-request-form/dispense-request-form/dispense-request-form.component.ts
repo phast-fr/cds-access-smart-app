@@ -32,9 +32,10 @@ import {
   MedicationFormIntentValueChangesDispenseRequest
 } from '../medication-request-form.intent';
 import { MedicationRequestFormState } from '../medication-request-form.state';
-import {MedicationRequestDispenseRequest} from 'phast-fhir-ts';
+import {MedicationRequest, MedicationRequestDispenseRequest} from 'phast-fhir-ts';
 import {DateTime} from 'luxon';
 import {environment} from '../../../../environments/environment';
+import {FhirTypeGuard} from '../../../common/fhir/utils/fhir.type.guard';
 
 @Component({
   selector: 'app-dispense-request-form',
@@ -107,16 +108,19 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
   }
 
   public render(state: MedicationRequestFormState): void {
+    const medicationRequest = state.bundle?.entry?.filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+        .map(entry => entry.resource as MedicationRequest)
+        .reduce((_, current: MedicationRequest) => current);
     switch (state.type) {
       case 'AddMedication':
-        if (state.medicationRequest?.dispenseRequest) {
+        if (medicationRequest?.dispenseRequest) {
           this._dispenseRequestGroup$.next(
-            this.addMedication(state.medicationRequest.dispenseRequest)
+            this.addMedication(medicationRequest.dispenseRequest)
           );
         }
         break;
       case 'RemoveMedication':
-        if (state.medicationRequest && this.dispenseRequestGroup) {
+        if (medicationRequest && this.dispenseRequestGroup) {
           this._dispenseRequestGroup$.next(this.dispenseRequestGroup);
         }
         else {
@@ -168,10 +172,10 @@ export class DispenseRequestFormComponent implements OnInit, OnDestroy, IRender<
           );
         }
 
-        if (this._viewModel.medicationRequest) {
+        if (this._viewModel.bundle) {
           this._viewModel.dispatchIntent(
             new MedicationFormIntentValueChangesDispenseRequest(
-              this._viewModel.medicationRequest,
+              this._viewModel.bundle,
               changes
             )
           );

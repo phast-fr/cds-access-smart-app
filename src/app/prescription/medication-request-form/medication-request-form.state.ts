@@ -26,10 +26,11 @@ import {BehaviorSubject, Observable} from 'rxjs';
 
 import {IPartialState, IState} from '../../common/cds-access/models/state.model';
 import {
+  Bundle,
   CodeableConcept, Coding,
-  Medication, MedicationIngredient,
+  MedicationIngredient,
   MedicationKnowledge,
-  MedicationRequest, Quantity,
+  Quantity,
   Ratio,
   ValueSetContains
 } from 'phast-fhir-ts';
@@ -52,12 +53,14 @@ export class MedicationFormStateCdsHelp implements IPartialState {
 export class MedicationFormStateAddMedication implements IPartialState {
   readonly type = 'AddMedication';
 
-  constructor(private _medicationRequest: MedicationRequest | undefined,
-              private _medicationKnowledge: MedicationKnowledge) {
+  constructor(
+      private _bundle: Bundle | undefined,
+      private _medicationKnowledge: MedicationKnowledge
+  ) {
   }
 
-  public get medicationRequest(): MedicationRequest | undefined {
-    return this._medicationRequest;
+  public get bundle(): Bundle | undefined {
+    return this._bundle;
   }
 
   public get medicationKnowledge(): MedicationKnowledge {
@@ -68,11 +71,11 @@ export class MedicationFormStateAddMedication implements IPartialState {
 export class MedicationFormStateRemoveMedication implements IPartialState {
   readonly type = 'RemoveMedication';
 
-  constructor(private _medicationRequest: MedicationRequest | null,
+  constructor(private _bundle: Bundle | null,
               private _nMedication: number) { }
 
-  public get medicationRequest(): MedicationRequest | null {
-    return this._medicationRequest;
+  public get bundle(): Bundle | null {
+    return this._bundle;
   }
 
   public get nMedication(): number {
@@ -83,51 +86,54 @@ export class MedicationFormStateRemoveMedication implements IPartialState {
 export class MedicationFormStateValueChangesMedication implements IPartialState {
   readonly type = 'ValueChangesMedication';
 
-  constructor(private _medicationRequest: MedicationRequest) {
+  constructor(
+      private _bundle: Bundle
+  ) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 }
 
 export class MedicationFormStateAddDosageInstruction implements IPartialState {
   readonly type = 'AddDosageInstruction';
 
-  constructor(private _medicationRequest: MedicationRequest) {
+  constructor(
+      private _bundle: Bundle
+  ) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 }
 
 export class MedicationFormStateRemoveDosageInstruction implements IPartialState {
   readonly type = 'RemoveDosageInstruction';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _bundle: Bundle,
               private _nDosage: number) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 
   public get nDosage(): number {
     return this._nDosage;
   }
 }
-
 
 export class MedicationFormStateValueChangesDosageInstruction implements IPartialState {
   readonly type = 'ValueChangesDosageInstruction';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _bundle: Bundle,
               private _nDosage: number) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 
   public get nDosage(): number {
@@ -135,14 +141,13 @@ export class MedicationFormStateValueChangesDosageInstruction implements IPartia
   }
 }
 
-
 export class MedicationFormStateValueChangesDispenseRequest implements IPartialState {
   readonly type = 'ValueChangesDispenseRequest';
 
-  constructor(private _medicationRequest: MedicationRequest) { }
+  constructor(private _bundle: Bundle) { }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 }
 
@@ -159,13 +164,13 @@ export class MedicationFormStateAddTimeOfDay implements IPartialState {
 export class MedicationFormStateRemoveTimeOfDay implements IPartialState {
   readonly type = 'RemoveTimeOfDay';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _bundle: Bundle,
               private _nDosage: number,
               private _index: number) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 
   public get nDosage(): number {
@@ -191,13 +196,13 @@ export class MedicationFormStateAddWhen implements IPartialState {
 export class MedicationFormStateRemoveWhen implements IPartialState {
   readonly type = 'RemoveWhen';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _bundle: Bundle,
               private _nDosage: number,
               private _nWhen: number) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 
   public get nDosage(): number {
@@ -222,13 +227,13 @@ export class MedicationFormStateAddDoseAndRate implements IPartialState {
 export class MedicationFormStateRemoveDoseAndRate implements IPartialState {
   readonly type = 'RemoveDoseAndRate';
 
-  constructor(private _medicationRequest: MedicationRequest,
+  constructor(private _bundle: Bundle,
               private _nDosage: number,
               private _index: number) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 
   public get nDosage(): number {
@@ -243,17 +248,19 @@ export class MedicationFormStateRemoveDoseAndRate implements IPartialState {
 export class MedicationFormStateValueChangesTreatmentIntent implements IPartialState {
   readonly type = 'ValueChangesTreatmentIntent';
 
-  constructor(private _medicationRequest: MedicationRequest) {
+  constructor(
+      private _bundle: Bundle
+  ) {
   }
 
-  public get medicationRequest(): MedicationRequest {
-    return this._medicationRequest;
+  public get bundle(): Bundle {
+    return this._bundle;
   }
 }
 
 export class MedicationRequestFormState implements IState {
 
-  private _medicationRequest?: MedicationRequest;
+  private _bundle?: Bundle;
 
   private readonly _loadingCIOList$: BehaviorSubject<boolean>;
 
@@ -277,7 +284,7 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _strengthMap: Map<string, Array<Ratio>>;
 
-  private readonly _doseAndRateUnitMap: Map<string, Map<number, Array<Coding>>>;
+  private readonly _doseUnitMap: Map<number, Array<Coding>>;
 
   private readonly _treatmentIntentArray: Array<ValueSetContains>;
 
@@ -285,7 +292,9 @@ export class MedicationRequestFormState implements IState {
 
   private readonly _whenArray: Array<ValueSetContains>;
 
-  constructor(public type: string) {
+  constructor(
+      public type: string
+  ) {
     this._loadingCIOList$ = new BehaviorSubject<boolean>(false);
     this._loadingTIOList$ = new BehaviorSubject<boolean>(false);
     this._nMedicationArray = new Array<number>();
@@ -295,20 +304,10 @@ export class MedicationRequestFormState implements IState {
     this._amountMap = new Map<string, Array<Ratio>>();
     this._formMap = new Map<string, Array<CodeableConcept>>();
     this._strengthMap = new Map<string, Array<Ratio>>();
-    this._doseAndRateUnitMap = new Map<string, Map<number, Array<Coding>>>();
+    this._doseUnitMap = new Map<number, Array<Coding>>();
     this._treatmentIntentArray = new Array<ValueSetContains>();
     this._durationUnitArray = new Array<ValueSetContains>();
     this._whenArray = new Array<ValueSetContains>();
-  }
-
-  public get medication(): Medication | undefined {
-    if (this._medicationRequest?.contained && this._medicationRequest?.contained.length > 1) {
-      return this._medicationRequest.contained[1] as Medication;
-    }
-    else if (this._medicationRequest?.contained && this._medicationRequest?.contained.length === 1) {
-      return this._medicationRequest.contained[0] as Medication;
-    }
-    return undefined;
   }
 
   public set loadingCIOList(loading: boolean) {
@@ -327,12 +326,12 @@ export class MedicationRequestFormState implements IState {
     return this._loadingTIOList$.asObservable();
   }
 
-  public set medicationRequest(medicationRequest: MedicationRequest | undefined) {
-    this._medicationRequest = medicationRequest;
+  public set bundle(bundle: Bundle | undefined) {
+    this._bundle = bundle;
   }
 
-  public get medicationRequest(): MedicationRequest | undefined {
-    return this._medicationRequest;
+  public get bundle(): Bundle | undefined {
+    return this._bundle;
   }
 
   public get nMedicationArray(): Array<number> {
@@ -375,8 +374,8 @@ export class MedicationRequestFormState implements IState {
     return this._strengthMap;
   }
 
-  public get doseAndRateUnitMap(): Map<string, Map<number, Array<Coding>>> {
-    return this._doseAndRateUnitMap;
+  public get doseUnitMap(): Map<number, Array<Coding>> {
+    return this._doseUnitMap;
   }
 
   public get routeMap(): Map<number, Array<CodeableConcept>> {
@@ -530,6 +529,28 @@ export class MedicationRequestFormState implements IState {
     const routes = this._routeMap.get(nDosage);
     if (routes) {
       routes.length = 0;
+    }
+  }
+
+  public doseUnitMapAddCoding(nDosage: number, unit: Coding): void {
+    let units = this._doseUnitMap.get(nDosage);
+    if (!units) {
+      units = new Array<Coding>();
+      this._doseUnitMap.set(nDosage, units);
+    }
+    units.push(unit);
+  }
+
+  public doseUnitMapRemove(nDosage: number): void {
+    if (this._doseUnitMap.has(nDosage)) {
+      this._doseUnitMap.delete(nDosage);
+    }
+  }
+
+  public doseUnitMapClear(nDosage: number): void {
+    const units = this._doseUnitMap.get(nDosage);
+    if (units) {
+      units.length = 0;
     }
   }
 }

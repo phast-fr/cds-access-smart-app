@@ -39,8 +39,9 @@ import {
   ReferenceLabelProvider,
   CompositionLabelProvider,
   ParametersParameterLabelProvider,
-  ValueSetContainsLabelProvider, LibraryLabelProvider
+  ValueSetContainsLabelProvider, LibraryLabelProvider, BundleLabelProvider
 } from './fhir.label.provider';
+import {Bundle} from 'phast-fhir-ts';
 
 @Injectable({
   providedIn: 'root'
@@ -59,7 +60,7 @@ export class FhirLabelProviderFactory {
       if (this._labelProviders.has('fhir.MedicationRequest')) {
         return this._labelProviders.get('fhir.MedicationRequest');
       }
-      const provider = new MedicationRequestLabelProvider(this) as ILabelProvider<any>;
+      const provider = new MedicationRequestLabelProvider() as ILabelProvider<any>;
       this._labelProviders.set('fhir.MedicationRequest', provider);
       return provider;
     }
@@ -109,6 +110,14 @@ export class FhirLabelProviderFactory {
       }
       const provider = new LibraryLabelProvider() as ILabelProvider<any>;
       this._labelProviders.set('fhir.Library', provider);
+      return provider;
+    }
+    else if (FhirTypeGuard.isBundle(object)) {
+      if (this._labelProviders.has('fhir.Bundle')) {
+        return this._labelProviders.get('fhir.Bundle');
+      }
+      const provider = new BundleLabelProvider(this) as ILabelProvider<Bundle>;
+      this._labelProviders.set('fhir.Bundle', provider);
       return provider;
     }
     else if (object === 'fhir.Ratio') {
