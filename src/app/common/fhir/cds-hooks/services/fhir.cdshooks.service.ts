@@ -37,7 +37,9 @@ export class FhirCdsHooksService {
 
   private readonly _options: object;
 
-  constructor(private _httpClient: HttpClient) {
+  constructor(
+      private _httpClient: HttpClient
+  ) {
     this._options = {
       headers: new HttpHeaders()
         .set('Accept', 'application/json; charset=utf-8; q=1')

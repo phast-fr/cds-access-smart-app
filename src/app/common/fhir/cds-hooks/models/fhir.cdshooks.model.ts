@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import {Bundle, Coding, Resource} from 'phast-fhir-ts';
+import {Bundle, Coding, id, Resource} from 'phast-fhir-ts';
 
 export interface Services {
   services: Array<Service>;
@@ -96,7 +96,7 @@ export class OrderSelectContext extends HookContext {
   selections: Array<string>;
   draftOrders: Bundle;
 
-  constructor(userId: string, patientId: string, selections: Array<string>, draftOrders: Bundle) {
+  constructor(userId: string, patientId: string, selections: Array<id>, draftOrders: Bundle) {
     super(userId, patientId);
     this.selections = selections;
     this.draftOrders = draftOrders;
