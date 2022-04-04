@@ -45,7 +45,7 @@ export class FormularyStateService {
     return this._user;
   }
 
-  public set changeComposition(composition: Composition) {
+  public set composition(composition: Composition) {
     this._compositionSubject$.next(composition);
   }
 

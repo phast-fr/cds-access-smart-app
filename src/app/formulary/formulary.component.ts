@@ -162,7 +162,7 @@ export class FormularyComponent extends SmartComponent implements OnDestroy, Aft
       .subscribe({
         next: composition => {
           this._composition = composition;
-          this._formularyState.changeComposition = this._composition;
+          this._formularyState.composition = this._composition;
         },
         error: err => console.error('error', err)
       });
