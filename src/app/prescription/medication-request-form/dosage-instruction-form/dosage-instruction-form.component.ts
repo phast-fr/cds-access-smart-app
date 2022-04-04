@@ -29,7 +29,7 @@ import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/o
 
 import {DateTime} from 'luxon';
 import {nanoid} from 'nanoid';
-import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains} from 'phast-fhir-ts';
+import {CodeableConcept, code, Coding, Dosage, UnitsOfTime, ValueSetContains, MedicationRequest} from 'phast-fhir-ts';
 
 import {IRender} from '../../../common/cds-access/models/state.model';
 import { FhirLabelProviderFactory } from '../../../common/fhir/providers/fhir.label.provider.factory';
@@ -37,10 +37,8 @@ import { MedicationRequestFormViewModel } from '../medication-request-form.view-
 import { MedicationRequestFormState } from '../medication-request-form.state';
 import {
   MedicationFormIntentAddDosageInstruction,
-  MedicationFormIntentAddDoseAndRate,
   MedicationFormIntentAddTimeOfDay,
   MedicationFormIntentRemoveDosageInstruction,
-  MedicationFormIntentRemoveDoseAndRate,
   MedicationFormIntentRemoveTimeOfDay,
   MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue,
   MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit,
@@ -67,6 +65,7 @@ import {
 } from '../medication-request-form.intent';
 
 import {environment} from '../../../../environments/environment';
+import {FhirTypeGuard} from '../../../common/fhir/utils/fhir.type.guard';
 
 @Component({
   selector: 'app-dosage-instruction-form',
@@ -78,13 +77,28 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
 
   private readonly _unsubscribeTrigger$: Subject<void>;
 
-  private readonly _dosageInstruction$: BehaviorSubject<FormArray | boolean>;
+  private readonly _dosageInstruction$: BehaviorSubject<FormArray>;
 
-  constructor(private _viewModel: MedicationRequestFormViewModel,
-              private _labelProviderFactory: FhirLabelProviderFactory,
-              private _fb: FormBuilder) {
+  private readonly _doseModes$: BehaviorSubject<Array<string>>;
+
+  constructor(
+      private _viewModel: MedicationRequestFormViewModel,
+      private _labelProviderFactory: FhirLabelProviderFactory,
+      private _fb: FormBuilder
+  ) {
     this._unsubscribeTrigger$ = new Subject<void>();
-    this._dosageInstruction$ = new BehaviorSubject<FormArray | boolean>(false);
+    this._dosageInstruction$ = new BehaviorSubject<FormArray>(this._fb.array([], this.formArrayMinLength(1)));
+    this._doseModes$ = new BehaviorSubject<Array<string>>([]);
+  }
+
+  public doseMode(nDosage: number, mode: string): void {
+    const doseModes = this._doseModes$.value;
+    doseModes[nDosage] = mode;
+    this._doseModes$.next(doseModes);
+  }
+
+  public get doseModes$(): Observable<Array<string>> {
+    return this._doseModes$.asObservable();
   }
 
   public toFormControl(control: AbstractControl): FormControl {
@@ -95,15 +109,12 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return control as FormArray;
   }
 
-  public get dosageInstruction$(): Observable<FormArray | boolean> {
+  public get dosageInstruction$(): Observable<FormArray> {
     return this._dosageInstruction$.asObservable();
   }
 
-  public get dosageInstruction(): FormArray | undefined {
-    if (this._dosageInstruction$.value) {
-      return this._dosageInstruction$.value as FormArray;
-    }
-    return undefined;
+  public get dosageInstruction(): FormArray {
+    return this._dosageInstruction$.value;
   }
 
   public get isLoadingList$(): Observable<boolean> {
@@ -122,14 +133,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
     return this._viewModel.whenArray;
   }
 
-  public doseAndRateUnitArray(nDosage: number): Array<Coding> | undefined {
-    if (this._viewModel.medication?.id && this._viewModel.doseAndRateUnitMap) {
-      const doseAndRateUnitForMed = this._viewModel.doseAndRateUnitMap.get(this._viewModel.medication.id);
-      if (doseAndRateUnitForMed) {
-        return doseAndRateUnitForMed.get(nDosage);
-      }
-    }
-    return undefined;
+  public unitArray(nDosage: number): Array<Coding> | undefined {
+    return this._viewModel.doseUnitMap?.get(nDosage);
   }
 
   public ngOnInit(): void {
@@ -152,28 +157,36 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   public render(state: MedicationRequestFormState): void {
+    const medicationRequest = state.bundle?.entry
+        ?.filter(entry => FhirTypeGuard.isMedicationRequest(entry.resource))
+        .map(entry => entry.resource as MedicationRequest)
+        .reduce((_, current: MedicationRequest) => current);
     switch (state.type) {
       case 'AddMedication':
-        if (state.medicationRequest?.dosageInstruction) {
-          this._dosageInstruction$.next(
-            this._fb.array([
+        if (medicationRequest?.dosageInstruction) {
+          this._doseModes$.value.push('qt');
+          this.dosageInstruction.push(
               this.addDosageInstruction(
-                state.medicationRequest.dosageInstruction[0],
-                0
+                  medicationRequest.dosageInstruction[0],
+                  0
               )
-            ], this.formArrayMinLength(1)));
+          );
+          this._dosageInstruction$.next(this.dosageInstruction);
         }
         break;
       case 'RemoveMedication':
-        if (!state.medicationRequest && !this.dosageInstruction) {
-          this._dosageInstruction$.next(false);
+        if (!medicationRequest && !this.dosageInstruction) {
+          this._doseModes$.value.length = 0;
+          this._dosageInstruction$.value.clear({emitEvent: false});
+          this._dosageInstruction$.next(this._dosageInstruction$.value);
         }
         break;
       case 'AddDosageInstruction':
-        if (state.nDosage && state.medicationRequest?.dosageInstruction) {
-          this.dosageInstruction?.push(
+        if (state.nDosage && medicationRequest?.dosageInstruction) {
+          this._doseModes$.value.push('qt');
+          this.dosageInstruction.push(
             this.addDosageInstruction(
-              state.medicationRequest.dosageInstruction[state.nDosage],
+              medicationRequest.dosageInstruction[state.nDosage],
               state.nDosage
             )
           );
@@ -181,10 +194,8 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         break;
       case 'RemoveDosageInstruction':
         if (state.nDosage) {
+          this._doseModes$.value.splice(state.nDosage, 1);
           this.dosageInstruction?.removeAt(state.nDosage);
-        }
-        if (!this.dosageInstruction) {
-          this._dosageInstruction$.next(false);
         }
         break;
       case 'AddTimeOfDay':
@@ -211,7 +222,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           removeWhen.removeAt(state.index);
         }
         break;
-      case 'AddDoseAndRate':
+      /*case 'AddDoseAndRate':
         if (typeof state.nDosage === 'number') {
           const addDoseAndRate = this.dosageInstruction?.at(state.nDosage).get('doseAndRate') as FormArray;
           addDoseAndRate.push(
@@ -227,45 +238,41 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           const removeDoseAndRate = this.dosageInstruction?.at(state.nDosage).get('doseAndRate') as FormArray;
           removeDoseAndRate.removeAt(state.index);
         }
-        break;
+        break;*/
       case 'ValueChangesDosageInstruction':
-        if (typeof state.nDosage === 'number' && state.medicationRequest?.dosageInstruction) {
+        if (typeof state.nDosage === 'number' && medicationRequest?.dosageInstruction) {
           this.updateDosageInstruction(
-            state.medicationRequest.dosageInstruction[state.nDosage],
+            medicationRequest.dosageInstruction[state.nDosage],
             this.dosageInstruction?.at(state.nDosage) as FormGroup
           );
         }
         break;
       case 'ValueChangesMedication':
-        if (state.medicationRequest?.dosageInstruction) {
-          state.medicationRequest.dosageInstruction.forEach((dosage: Dosage, nDosage: number) => {
-            this.updateDosageInstruction(
-              dosage,
-              this.dosageInstruction?.at(nDosage) as FormGroup
-            );
-          });
-        }
+        medicationRequest?.dosageInstruction?.forEach((dosage: Dosage, nDosage: number) => {
+          this.updateDosageInstruction(
+            dosage,
+            this.dosageInstruction?.at(nDosage) as FormGroup
+          );
+        });
         break;
       case 'AddMedicationRequest':
-        this._dosageInstruction$.next(false);
+        this._doseModes$.value.length = 0;
+        this._dosageInstruction$.value.clear({emitEvent: false});
+        this._dosageInstruction$.next(this._dosageInstruction$.value);
         break;
     }
   }
 
   public onAddDosageInstruction(): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentAddDosageInstruction(this._viewModel.medicationRequest)
-      );
-    }
+    this._viewModel.dispatchIntent(
+        new MedicationFormIntentAddDosageInstruction(this._viewModel.bundle)
+    );
   }
 
   public onRemoveDosageInstruction(nDosage: number): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveDosageInstruction(this._viewModel.medicationRequest, nDosage)
-      );
-    }
+    this._viewModel.dispatchIntent(
+        new MedicationFormIntentRemoveDosageInstruction(this._viewModel.bundle, nDosage)
+    );
   }
 
   public onAddTimeOfDay(nDosage: number): void {
@@ -273,11 +280,9 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   public onRemoveTimeOfDay(nDosage: number, nTimeOfDay: number): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveTimeOfDay(this._viewModel.medicationRequest, nDosage, nTimeOfDay)
-      );
-    }
+    this._viewModel.dispatchIntent(
+        new MedicationFormIntentRemoveTimeOfDay(this._viewModel.bundle, nDosage, nTimeOfDay)
+    );
   }
 
   public onAddWhen(nDosage: number): void {
@@ -285,24 +290,18 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
   }
 
   public onRemoveWhen(nDosage: number, nWhen: number): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveWhen(this._viewModel.medicationRequest, nDosage, nWhen)
-      );
-    }
+    this._viewModel.dispatchIntent(
+        new MedicationFormIntentRemoveWhen(this._viewModel.bundle, nDosage, nWhen)
+    );
   }
 
-  public onAddDoseAndRate(nDosage: number): void {
+  /*public onAddDoseAndRate(nDosage: number): void {
     this._viewModel.dispatchIntent(new MedicationFormIntentAddDoseAndRate(nDosage));
   }
 
   public onRemoveDoseAndRate(nDosage: number, nDoseAndRate: number): void {
-    if (this._viewModel.medicationRequest) {
-      this._viewModel.dispatchIntent(
-        new MedicationFormIntentRemoveDoseAndRate(this._viewModel.medicationRequest, nDosage, nDoseAndRate)
-      );
-    }
-  }
+    this._viewModel.dispatchIntent(new MedicationFormIntentRemoveDoseAndRate(this._viewModel.bundle, nDosage, nDoseAndRate));
+  }*/
 
   public trackByCodeableConcept(_: number, codeableConcept: CodeableConcept): string | undefined {
     return codeableConcept.text;
@@ -412,7 +411,7 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           offset: [dosage.timing?.repeat?.offset, Validators.pattern( /\d/ )]
         })
       }),
-      doseAndRate: this._fb.array([], Validators.required)
+      doseAndRate: this.addDoseAndRate(nDosage)
     });
 
     const routeControl = dosageInstructionGroup.get('route');
@@ -433,18 +432,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           tap(() => routeControl.reset(undefined, {emitEvent: false}))
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest && this._viewModel.medication) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRoute(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  null,
-                  this._viewModel.medication
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRoute(
+              this._viewModel.bundle,
+              nDosage,
+              null
+            )
+          ),
           error: err => console.error('error', err)
         });
       routeObj$
@@ -452,18 +446,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest && this._viewModel.medication) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRoute(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value,
-                  this._viewModel.medication
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRoute(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -477,17 +466,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           filter(() => boundsDurationValue.valid)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionBoundsDurationValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -512,17 +497,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
       boundsDurationUnitNotValid$
@@ -530,17 +511,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  null
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionBoundsDurationUnit(
+              this._viewModel.bundle,
+              nDosage,
+              null
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -555,17 +532,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           filter(() => boundsPeriodStartControl.valid)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionBoundsPeriodStart(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -580,17 +553,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           filter(() => boundsPeriodEndControl.valid)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionBoundsPeriodEnd(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -602,17 +571,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDurationValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDurationValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -637,17 +602,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
       durationUnitNotValid$
@@ -656,17 +617,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           tap(() => durationUnitControl.reset(null, {emitEvent: false}))
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  null
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDurationUnit(
+              this._viewModel.bundle,
+              nDosage,
+              null
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -678,17 +635,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionFrequencyValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionFrequencyValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -700,17 +653,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionPeriodValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionPeriodValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -735,17 +684,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionPeriodUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionPeriodUnit(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
       periodUnitNotValid$
@@ -755,17 +700,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
             .reset(null, {emitEvent: false}))
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionPeriodUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  null
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionPeriodUnit(
+              this._viewModel.bundle,
+              nDosage,
+              null
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -777,17 +718,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: dayOfWeekValues => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDayOfWeek(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  dayOfWeekValues
-                )
-              );
-            }
-          },
+          next: dayOfWeekValues => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDayOfWeek(
+              this._viewModel.bundle,
+              nDosage,
+              dayOfWeekValues
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -799,17 +736,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionOffsetValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionOffsetValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -853,18 +786,14 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         filter(() => timeOfDayControl.valid)
       )
       .subscribe({
-        next: value => {
-          if (this._viewModel.medicationRequest) {
-            this._viewModel.dispatchIntent(
-              new MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue(
-                this._viewModel.medicationRequest,
-                nDosage,
-                nTimeOfDay,
-                value
-              )
-            );
-          }
-        },
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionTimeOfDayValue(
+            this._viewModel.bundle,
+            nDosage,
+            nTimeOfDay,
+            value
+          )
+        ),
         error: err => console.error('error', err)
       });
     return timeOfDayControl;
@@ -886,18 +815,14 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
-        next: () => {
-          if (this._viewModel.medicationRequest) {
-            this._viewModel.dispatchIntent(
-              new MedicationFormIntentValueChangesDosageInstructionWhenValue(
-                this._viewModel.medicationRequest,
-                nDosage,
-                nWhen,
-                null
-              )
-            );
-          }
-        },
+        next: () => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionWhenValue(
+            this._viewModel.bundle,
+            nDosage,
+            nWhen,
+            null
+          )
+        ),
         error: err => console.error('error', err)
       });
     whenObj$
@@ -905,42 +830,51 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
         takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
-        next: value => {
-          if (this._viewModel.medicationRequest) {
-            this._viewModel.dispatchIntent(
-              new MedicationFormIntentValueChangesDosageInstructionWhenValue(
-                this._viewModel.medicationRequest,
-                nDosage,
-                nWhen,
-                value
-              )
-            );
-          }
-        },
+        next: value => this._viewModel.dispatchIntent(
+          new MedicationFormIntentValueChangesDosageInstructionWhenValue(
+            this._viewModel.bundle,
+            nDosage,
+            nWhen,
+            value
+          )
+        ),
         error: err => console.error('error', err)
       });
 
     return whenControl;
   }
 
-  private addDoseAndRate(nDosage: number, nDoseAndRate: number): FormGroup {
+  private addDoseAndRate(nDosage: number): FormGroup {
     const options = {emitEvent: false};
     const doseAndRateGroup = this._fb.group({
+      doseMode: [this._doseModes$.value[nDosage]],
       doseQuantity: this._fb.group({
-        value: [undefined, [Validators.required, Validators.pattern( /\d/ )]],
+        value: [undefined, [Validators.required, Validators.pattern( /\d/ ), Validators.min(1)]],
         unit: [undefined]
       }),
       rateRatio: this._fb.group({
         numerator: this._fb.group({
-          value: [undefined, Validators.pattern( /\d/ )],
+          value: [undefined],
           unit: [undefined]
         }),
         denominator: this._fb.group({
-          value: [undefined, Validators.pattern( /\d/ )],
+          value: [undefined],
           unit: [undefined]
         })
       })
     });
+
+    const doseModeControl = doseAndRateGroup.get('doseMode');
+    if (doseModeControl) {
+      doseModeControl.valueChanges
+          .pipe(
+              takeUntil(this._unsubscribeTrigger$)
+          )
+          .subscribe({
+            next: mode => this.onChangeMode(nDosage, mode),
+            error: err => console.error('error', err)
+          });
+    }
 
     const doseQuantityValueControl = doseAndRateGroup.get(['doseQuantity', 'value']);
     if (doseQuantityValueControl) {
@@ -951,18 +885,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           distinctUntilChanged()
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDoseQuantityValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -983,18 +912,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           tap(() => doseQuantityUnitControl.reset(undefined, options))
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  null
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
+              this._viewModel.bundle,
+              nDosage,
+              null
+            )
+          ),
           error: err => console.error('error', err)
         });
       doseQuantityUnitObj$
@@ -1002,18 +926,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionDoseQuantityUnit(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -1027,18 +946,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           distinctUntilChanged()
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -1059,18 +973,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           tap(() => rateRatioNumeratorUnit.reset(undefined, options))
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  null
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+              new MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit(
+                this._viewModel.bundle,
+                nDosage,
+                null
+              )
+          ),
           error: err => console.error('error', err)
         });
       rateRatioNumeratorUnitObj$
@@ -1078,18 +987,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+              new MedicationFormIntentValueChangesDosageInstructionRateRatioNumeratorUnit(
+                this._viewModel.bundle,
+                nDosage,
+                value
+              )
+            ),
           error: err => console.error('error', err)
         });
     }
@@ -1103,18 +1007,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           distinctUntilChanged()
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorValue(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
@@ -1135,18 +1034,13 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           tap(() => rateRatioDenominatorUnit.reset(undefined, options))
         )
         .subscribe({
-          next: () => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  null
-                )
-              );
-            }
-          },
+          next: () => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit(
+              this._viewModel.bundle,
+              nDosage,
+              null
+            )
+          ),
           error: err => console.error('error', err)
         });
       rateRatioDenominatorUnitObj$
@@ -1154,23 +1048,52 @@ export class DosageInstructionFormComponent implements OnInit, OnDestroy, IRende
           takeUntil(this._unsubscribeTrigger$)
         )
         .subscribe({
-          next: value => {
-            if (this._viewModel.medicationRequest) {
-              this._viewModel.dispatchIntent(
-                new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit(
-                  this._viewModel.medicationRequest,
-                  nDosage,
-                  nDoseAndRate,
-                  value
-                )
-              );
-            }
-          },
+          next: value => this._viewModel.dispatchIntent(
+            new MedicationFormIntentValueChangesDosageInstructionRateRatioDenominatorUnit(
+              this._viewModel.bundle,
+              nDosage,
+              value
+            )
+          ),
           error: err => console.error('error', err)
         });
     }
 
     return doseAndRateGroup;
+  }
+
+  private onChangeMode(nDosage: number, mode: string): void {
+    const doseAndRateGroup = this.dosageInstruction?.at(nDosage) as FormGroup;
+
+    this.doseMode(nDosage, mode);
+    const validators = [Validators.required, Validators.pattern( /\d/ ), Validators.min(1)];
+
+    const doseQuantityValue = doseAndRateGroup.get(['doseAndRate', 'doseQuantity', 'value']);
+    const doseRateNumeratorValue = doseAndRateGroup.get(['doseAndRate', 'rateRatio', 'numerator', 'value']);
+    const doseRateDenominatorValue = doseAndRateGroup.get(['doseAndRate', 'rateRatio', 'denominator', 'value']);
+
+    doseQuantityValue?.clearValidators();
+    doseRateNumeratorValue?.clearValidators();
+    doseRateDenominatorValue?.clearValidators();
+
+    switch (mode) {
+      case 'qt':
+        validators.forEach(validator => doseQuantityValue?.addValidators(validator));
+        break;
+      case 'time':
+      case 'rate':
+        validators.forEach(validator => doseRateNumeratorValue?.addValidators(validator));
+        validators.forEach(validator => doseRateDenominatorValue?.addValidators(validator));
+        break;
+      default:
+        console.error('error:', `this ${mode} dose mode is not supported`);
+        break;
+    }
+
+    const options = { onlySelf: false, emitEvent: false };
+    doseQuantityValue?.updateValueAndValidity(options);
+    doseRateNumeratorValue?.updateValueAndValidity(options);
+    doseRateDenominatorValue?.updateValueAndValidity(options);
   }
 
   private updateDosageInstruction(dosage: Dosage, dosageInstructionGroup: FormGroup): void {

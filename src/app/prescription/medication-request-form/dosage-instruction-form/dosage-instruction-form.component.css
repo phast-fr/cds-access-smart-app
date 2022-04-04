@@ -2,6 +2,10 @@
   margin-left: 8px;
 }
 
+.form-group-footer .mat-error + .mat-error {
+  margin-left: 8px;
+}
+
 button.mat-stroked-button {
   height: 51px;
 }
