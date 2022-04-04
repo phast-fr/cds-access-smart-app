@@ -36,7 +36,7 @@
           </ng-container>
         </mat-autocomplete>
       </ng-container>
-      <ng-container *ngIf="ingredientGroup.get('itemReference')">
+      <!--<ng-container *ngIf="ingredientGroup.get('itemReference')">
         <button mat-stroked-button color="primary"
                 matTooltip="Supprimer cet ingrédient"
                 matTooltipPosition="right"
@@ -66,13 +66,13 @@
         <mat-autocomplete #autoStrengthUnit="matAutocomplete" [displayWith]="displayFnCoding.bind(this)">
           <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
           <ng-container *ngIf="!(isLoadingList$ | async)">
-            <mat-option *ngFor="let unitCode of doseAndRateUnitList(ingredientGroup.get('itemReference').value);
+            <mat-option *ngFor="let unitCode of unitArray;
           index as i trackBy: trackByCoding" [value]="unitCode">
               {{ unitCode | coding }}
             </mat-option>
           </ng-container>
         </mat-autocomplete>
-      </ng-container>
+      </ng-container>-->
     </div>
     <div fxLayout="row" class="form-field-row form-field-medication-amount">
       <mat-form-field fxFlex="100%" appearance="fill">
@@ -90,7 +90,7 @@
     <div fxLayout="row" class="form-field-row form-field-medication-form">
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-label>
-          {{medicationGroup.get('medication').value.code | codeableConcept}}
+          {{ medicationGroup.get('medication').value.code | codeableConcept }}
           Forme
         </mat-label>
         <input type="text"
@@ -105,7 +105,8 @@
   <mat-autocomplete #autoAmount="matAutocomplete" [displayWith]="displayFnRatio.bind(this)">
     <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
     <ng-container *ngIf="!(isLoadingList$ | async)">
-      <mat-option *ngFor="let amount of amountList; trackBy: trackByQuantity" [value]="amount">
+      <mat-option *ngFor="let amount of amountList(medicationGroup.get('medication').value.code);
+      trackBy: trackByQuantity" [value]="amount">
         {{ amount | quantity }}
       </mat-option>
     </ng-container>
@@ -114,7 +115,8 @@
   <mat-autocomplete #autoForm="matAutocomplete" [displayWith]="displayFnCodeableConcept.bind(this)">
     <mat-option *ngIf="isLoadingList$ | async" class="is-loading"> Chargement... </mat-option>
     <ng-container *ngIf="!(isLoadingList$ | async)">
-      <mat-option *ngFor="let formCode of formList; trackBy: trackByCodeableConcept" [value]="formCode">
+      <mat-option *ngFor="let formCode of formList(medicationGroup.get('medication').value.code);
+      trackBy: trackByCodeableConcept" [value]="formCode">
         {{ formCode | codeableConcept }}
       </mat-option>
     </ng-container>
