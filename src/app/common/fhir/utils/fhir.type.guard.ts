@@ -94,6 +94,6 @@ export class FhirTypeGuard {
   static isOperationOutcome(x: unknown | null): x is OperationOutcome {
     return x != null
         && (x as Medication).resourceType !== undefined
-        && (x as Medication).resourceType === ResourceType.Medication;
+        && (x as Medication).resourceType === ResourceType.OperationOutcome;
   }
 }
