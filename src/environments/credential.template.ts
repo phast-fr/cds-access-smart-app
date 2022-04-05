@@ -7,5 +7,5 @@ export const credential = {
   },
   cio_dc_credential: 'TODO put here your CIOdc credentials',
   tio_credential: 'TODO put here your TIO credentials',
-  library_credential: 'TODO put here your library credentials'
+  cql_library_credential: 'TODO put here your library credentials'
 };

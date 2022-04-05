@@ -48,13 +48,24 @@ export class PhastCioCdsService {
 
   private readonly _options: Options;
 
-  constructor(private _fhirClient: FhirClientService) {
-    this._options = {
-      headers: new HttpHeaders()
-        .set('Accept', 'application/json; charset=utf-8; q=1')
-        .set('Content-type', 'application/fhir+json')
-        .set('Authorization', `Basic ${environment.cio_dc_credential}`)
-    } as Options;
+  constructor(
+      private _fhirClient: FhirClientService
+  ) {
+    if (environment.cql_library_auth) {
+      this._options = {
+        headers: new HttpHeaders()
+            .set('Accept', 'application/json; charset=utf-8; q=1')
+            .set('Content-type', 'application/fhir+json')
+            .set('Authorization', `Basic ${environment.cql_library_credential}`)
+      } as Options;
+    }
+    else {
+      this._options = {
+        headers: new HttpHeaders()
+            .set('Accept', 'application/json; charset=utf-8; q=1')
+            .set('Content-type', 'application/fhir+json')
+      } as Options;
+    }
   }
 
   public searchLibraryCQL(filter?: string, sortActive?: string, sortDirection?: string,
@@ -69,7 +80,7 @@ export class PhastCioCdsService {
   }
 
   public updateLibraryCQL(library: Library): Observable<Library> {
-    return this._fhirClient.update<Library>(environment.cio_dc_url, {
+    return this._fhirClient.update<Library>(environment.cql_library_url, {
       resourceType: 'Library',
       id: library.id,
       input: JSON.stringify(library)
@@ -94,12 +105,12 @@ export class PhastCioCdsService {
 
     if (columnNameToFilter && typeof filter === 'string' && filter.length > 0) {
       searchParams.set(columnNameToFilter, filter.trim());
-      return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
+      return this._fhirClient.resourceSearch<T>(environment.cql_library_url, {
         resourceType,
         searchParams
       }, this._options);
     }
-    return this._fhirClient.resourceSearch<T>(environment.cio_dc_url, {
+    return this._fhirClient.resourceSearch<T>(environment.cql_library_url, {
       resourceType,
       searchParams
     }, this._options);
