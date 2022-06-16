@@ -35,18 +35,21 @@ import {FhirSmartService} from '../../services/fhir.smart.service';
 })
 export class SmartLaunchComponent implements OnInit {
 
-  constructor(private route: ActivatedRoute,
-              private smartService: FhirSmartService) { }
+  constructor(
+      private route: ActivatedRoute,
+      private smartService: FhirSmartService
+  ) {
+  }
 
   public ngOnInit(): void {
     if (this.route.snapshot?.routeConfig?.path) {
-      const context = this.route.snapshot.routeConfig.path.replace('/launch', '');
+      const context = this.route.snapshot.routeConfig.path.replace('/launch', '') || 'prescription';
       const iss = this.route.snapshot.queryParamMap.get('iss');
       const launch = this.route.snapshot.queryParamMap.get('launch');
       const redirectUri = location.origin + '/' + context;
 
-      if (iss && launch) {
-        this.smartService.launch(context, iss, launch, redirectUri);
+      if (iss) {
+        this.smartService.obtainAuthorizationCode(context, iss, redirectUri, launch);
       }
     }
     else {

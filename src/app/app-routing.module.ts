@@ -33,8 +33,8 @@ const routes: Routes = [
   { path: 'formulary/launch', component: SmartLaunchComponent },
   { path: 'dispense', loadChildren: () => import('./dispense/dispense.module').then(m => m.DispenseModule) },
   { path: 'dispense/launch', component: SmartLaunchComponent },
-  { path: 'cql-editor', loadChildren: () => import('./cql-editor/cql-editor.module').then(m => m.CqlEditorModule) },
-  { path: 'cql-editor/launch', component: SmartLaunchComponent },
+  { path: 'cqleditor', loadChildren: () => import('./cql-editor/cql-editor.module').then(m => m.CqlEditorModule) },
+  { path: 'cqleditor/launch', component: SmartLaunchComponent },
   { path: '', redirectTo: 'prescription', pathMatch: 'full' },
   { path: '**', redirectTo: 'prescription' }
 ];

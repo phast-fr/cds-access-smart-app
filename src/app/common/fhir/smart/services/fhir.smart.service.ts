@@ -47,9 +47,11 @@ export class FhirSmartService {
 
   private readonly _accessToken$: BehaviorSubject<string | boolean>;
 
-  constructor(private _stateService: StateService,
-              private _fhirClient: FhirClientService,
-              private _http: HttpClient) {
+  constructor(
+      private _stateService: StateService,
+      private _fhirClient: FhirClientService,
+      private _http: HttpClient
+  ) {
     this._baseUrl$ = new BehaviorSubject<string | boolean>(false);
     this._accessToken$ = new BehaviorSubject<string | boolean>(false);
   }
@@ -62,8 +64,8 @@ export class FhirSmartService {
     return this._accessToken$.asObservable();
   }
 
-  public launch(context: string, iss: string, launch: string, redirectUri?: string): void {
-    const params = this.getLaunchParams(context, iss, launch, redirectUri);
+  public obtainAuthorizationCode(context: string, iss: string, redirectUri: string, launch: string | null): void {
+    const params = this.buildLaunchParams(context, iss, redirectUri, launch);
     if (params) {
       this._fhirClient.smartAuthMetadata(iss, this.getHttpOptions())
           .subscribe({
@@ -119,10 +121,14 @@ export class FhirSmartService {
 
     if (context.iss) {
       if (context.iss && context.patient) {
-        this._fhirClient.read<Patient>(context.iss, {
-          resourceType: 'Patient',
-          id: context.patient
-        }, options)
+        this._fhirClient.read<Patient>(
+            context.iss,
+            {
+              resourceType: 'Patient',
+              id: context.patient
+            },
+            options
+        )
           .pipe(
             filter(patient => FhirTypeGuard.isPatient(patient)),
             map(patient => patient as Patient)
@@ -138,26 +144,30 @@ export class FhirSmartService {
           });
       }
 
-      this._fhirClient.read(context.iss, {
-        resourceType: 'Practitioner',
-        id: state.userId()
-      }, options)
-        .pipe(
-          filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
-          map(practitioner => practitioner as Practitioner)
-        )
-        .subscribe({
-          next: practitioner => {
-            state.practitioner = practitioner;
-            if (context.patient && state.patient) {
-              this._stateService.emitState(state);
-            }
-            else if (!context.patient) {
-              this._stateService.emitState(state);
-            }
+      this._fhirClient.read(
+          context.iss,
+          {
+            resourceType: 'Practitioner',
+            id: state.userId()
           },
-          error: err => console.error('error', err)
-        });
+          options
+      )
+          .pipe(
+              filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
+              map(practitioner => practitioner as Practitioner)
+          )
+          .subscribe({
+            next: practitioner => {
+              state.practitioner = practitioner;
+              if (context.patient && state.patient) {
+                this._stateService.emitState(state);
+              }
+              else if (!context.patient) {
+                this._stateService.emitState(state);
+              }
+            },
+            error: err => console.error('error', err)
+          });
     }
   }
 
@@ -167,7 +177,12 @@ export class FhirSmartService {
         this.refreshContext();
       }
       else {
-        this.launch(sessionStorage['context'], sessionStorage['iss'], sessionStorage['launch'], sessionStorage['redirect_uri']);
+        this.obtainAuthorizationCode(
+            sessionStorage['context'],
+            sessionStorage['iss'],
+            sessionStorage['redirect_uri'],
+            sessionStorage['launch']
+        );
       }
     }
     else {
@@ -176,45 +191,54 @@ export class FhirSmartService {
       const options = this.getHttpOptionsWithAccessToken();
       if (context.iss) {
         if (context.patient && context.patient !== 'undefined') {
-          this._fhirClient.read(context.iss, {
-            resourceType: 'Patient',
-            id: context.patient
-          }, options)
-            .pipe(
-              filter(patient => FhirTypeGuard.isPatient(patient)),
-              map(patient => patient as Patient)
-            )
-            .subscribe({
-              next: patient => {
-                state.patient = patient;
-                if (state.practitioner) {
-                  this._stateService.emitState(state);
-                }
+          this._fhirClient.read(
+              context.iss,
+              {
+                resourceType: 'Patient',
+                id: context.patient
               },
-              error: err => console.error('error', err)
-            });
+              options)
+              .pipe(
+                filter(patient => FhirTypeGuard.isPatient(patient)),
+                map(patient => patient as Patient)
+              )
+              .subscribe({
+                next: patient => {
+                  state.patient = patient;
+                  if (state.practitioner) {
+                    this._stateService.emitState(state);
+                  }
+                },
+                error: err => console.error('error', err)
+              });
         }
-
-        this._fhirClient.read(context.iss, {
-          resourceType: 'Practitioner',
-          id: state.userId()
-        }, options)
-          .pipe(
-            filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
-            map(practitioner => practitioner as Practitioner)
+        const userId = state.userId();
+        if (userId) {
+          this._fhirClient.read(
+              context.iss,
+              {
+                resourceType: 'Practitioner',
+                id: userId
+              },
+              options
           )
-          .subscribe({
-            next: practitioner => {
-              state.practitioner = practitioner;
-              if (context.patient !== 'undefined' && state.patient) {
-                this._stateService.emitState(state);
-              }
-              else if (context.patient === 'undefined') {
-                this._stateService.emitState(state);
-              }
-            },
-            error: err => console.error('error', err)
-          });
+              .pipe(
+                  filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
+                  map(practitioner => practitioner as Practitioner)
+              )
+              .subscribe({
+                next: practitioner => {
+                  state.practitioner = practitioner;
+                  if (context.patient !== 'undefined' && state.patient) {
+                    this._stateService.emitState(state);
+                  }
+                  else if (context.patient === 'undefined') {
+                    this._stateService.emitState(state);
+                  }
+                },
+                error: err => console.error('error', err)
+              });
+        }
       }
     }
   }
@@ -235,13 +259,13 @@ export class FhirSmartService {
     return Utils.jwtDecode(tokenId) as any;
   }
 
-  private getLaunchParams(context: string, iss: string, launch: string, redirectUri?: string): HttpParams | boolean {
+  private buildLaunchParams(context: string, iss: string, redirectUri: string, launch: string | null): HttpParams | boolean {
     if (!context) {
       console.error('context cannot be undefined');
       return false;
     }
     if (context !== 'prescription' && context !== 'formulary'
-        && context !== 'dispense' && context !== 'cql-editor') {
+        && context !== 'dispense' && context !== 'cqleditor') {
       console.error('context is not supported', context);
       return false;
     }
@@ -257,9 +281,9 @@ export class FhirSmartService {
     sessionStorage.clear();
     sessionStorage.setItem('context', context);
     this.setBaseUrl(iss);
-    sessionStorage.setItem('launch', launch);
-    if (redirectUri) {
-      sessionStorage.setItem('redirect_uri', redirectUri);
+    sessionStorage.setItem('redirect_uri', redirectUri);
+    if (launch) {
+      sessionStorage.setItem('launch', launch);
     }
 
     const state = nanoid(16);
@@ -267,13 +291,13 @@ export class FhirSmartService {
     let params = new HttpParams()
         .set('response_type', 'code')
         .set('client_id', clientId)
-        .set('launch', launch)
+        .set('redirect_uri', redirectUri)
         .set('scope', environment.scope[context])
         .set('state', state)
         .set('aud', iss);
 
-    if (redirectUri) {
-      params = params.set('redirect_uri', redirectUri);
+    if (launch) {
+      params = params.set('launch', launch);
     }
     return params;
   }
@@ -314,16 +338,20 @@ export class FhirSmartService {
   }
 
   private doPostToken(url: string, body: string): void {
-    this._http.post<SmartContext>(url, body, {
-      headers: new HttpHeaders()
-        .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
-        .set('Accept', 'application/json')
-    }).subscribe({
-      next: context => {
-        console.log('smart context', context);
-        this.saveContext(context);
-      },
-      error: err => console.error('error', err)
+    this._http.post<SmartContext>(
+        url,
+        body,
+        {
+          headers: new HttpHeaders()
+              .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
+              .set('Accept', 'application/json')
+        })
+        .subscribe({
+          next: context => {
+            console.log('smart context', context);
+            this.saveContext(context);
+          },
+          error: err => console.error('error', err)
     });
   }
 
@@ -334,7 +362,7 @@ export class FhirSmartService {
       return false;
     }
     if (context !== 'prescription' && context !== 'formulary'
-        && context !== 'dispense' && context !== 'cql-editor') {
+        && context !== 'dispense' && context !== 'cqleditor') {
       console.error('context is not supported', context);
       return false;
     }
@@ -364,7 +392,7 @@ export class FhirSmartService {
     }
     const context = sessionStorage.getItem('context');
     if (context !== 'prescription' && context !== 'formulary'
-        && context !== 'dispense' && context !== 'cql-editor') {
+        && context !== 'dispense' && context !== 'cqleditor') {
       console.error('context is not supported', context);
       return false;
     }

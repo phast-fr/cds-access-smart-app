@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 import {Component, OnDestroy, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {Subject} from 'rxjs';
@@ -150,8 +151,10 @@ export abstract class SmartComponent implements OnInit, OnDestroy {
 
   private readonly _unsubscribeTrigger$: Subject<void>;
 
-  protected constructor(private _route: ActivatedRoute,
-                        private _smartService: FhirSmartService) {
+  protected constructor(
+      private _route: ActivatedRoute,
+      private _smartService: FhirSmartService
+  ) {
     this._unsubscribeTrigger$ = new Subject<void>();
   }
 

@@ -1,8 +1,6 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
 src/assets/env.js
-src/environments/credential.dev.ts
-src/environments/credential.prod.ts
 
 # compiled output
 /.angular

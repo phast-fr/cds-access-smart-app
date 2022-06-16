@@ -1,8 +1,15 @@
-FROM nginx:1.21.6-alpine
+FROM nginx:1.22.0-alpine
 
 MAINTAINER David Ouagne <david.ouagne@phast.fr>
 
 ENV TZ=Europe/Paris
+ENV CLIENT_ID_PRESCRIPTION=""
+ENV CLIENT_ID_FORMULARY=""
+ENV CLIENT_ID_DISPENSE=""
+ENV CLIENT_ID_CQL_EDITOR=""
+ENV CIO_DC_CREDENTIAL=""
+ENV TIO_CREDENTIAL=""
+ENV CQL_LIBRARY_CREDENTIAL=""
 
 EXPOSE 443
 
@@ -15,4 +22,5 @@ RUN rm -rf /usr/share/nginx/html/*
 ## Copy the artifacts in dist folder to default nginx public folder
 COPY ./dist/cds-access-smart-app /usr/share/nginx/html
 
-CMD ["nginx", "-g", "daemon off;"]
+#CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh",  "-c",  "envsubst < /usr/share/nginx/html/assets/env.template.js > /usr/share/nginx/html/assets/env.js && exec nginx -g 'daemon off;'"]
