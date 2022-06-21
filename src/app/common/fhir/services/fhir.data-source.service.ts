@@ -44,7 +44,7 @@ export class FhirDataSourceService {
       private _smartService: FhirSmartService,
       private _fhirClient: FhirClientService
   ) {
-    this._smartService.baseUrl$
+    this._smartService.iss$
       .pipe(
         filter(value => value !== false),
         map(value => value as string)

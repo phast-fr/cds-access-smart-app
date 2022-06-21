@@ -77,8 +77,9 @@ export interface SmartOAuthMetadata {
 @Injectable()
 export class FhirClientService {
 
-  constructor(private _http: HttpClient) {
-  }
+  constructor(
+      private _http: HttpClient
+  ) {}
 
   public smartAuthMetadata(baseUrl: string, options: Options): Observable<SmartOAuthMetadata> {
     const normalizedBaseUrl = baseUrl.replace(/\/*$/, '/');

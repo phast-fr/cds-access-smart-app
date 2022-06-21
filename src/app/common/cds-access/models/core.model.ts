@@ -183,7 +183,7 @@ export abstract class SmartComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: value => this._smartService.retrieveContext(value.code, value.state),
+        next: value => this._smartService.obtainAccessToken(value.code, value.state),
         error: err => console.error(err)
       });
     routeWithToken$
@@ -191,7 +191,7 @@ export abstract class SmartComponent implements OnInit, OnDestroy {
         takeUntil(this._unsubscribeTrigger$)
       )
       .subscribe({
-        next: () => this._smartService.loadContext(),
+        next: () => this._smartService.loadSmartContext(),
         error: err => console.error(err)
       });
   }
