@@ -95,11 +95,11 @@ export class FhirSmartService {
     return !!sessionStorage.getItem('refresh_token');
   }
 
-  public refreshContext(): void {
-    const body = this.refreshContextBody();
-    const baseUrl = this.getISS();
-    if (baseUrl && body) {
-      this._fhirClient.smartAuthMetadata(baseUrl, this.getHttpOptions())
+  public obtainRefreshToken(): void {
+    const body = this.buildRefreshAuthorizationBody();
+    const iss = this.getISS();
+    if (iss && body) {
+      this._fhirClient.smartAuthMetadata(iss, this.getHttpOptions())
         .subscribe({
           next: metadata => {
             this.doPostToken(metadata.tokenUrl.href, body.toString());
@@ -174,7 +174,7 @@ export class FhirSmartService {
   public loadSmartContext(): void {
     if (this.isTokenExpired()) {
       if (this.isSupportedRefreshToken()) {
-        this.refreshContext();
+        this.obtainRefreshToken();
       }
       else {
         this.obtainAuthorizationCode(
@@ -386,7 +386,7 @@ export class FhirSmartService {
     return body;
   }
 
-  private refreshContextBody(): HttpParams | boolean {
+  private buildRefreshAuthorizationBody(): HttpParams | boolean {
     const refreshToken = sessionStorage.getItem('refresh_token');
     if (!refreshToken) {
       console.error('refresh token is absent to session storage');
