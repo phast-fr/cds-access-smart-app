@@ -25,6 +25,7 @@
 import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 
+import {SmartOnFHIR} from '../../models/fhir.smart.context.model';
 import {FhirSmartService} from '../../services/fhir.smart.service';
 
 @Component({
@@ -44,8 +45,8 @@ export class SmartLaunchComponent implements OnInit {
   public ngOnInit(): void {
     if (this.route.snapshot?.routeConfig?.path) {
       const context = this.route.snapshot.routeConfig.path.replace('/launch', '') || 'prescription';
-      const iss = this.route.snapshot.queryParamMap.get('iss');
-      const launch = this.route.snapshot.queryParamMap.get('launch');
+      const iss = this.route.snapshot.queryParamMap.get(SmartOnFHIR.ISS);
+      const launch = this.route.snapshot.queryParamMap.get(SmartOnFHIR.LAUNCH);
       const redirectUri = location.origin + '/' + context;
 
       if (iss) {

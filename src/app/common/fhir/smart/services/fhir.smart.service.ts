@@ -34,7 +34,7 @@ import {Utils} from '../../../cds-access/utils/utils';
 import {StateService} from '../../../cds-access/services/state.service';
 import {FhirClientService, Options} from '../../services/fhir.client.service';
 import {StateModel} from '../../../cds-access/models/core.model';
-import {SmartContext} from '../models/fhir.smart.context.model';
+import {SmartContext, SmartOnFHIR} from '../models/fhir.smart.context.model';
 import {SmartUser} from '../models/fhir.smart.user.model';
 import {FhirTypeGuard} from '../../utils/fhir.type.guard';
 
@@ -92,7 +92,7 @@ export class FhirSmartService {
   }
 
   public isSupportedRefreshToken(): boolean {
-    return !!sessionStorage.getItem('refresh_token');
+    return !!sessionStorage.getItem(SmartOnFHIR.REFRESH_TOKEN);
   }
 
   public obtainRefreshToken(): void {
@@ -179,9 +179,9 @@ export class FhirSmartService {
       else {
         this.obtainAuthorizationCode(
             sessionStorage['context'],
-            sessionStorage['iss'],
-            sessionStorage['redirect_uri'],
-            sessionStorage['launch']
+            sessionStorage[SmartOnFHIR.ISS],
+            sessionStorage[SmartOnFHIR.REDIRECT_URI],
+            sessionStorage[SmartOnFHIR.LAUNCH]
         );
       }
     }
@@ -246,7 +246,7 @@ export class FhirSmartService {
   }
 
   public isTokenExpired(): boolean {
-    const expireDate = sessionStorage.getItem('expire_date');
+    const expireDate = sessionStorage.getItem(SmartOnFHIR.EXPIRE_DATE);
     if (expireDate) {
       return new Date().getTime() > +expireDate;
     }
@@ -254,7 +254,7 @@ export class FhirSmartService {
   }
 
   public isTokenExist(): boolean {
-    return sessionStorage.getItem('access_token') != null;
+    return sessionStorage.getItem(SmartOnFHIR.ACCESS_TOKEN) != null;
   }
 
   public getUser<T>(tokenId: string): T {
@@ -283,29 +283,29 @@ export class FhirSmartService {
     sessionStorage.clear();
     sessionStorage.setItem('context', smartApp);
     this.setISS(iss);
-    sessionStorage.setItem('redirect_uri', redirectUri);
+    sessionStorage.setItem(SmartOnFHIR.REDIRECT_URI, redirectUri);
     if (launch) {
-      sessionStorage.setItem('launch', launch);
+      sessionStorage.setItem(SmartOnFHIR.LAUNCH, launch);
     }
 
     const state = nanoid(16);
 
     let params = new HttpParams()
-        .set('response_type', 'code')
-        .set('client_id', clientId)
-        .set('redirect_uri', redirectUri)
-        .set('scope', environment.scope[smartApp])
-        .set('state', state)
-        .set('aud', iss);
+        .set(SmartOnFHIR.RESPONSE_TYPE, 'code')
+        .set(SmartOnFHIR.CLIENT_ID, clientId)
+        .set(SmartOnFHIR.REDIRECT_URI, redirectUri)
+        .set(SmartOnFHIR.SCOPE, environment.scope[smartApp])
+        .set(SmartOnFHIR.STATE, state)
+        .set(SmartOnFHIR.AUD, iss);
 
     if (launch) {
-      params = params.set('launch', launch);
+      params = params.set(SmartOnFHIR.LAUNCH, launch);
     }
     return params;
   }
 
   private setISS(value: string): void {
-    sessionStorage.setItem('iss', value);
+    sessionStorage.setItem(SmartOnFHIR.ISS, value);
     this._iss$.next(value);
   }
 
@@ -314,7 +314,7 @@ export class FhirSmartService {
       return this._iss$.value as string;
     }
 
-    const iss = sessionStorage.getItem('iss');
+    const iss = sessionStorage.getItem(SmartOnFHIR.ISS);
     if (iss) {
       this._iss$.next(iss);
       return this._iss$.value as string;
@@ -323,7 +323,7 @@ export class FhirSmartService {
   }
 
   private setAccessToken(value: string): void {
-    sessionStorage.setItem('access_token', value);
+    sessionStorage.setItem(SmartOnFHIR.ACCESS_TOKEN, value);
     this._accessToken$.next(value);
   }
 
@@ -331,7 +331,7 @@ export class FhirSmartService {
     if (this._accessToken$.value) {
       return this._accessToken$.value as string;
     }
-    const accessToken = sessionStorage.getItem('access_token');
+    const accessToken = sessionStorage.getItem(SmartOnFHIR.ACCESS_TOKEN);
     if (accessToken) {
       this._accessToken$.next(accessToken);
       return this._accessToken$.value as string;
@@ -374,20 +374,20 @@ export class FhirSmartService {
     }
     const clientId = environment.client_id[smartApp];
     let body = new HttpParams()
-        .set('grant_type', 'authorization_code')
-        .set('client_id', clientId)
-        .set('code', code)
-        .set('state', state);
+        .set(SmartOnFHIR.GRANT_TYPE, 'authorization_code')
+        .set(SmartOnFHIR.CLIENT_ID, clientId)
+        .set(SmartOnFHIR.CODE, code)
+        .set(SmartOnFHIR.STATE, state);
 
-    const redirectUri = sessionStorage.getItem('redirect_uri');
+    const redirectUri = sessionStorage.getItem(SmartOnFHIR.REDIRECT_URI);
     if (redirectUri) {
-      body = body.set('redirect_uri', redirectUri);
+      body = body.set(SmartOnFHIR.REDIRECT_URI, redirectUri);
     }
     return body;
   }
 
   private buildRefreshAuthorizationBody(): HttpParams | boolean {
-    const refreshToken = sessionStorage.getItem('refresh_token');
+    const refreshToken = sessionStorage.getItem(SmartOnFHIR.REFRESH_TOKEN);
     if (!refreshToken) {
       console.error('refresh token is absent to session storage');
       return false;
@@ -399,22 +399,22 @@ export class FhirSmartService {
       return false;
     }
     return new HttpParams()
-        .set('grant_type', 'refresh_token')
-        .set('refresh_token', refreshToken)
-        .set('scope', environment.scope[context]);
+        .set(SmartOnFHIR.GRANT_TYPE, 'refresh_token')
+        .set(SmartOnFHIR.REFRESH_TOKEN, refreshToken)
+        .set(SmartOnFHIR.SCOPE, environment.scope[context]);
   }
 
   private setSmartContextToSession(context: SmartContext): void {
     this.setAccessToken(context.access_token);
-    sessionStorage.setItem('expires_in', String(context.expires_in));
-    sessionStorage.setItem('expire_date', String(new Date().getTime() + (1000 * context.expires_in)));
-    sessionStorage.setItem('scope', context.scope);
-    sessionStorage.setItem('token_type', context.token_type);
-    sessionStorage.setItem('id_token', context.id_token);
-    sessionStorage.setItem('patient', context.patient);
+    sessionStorage.setItem(SmartOnFHIR.EXPIRES_IN, String(context.expires_in));
+    sessionStorage.setItem(SmartOnFHIR.EXPIRE_DATE, String(new Date().getTime() + (1000 * context.expires_in)));
+    sessionStorage.setItem(SmartOnFHIR.SCOPE, context.scope);
+    sessionStorage.setItem(SmartOnFHIR.TOKEN_TYPE, context.token_type);
+    sessionStorage.setItem(SmartOnFHIR.ID_TOKEN, context.id_token);
+    sessionStorage.setItem(SmartOnFHIR.PATIENT, context.patient);
     sessionStorage.setItem('need_patient_banner', String(context.need_patient_banner));
     if (context.refresh_token) {
-      sessionStorage.setItem('refresh_token', context.refresh_token);
+      sessionStorage.setItem(SmartOnFHIR.REFRESH_TOKEN, context.refresh_token);
     }
     if (context.intent) {
       sessionStorage.setItem('intent', context.intent);
@@ -434,20 +434,20 @@ export class FhirSmartService {
     if (accessToken) {
       context.access_token = accessToken;
     }
-    context.expires_in = Number(sessionStorage.getItem('expires_in'));
-    const scope = sessionStorage.getItem('scope');
+    context.expires_in = Number(sessionStorage.getItem(SmartOnFHIR.EXPIRES_IN));
+    const scope = sessionStorage.getItem(SmartOnFHIR.SCOPE);
     if (scope) {
       context.scope = scope;
     }
-    const tokenType = sessionStorage.getItem('token_type');
+    const tokenType = sessionStorage.getItem(SmartOnFHIR.TOKEN_TYPE);
     if (tokenType) {
       context.token_type = tokenType;
     }
-    const idToken = sessionStorage.getItem('id_token');
+    const idToken = sessionStorage.getItem(SmartOnFHIR.ID_TOKEN);
     if (idToken) {
       context.id_token = idToken;
     }
-    const patientId = sessionStorage.getItem('patient');
+    const patientId = sessionStorage.getItem(SmartOnFHIR.PATIENT);
     if (patientId) {
       context.patient = patientId;
     }

@@ -22,6 +22,26 @@
  * SOFTWARE.
  */
 
+export enum SmartOnFHIR {
+  ISS = 'iss',
+  LAUNCH = 'launch',
+  REDIRECT_URI = 'redirect_uri',
+  REFRESH_TOKEN = 'refresh_token',
+  RESPONSE_TYPE = 'response_type',
+  CLIENT_ID = 'client_id',
+  SCOPE = 'scope',
+  STATE = 'state',
+  AUD = 'aud',
+  GRANT_TYPE = 'grant_type',
+  CODE = 'code',
+  ACCESS_TOKEN = 'access_token',
+  EXPIRE_DATE = 'expire_date',
+  EXPIRES_IN = 'expires_in',
+  TOKEN_TYPE = 'token_type',
+  ID_TOKEN = 'id_token',
+  PATIENT = 'patient'
+}
+
 export interface SmartContext {
   iss: string;
   access_token: string;
