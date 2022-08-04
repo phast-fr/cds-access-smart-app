@@ -65,6 +65,9 @@ export class FhirSmartService {
   }
 
   public obtainAuthorizationCode(context: string, iss: string, redirectUri: string, launch: string | null): void {
+    if (environment.override_iss) {
+      iss = environment.overridden_iss;
+    }
     const params = this.buildSmartLaunchParams(context, iss, redirectUri, launch);
     if (params) {
       this._fhirClient.smartAuthMetadata(iss, this.getHttpOptions())

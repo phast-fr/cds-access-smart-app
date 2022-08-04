@@ -59,6 +59,8 @@ const setEnv = () => {
     dispense: 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*',
     'cql-editor': 'online_access profile openid fhirUser launch launch/user user/*.* patient/*.*'
   },
+  override_iss: false,
+  overridden_iss: 'https://localhost',
   production: true
 };
 `;

@@ -1,4 +1,4 @@
-FROM nginx:1.22.0-alpine
+FROM nginx:1.23.1-alpine
 
 MAINTAINER David Ouagne <david.ouagne@phast.fr>
 
@@ -10,6 +10,8 @@ ENV CLIENT_ID_CQL_EDITOR=""
 ENV CIO_DC_CREDENTIAL=""
 ENV TIO_CREDENTIAL=""
 ENV CQL_LIBRARY_CREDENTIAL=""
+ENV OVERRIDE_ISS=false
+ENV OVERRIDDEN_ISS=""
 
 EXPOSE 443
 

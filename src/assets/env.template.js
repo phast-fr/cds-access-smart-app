@@ -40,5 +40,7 @@
     window.env.cio_dc_credential = "${CIO_DC_CREDENTIAL}";
     window.env.tio_credential = "${TIO_CREDENTIAL}";
     window.env.cql_library_credential = "${CQL_LIBRARY_CREDENTIAL}";
+    window.env.override_iss = "${OVERRIDE_ISS}";
+    window.env.overridden_iss = "${OVERRIDDEN_ISS}";
     window.env.debug = true;
 })(this);
