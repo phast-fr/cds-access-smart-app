@@ -29,5 +29,7 @@ export const environment = {
   fhir_date_short_format: 'yyyy-MM-dd\'T\'HH:mm:00',
   fhir_date_format: 'yyyy-MM-dd\'T\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
-  drug_formulary_resource_type: 'MedicationKnowledge'
+  drug_formulary_resource_type: 'MedicationKnowledge',
+  override_iss: false,
+  overridden_iss: 'https://localhost'
 };
