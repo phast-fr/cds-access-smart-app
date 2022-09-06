@@ -57,13 +57,15 @@ import {CodeMirrorDirective} from './shared/code-mirror/code-mirror.directive';
 import {MenuComponent} from './menu/menu.component';
 import {MatDialogModule} from '@angular/material/dialog';
 import {CqlEditorViewModel} from './cql-editor.view-model';
+import { TableauComponent } from './tableau/tableau.component';
 
 @NgModule({
     declarations: [
         CqlEditorComponent,
         RunnerComponent,
         CodeMirrorDirective,
-        MenuComponent
+        MenuComponent,
+        TableauComponent
     ],
     imports: [
         CommonModule,

@@ -109,6 +109,8 @@ export class CqlEditorState implements IState {
 
   private _library?: Library;
 
+  private _count?: number;
+
   private _error?: string;
 
   private _oValue?: string;
@@ -126,6 +128,14 @@ export class CqlEditorState implements IState {
 
   public get isDirty(): boolean {
     return this._isDirty;
+  }
+
+  public set count(count: number | undefined) {
+    this._count = count;
+  }
+
+  public get count(): number | undefined {
+    return this._count;
   }
 
   public set isRunning(isRunning: boolean) {

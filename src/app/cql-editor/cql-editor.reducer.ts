@@ -107,13 +107,14 @@ export class CqlEditorReducer implements IReducer<CqlEditorState> {
         newState.libraries.push(entry.resource);
       }
     });
+    newState.count = partialState.value.total;
     newState.isSearching = false;
     return newState;
   }
 
   private processBundle(state: CqlEditorState, bundle: Bundle): void {
     state.oValue += '\n';
-
+    state.count = bundle.total;
     if (bundle.entry) {
       bundle.entry.forEach(entry => {
         const name = entry.fullUrl;
@@ -122,6 +123,7 @@ export class CqlEditorReducer implements IReducer<CqlEditorState> {
           const p = parameters.parameter;
           let value = 'undefined';
           let location = 'unknown';
+          
           if (p) {
             if (p[0].valueString) {
               location = p[0].valueString;

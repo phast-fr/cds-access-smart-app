@@ -79,8 +79,8 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
     return undefined;
   }
 
-  public searchLibraryCQL(filter?: string): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
-    return this._cioCdsSource.searchLibraryCQL(filter);
+  public searchLibraryCQL(filter?: string, pagesize?: number, LinkPageNumber?: number): Observable<OperationOutcome | Bundle & { type: 'searchset' }> {
+    return this._cioCdsSource.searchLibraryCQL(filter, undefined, undefined, undefined, pagesize, LinkPageNumber);
   }
 
   public updateLibrary(library: Library): Observable<Library> {
@@ -138,7 +138,9 @@ export class CqlEditorViewModel implements IViewModel<IIntent, CqlEditorState>{
       case 'OnSearchLibrary':
         action = new CqlEditorActionOnSearchLibrary(
             this,
-            (intent as CqlEditorIntentOnSearchLibrary).value
+            (intent as CqlEditorIntentOnSearchLibrary).value,
+            (intent as CqlEditorIntentOnSearchLibrary).pageCount,
+            (intent as CqlEditorIntentOnSearchLibrary).pageLinkPageNumber
         );
         break;
       default:

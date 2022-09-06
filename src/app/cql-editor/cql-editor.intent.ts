@@ -88,10 +88,18 @@ export class CqlEditorIntentOnRunLibrary implements IIntent {
 export class CqlEditorIntentOnSearchLibrary implements IIntent {
   readonly type = 'OnSearchLibrary';
 
-  constructor(private _value: string) {
+  constructor(private _value: string, private _pageCount?: number, private _LinkPageNumber?: number) {
   }
 
   public get value(): string {
     return this._value;
   }
+  public get pageCount(): number {
+    return this._pageCount ?? 10;
+  }
+
+  public get pageLinkPageNumber(): number {
+    return this._LinkPageNumber ?? 0;
+  }
+
 }
