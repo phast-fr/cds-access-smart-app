@@ -30,6 +30,6 @@ export const environment = {
   fhir_date_format: 'yyyy-MM-dd\'T\'HH:mm:ss',
   display_date_format: 'dd/MM/yyyy HH:mm',
   drug_formulary_resource_type: 'MedicationKnowledge',
-  override_iss: false,
-  overridden_iss: 'https://localhost'
+  override_iss: window['env']['override_iss'] || false,
+  overridden_iss: window['env']['overridden_iss'] || ''
 };
