@@ -29,7 +29,12 @@
             formulary: "",
             dispense: "",
             cqleditor: ""
-        }
+        },
+        cio_dc_credential: "",
+        tio_credential: "",
+        cql_library_credential: "",
+        override_iss: false,
+        overridden_iss: ""
     };
 
     // Environment variables
