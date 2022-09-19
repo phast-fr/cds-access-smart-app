@@ -130,17 +130,17 @@ export class StateModel implements IStateModel {
   }
 
   public userType(): string | undefined {
-    const profile = this._user?.profile;
-    if (profile) {
-      return profile.split('/')[0];
+    const fhirUser = this._user?.fhirUser;
+    if (fhirUser) {
+      return fhirUser.split('/')[0];
     }
     return undefined;
   }
 
   public userId(): string | undefined {
-    const profile = this._user?.profile;
-    if (profile) {
-      return profile.split('/')[1];
+    const fhirUser = this._user?.fhirUser;
+    if (fhirUser) {
+      return fhirUser.split('/')[1];
     }
     return undefined;
   }

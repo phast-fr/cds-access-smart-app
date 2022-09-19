@@ -31,6 +31,5 @@ export interface SmartUser {
   iat: number;
   iss: string;
   kid: string;
-  profile: string;
   sub: string;
 }
