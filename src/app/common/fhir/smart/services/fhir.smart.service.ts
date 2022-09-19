@@ -123,7 +123,7 @@ export class FhirSmartService {
     const options = this.getHttpOptionsWithAccessToken();
 
     if (smartContext.iss) {
-      if (smartContext.iss && smartContext.patient) {
+      if (smartContext.patient) {
         this._fhirClient.read<Patient>(
             smartContext.iss,
             {
@@ -147,30 +147,38 @@ export class FhirSmartService {
           });
       }
 
-      this._fhirClient.read(
-          smartContext.iss,
-          {
-            resourceType: 'Practitioner',
-            id: state.userId()
-          },
-          options
-      )
-          .pipe(
-              filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
-              map(practitioner => practitioner as Practitioner)
-          )
-          .subscribe({
-            next: practitioner => {
-              state.practitioner = practitioner;
-              if (smartContext.patient && state.patient) {
-                this._stateService.emitState(state);
-              }
-              else if (!smartContext.patient) {
-                this._stateService.emitState(state);
-              }
+      const userId = state.userId();
+      const userType = state.userType();
+      if (userId && userType === 'Practitioner') {
+        this._fhirClient.read(
+            smartContext.iss,
+            {
+              resourceType: 'Practitioner',
+              id: state.userId()
             },
-            error: err => console.error('error', err)
-          });
+            options
+        )
+            .pipe(
+                filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
+                map(practitioner => practitioner as Practitioner)
+            )
+            .subscribe({
+              next: practitioner => {
+                state.practitioner = practitioner;
+                if (smartContext.patient && state.patient) {
+                  this._stateService.emitState(state);
+                }
+                else if (!smartContext.patient) {
+                  this._stateService.emitState(state);
+                }
+              },
+              error: err => console.error('error', err)
+            });
+      }
+      else {
+        console.error('User', 'UserID cannot be empty and this Smart App is dedicated to Practitioner ' +
+            `(userId: ${userId}, userType: ${userType})`);
+      }
     }
   }
 
@@ -218,7 +226,8 @@ export class FhirSmartService {
               });
         }
         const userId = state.userId();
-        if (userId) {
+        const userType = state.userType();
+        if (userId && userType === 'Practitioner') {
           this._fhirClient.read(
               smartContext.iss,
               {
@@ -243,6 +252,10 @@ export class FhirSmartService {
                 },
                 error: err => console.error('error', err)
               });
+        }
+        else {
+          console.error('User', 'UserID cannot be empty and this Smart App is dedicated to Practitioner ' +
+              `(userId: ${userId}, userType: ${userType})`);
         }
       }
     }
