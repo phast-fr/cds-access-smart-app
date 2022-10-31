@@ -26,6 +26,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {filter, map} from 'rxjs/operators';
+import jwt_decode from 'jwt-decode';
 
 import {nanoid} from 'nanoid';
 import {Patient, Practitioner} from 'phast-fhir-ts';
@@ -39,6 +40,7 @@ import {SmartUser} from '../models/fhir.smart.user.model';
 import {FhirTypeGuard} from '../../utils/fhir.type.guard';
 
 import {environment} from '../../../../../environments/environment';
+
 
 @Injectable()
 export class FhirSmartService {
@@ -121,6 +123,13 @@ export class FhirSmartService {
 
     const state = this.getStateModel(smartContext);
     const options = this.getHttpOptionsWithAccessToken();
+    let patientToken = null;
+
+    if (smartContext.id_token){
+      patientToken = this.getDecodedAccessToken(smartContext.id_token) ? this.getDecodedAccessToken(smartContext.id_token).patient : null;
+      const bits = patientToken.split("/");
+      patientToken = patientToken ? bits[bits.length-1] : null;
+    }
 
     if (smartContext.iss) {
       if (smartContext.patient) {
@@ -129,6 +138,28 @@ export class FhirSmartService {
             {
               resourceType: 'Patient',
               id: smartContext.patient
+            },
+            options
+        )
+          .pipe(
+            filter(patient => FhirTypeGuard.isPatient(patient)),
+            map(patient => patient as Patient)
+          )
+          .subscribe({
+            next: patient => {
+              state.patient = patient;
+              if (state.practitioner) {
+                this._stateService.emitState(state);
+              }
+            },
+            error: err => console.error('error', err)
+          });
+      } else if (patientToken) {
+        this._fhirClient.read<Patient>(
+            smartContext.iss,
+            {
+              resourceType: 'Patient',
+              id: patientToken
             },
             options
         )
@@ -367,7 +398,8 @@ export class FhirSmartService {
         .subscribe({
           next: smartContext => {
             console.log('smart context: ', smartContext);
-            this.saveSmartContext(smartContext);
+            smartContext.need_patient_banner = true;
+            this.saveSmartContext(smartContext); 
           },
           error: err => console.error('error: ', err)
     });
@@ -507,5 +539,13 @@ export class FhirSmartService {
           .set('Content-type', 'application/fhir+json')
           .set('Authorization', `Bearer ${this.getAccessToken()}`)
     } as Options;
+  }
+
+  private getDecodedAccessToken(token: string): any {
+    try {
+      return jwt_decode(token);
+    } catch(Error) {
+      return null;
+    }
   }
 }
