@@ -1,0 +1,9 @@
+.mat-card-info{
+    border: 8px solid #0f9708;
+}
+.mat-card-warn{
+    border: 8px solid #FD7C02;
+}
+.mat-card-critical{
+    border: 8px solid #E10000;
+}
