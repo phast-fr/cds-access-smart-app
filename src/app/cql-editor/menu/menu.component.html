@@ -27,6 +27,6 @@
 
 <mat-menu #fileMenu="matMenu">
   <button mat-menu-item> New </button>
-  <button mat-menu-item [disabled]="!(isDirty$ | async)" (click)="onSave()"> Save </button>
+  <button mat-menu-item (click)="onSave()"> Save </button>
   <button mat-menu-item> Load </button>
 </mat-menu>
