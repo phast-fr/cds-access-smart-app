@@ -126,9 +126,8 @@ export class FhirSmartService {
     let patientToken = null;
 
     if (smartContext.id_token){
-      patientToken = this.getDecodedAccessToken(smartContext.id_token) ? this.getDecodedAccessToken(smartContext.id_token).patient : null;
-      const bits = patientToken.split("/");
-      patientToken = patientToken ? bits[bits.length-1] : null;
+      const bits = this.getDecodedAccessToken(smartContext.id_token)?.patient?.split("/");
+      patientToken = bits? bits[bits.length-1] : undefined;
     }
 
     if (smartContext.iss) {
