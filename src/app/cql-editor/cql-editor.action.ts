@@ -130,12 +130,12 @@ export class CqlEditorActionOnSearchLibrary implements IAction {
   readonly type = 'OnSearchLibrary';
 
   constructor(private _viewModel: CqlEditorViewModel,
-    private _value: string) {
-}
+              private _value: string) {
+  }
 
   public async execute(): Promise<IPartialState> {
     const bundle = await firstValueFrom(
-        this._viewModel.searchLibraryCQL(this._value, this._pageCount, this._LinkPageNumber)
+        this._viewModel.searchLibraryCQL(this._value)
             .pipe(
                 catchError((err: any) => {
                   console.error('error', err);
