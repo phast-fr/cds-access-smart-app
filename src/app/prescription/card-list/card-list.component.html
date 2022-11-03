@@ -1,5 +1,6 @@
 <div class="card-content" *ngIf="cards$ | async">
-  <mat-card class="mat-elevation-z4" *ngFor="let card of cards">
+  <mat-card class="mat-elevation-z4" [ngClass]="{'mat-card-info': card.getCard().indicator==='info', 'mat-card-warn': card.getCard().indicator==='warn', 'mat-card-critical': card.getCard().indicator==='critical'}"
+  *ngFor="let card of cards">{{indicatorStatus}}
     <mat-card-header>
       <mat-card-avatar>
         <mat-icon aria-hidden="false" aria-label="Information" *ngIf="card.getCard().indicator == 'info'">info</mat-icon>
@@ -7,11 +8,11 @@
         <mat-icon aria-hidden="false" aria-label="Information" *ngIf="card.getCard().indicator == 'critical'">error</mat-icon>
         <mat-icon aria-hidden="false" aria-label="Information" *ngIf="card.getCard().indicator == 'hard-stop'">dangerous</mat-icon>
       </mat-card-avatar>
-      <mat-card-title>{{card.getCard().summary}}</mat-card-title>
-      <mat-card-subtitle>par {{card.getCard().source.label}}</mat-card-subtitle>
+      <mat-card-title><div [innerHTML]=card.getCard().summary></div></mat-card-title>
+        <mat-card-subtitle>par {{card.getCard().source.label}}</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
-      {{card.getCard().detail}}
+      <div [innerHTML]=card.getCard().detail></div>
     </mat-card-content>
     <mat-card-footer>
       <a mat-icon-button href="{{card.getCard().source.url}}" target="_blank" aria-label="{{card.getCard().source.label}}">
