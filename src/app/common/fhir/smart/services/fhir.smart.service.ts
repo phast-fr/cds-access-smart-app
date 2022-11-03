@@ -22,23 +22,24 @@
  * SOFTWARE.
  */
 
-import {Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {filter, map} from 'rxjs/operators';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { filter, map } from 'rxjs/operators';
+import jwt_decode from 'jwt-decode';
 
-import {nanoid} from 'nanoid';
-import {Patient, Practitioner} from 'phast-fhir-ts';
+import { nanoid } from 'nanoid';
+import { Patient, Practitioner } from 'phast-fhir-ts';
 
-import {Utils} from '../../../cds-access/utils/utils';
-import {StateService} from '../../../cds-access/services/state.service';
-import {FhirClientService, Options} from '../../services/fhir.client.service';
-import {StateModel} from '../../../cds-access/models/core.model';
-import {SmartContext, SmartOnFHIR} from '../models/fhir.smart.context.model';
-import {SmartUser} from '../models/fhir.smart.user.model';
-import {FhirTypeGuard} from '../../utils/fhir.type.guard';
+import { Utils } from '../../../cds-access/utils/utils';
+import { StateService } from '../../../cds-access/services/state.service';
+import { FhirClientService, Options } from '../../services/fhir.client.service';
+import { StateModel } from '../../../cds-access/models/core.model';
+import { SmartContext, SmartOnFHIR } from '../models/fhir.smart.context.model';
+import { SmartUser } from '../models/fhir.smart.user.model';
+import { FhirTypeGuard } from '../../utils/fhir.type.guard';
 
-import {environment} from '../../../../../environments/environment';
+import { environment } from '../../../../../environments/environment';
 
 @Injectable()
 export class FhirSmartService {
@@ -48,9 +49,9 @@ export class FhirSmartService {
   private readonly _accessToken$: BehaviorSubject<string | boolean>;
 
   constructor(
-      private _stateService: StateService,
-      private _fhirClient: FhirClientService,
-      private _http: HttpClient
+    private _stateService: StateService,
+    private _fhirClient: FhirClientService,
+    private _http: HttpClient
   ) {
     this._iss$ = new BehaviorSubject<string | boolean>(false);
     this._accessToken$ = new BehaviorSubject<string | boolean>(false);
@@ -71,12 +72,12 @@ export class FhirSmartService {
     const params = this.buildSmartLaunchParams(context, iss, redirectUri, launch);
     if (params) {
       this._fhirClient.smartAuthMetadata(iss, this.getHttpOptions())
-          .subscribe({
-            next: metadata => {
-              window.location.href = metadata.authorizeUrl.href + '?' + params.toString();
-            },
-            error: err => console.error('error', err)
-          });
+        .subscribe({
+          next: metadata => {
+            window.location.href = metadata.authorizeUrl.href + '?' + params.toString();
+          },
+          error: err => console.error('error', err)
+        });
     }
   }
 
@@ -121,16 +122,24 @@ export class FhirSmartService {
 
     const state = this.getStateModel(smartContext);
     const options = this.getHttpOptionsWithAccessToken();
+    let patientId = undefined;
+
+    if (smartContext.patient) {
+      patientId = smartContext.patient;
+    } else if (smartContext.id_token) {
+      const bits = this.getDecodedAccessToken(smartContext.id_token)?.patient?.split("/");
+      patientId = bits ? bits[bits.length - 1] : undefined;
+    }
 
     if (smartContext.iss) {
-      if (smartContext.patient) {
+      if (patientId) {
         this._fhirClient.read<Patient>(
-            smartContext.iss,
-            {
-              resourceType: 'Patient',
-              id: smartContext.patient
-            },
-            options
+          smartContext.iss,
+          {
+            resourceType: 'Patient',
+            id: patientId
+          },
+          options
         )
           .pipe(
             filter(patient => FhirTypeGuard.isPatient(patient)),
@@ -146,38 +155,38 @@ export class FhirSmartService {
             error: err => console.error('error', err)
           });
       }
-
+      
       const userId = state.userId();
       const userType = state.userType();
       if (userId && userType === 'Practitioner') {
         this._fhirClient.read(
-            smartContext.iss,
-            {
-              resourceType: 'Practitioner',
-              id: state.userId()
-            },
-            options
+          smartContext.iss,
+          {
+            resourceType: 'Practitioner',
+            id: state.userId()
+          },
+          options
         )
-            .pipe(
-                filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
-                map(practitioner => practitioner as Practitioner)
-            )
-            .subscribe({
-              next: practitioner => {
-                state.practitioner = practitioner;
-                if (smartContext.patient && state.patient) {
-                  this._stateService.emitState(state);
-                }
-                else if (!smartContext.patient) {
-                  this._stateService.emitState(state);
-                }
-              },
-              error: err => console.error('error', err)
-            });
+          .pipe(
+            filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
+            map(practitioner => practitioner as Practitioner)
+          )
+          .subscribe({
+            next: practitioner => {
+              state.practitioner = practitioner;
+              if (smartContext.patient && state.patient) {
+                this._stateService.emitState(state);
+              }
+              else if (!smartContext.patient) {
+                this._stateService.emitState(state);
+              }
+            },
+            error: err => console.error('error', err)
+          });
       }
       else {
         console.error('User', 'UserID cannot be empty and this Smart App is dedicated to Practitioner ' +
-            `(userId: ${userId}, userType: ${userType})`);
+          `(userId: ${userId}, userType: ${userType})`);
       }
     }
   }
@@ -189,10 +198,10 @@ export class FhirSmartService {
       }
       else {
         this.obtainAuthorizationCode(
-            sessionStorage['context'],
-            sessionStorage[SmartOnFHIR.ISS],
-            sessionStorage[SmartOnFHIR.REDIRECT_URI],
-            sessionStorage[SmartOnFHIR.LAUNCH]
+          sessionStorage['context'],
+          sessionStorage[SmartOnFHIR.ISS],
+          sessionStorage[SmartOnFHIR.REDIRECT_URI],
+          sessionStorage[SmartOnFHIR.LAUNCH]
         );
       }
     }
@@ -202,60 +211,60 @@ export class FhirSmartService {
       const options = this.getHttpOptionsWithAccessToken();
       if (smartContext.iss) {
         if (smartContext.patient
-            && smartContext.patient !== 'undefined') {
+          && smartContext.patient !== 'undefined') {
           this._fhirClient.read(
-              smartContext.iss,
-              {
-                resourceType: 'Patient',
-                id: smartContext.patient
-              },
-              options
+            smartContext.iss,
+            {
+              resourceType: 'Patient',
+              id: smartContext.patient
+            },
+            options
           )
-              .pipe(
-                filter(patient => FhirTypeGuard.isPatient(patient)),
-                map(patient => patient as Patient)
-              )
-              .subscribe({
-                next: patient => {
-                  state.patient = patient;
-                  if (state.practitioner) {
-                    this._stateService.emitState(state);
-                  }
-                },
-                error: err => console.error('error', err)
-              });
+            .pipe(
+              filter(patient => FhirTypeGuard.isPatient(patient)),
+              map(patient => patient as Patient)
+            )
+            .subscribe({
+              next: patient => {
+                state.patient = patient;
+                if (state.practitioner) {
+                  this._stateService.emitState(state);
+                }
+              },
+              error: err => console.error('error', err)
+            });
         }
         const userId = state.userId();
         const userType = state.userType();
         if (userId && userType === 'Practitioner') {
           this._fhirClient.read(
-              smartContext.iss,
-              {
-                resourceType: 'Practitioner',
-                id: userId
-              },
-              options
+            smartContext.iss,
+            {
+              resourceType: 'Practitioner',
+              id: userId
+            },
+            options
           )
-              .pipe(
-                  filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
-                  map(practitioner => practitioner as Practitioner)
-              )
-              .subscribe({
-                next: practitioner => {
-                  state.practitioner = practitioner;
-                  if (smartContext.patient !== 'undefined' && state.patient) {
-                    this._stateService.emitState(state);
-                  }
-                  else if (smartContext.patient === 'undefined') {
-                    this._stateService.emitState(state);
-                  }
-                },
-                error: err => console.error('error', err)
-              });
+            .pipe(
+              filter(practitioner => FhirTypeGuard.isPractitioner(practitioner)),
+              map(practitioner => practitioner as Practitioner)
+            )
+            .subscribe({
+              next: practitioner => {
+                state.practitioner = practitioner;
+                if (smartContext.patient !== 'undefined' && state.patient) {
+                  this._stateService.emitState(state);
+                }
+                else if (smartContext.patient === 'undefined') {
+                  this._stateService.emitState(state);
+                }
+              },
+              error: err => console.error('error', err)
+            });
         }
         else {
           console.error('User', 'UserID cannot be empty and this Smart App is dedicated to Practitioner ' +
-              `(userId: ${userId}, userType: ${userType})`);
+            `(userId: ${userId}, userType: ${userType})`);
         }
       }
     }
@@ -283,7 +292,7 @@ export class FhirSmartService {
       return false;
     }
     if (smartApp !== 'prescription' && smartApp !== 'formulary'
-        && smartApp !== 'dispense' && smartApp !== 'cqleditor') {
+      && smartApp !== 'dispense' && smartApp !== 'cqleditor') {
       console.error('context is not supported', smartApp);
       return false;
     }
@@ -307,12 +316,12 @@ export class FhirSmartService {
     const state = nanoid(16);
 
     let params = new HttpParams()
-        .set(SmartOnFHIR.RESPONSE_TYPE, 'code')
-        .set(SmartOnFHIR.CLIENT_ID, clientId)
-        .set(SmartOnFHIR.REDIRECT_URI, redirectUri)
-        .set(SmartOnFHIR.SCOPE, environment.scope[smartApp])
-        .set(SmartOnFHIR.STATE, state)
-        .set(SmartOnFHIR.AUD, iss);
+      .set(SmartOnFHIR.RESPONSE_TYPE, 'code')
+      .set(SmartOnFHIR.CLIENT_ID, clientId)
+      .set(SmartOnFHIR.REDIRECT_URI, redirectUri)
+      .set(SmartOnFHIR.SCOPE, environment.scope[smartApp])
+      .set(SmartOnFHIR.STATE, state)
+      .set(SmartOnFHIR.AUD, iss);
 
     if (launch) {
       params = params.set(SmartOnFHIR.LAUNCH, launch);
@@ -325,7 +334,7 @@ export class FhirSmartService {
     this._iss$.next(value);
   }
 
-  private getISS(): string | undefined  {
+  private getISS(): string | undefined {
     if (this._iss$.value) {
       return this._iss$.value as string;
     }
@@ -357,20 +366,23 @@ export class FhirSmartService {
 
   private doPostToken(url: string, body: string): void {
     this._http.post<SmartContext>(
-        url,
-        body,
-        {
-          headers: new HttpHeaders()
-              .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
-              .set('Accept', 'application/json')
-        })
-        .subscribe({
-          next: smartContext => {
-            console.log('smart context: ', smartContext);
-            this.saveSmartContext(smartContext);
-          },
-          error: err => console.error('error: ', err)
-    });
+      url,
+      body,
+      {
+        headers: new HttpHeaders()
+          .set('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8')
+          .set('Accept', 'application/json')
+      })
+      .subscribe({
+        next: smartContext => {
+          console.log('smart context: ', smartContext);
+          // diversion to display the banner while waiting for the resolution on the Infor side
+          smartContext.need_patient_banner = true;
+          // 
+          this.saveSmartContext(smartContext);
+        },
+        error: err => console.error('error: ', err)
+      });
   }
 
   private buildAuthorizationBody(code: string, state: string): HttpParams | boolean {
@@ -380,7 +392,7 @@ export class FhirSmartService {
       return false;
     }
     if (smartApp !== 'prescription' && smartApp !== 'formulary'
-        && smartApp !== 'dispense' && smartApp !== 'cqleditor') {
+      && smartApp !== 'dispense' && smartApp !== 'cqleditor') {
       console.error('context is not supported', smartApp);
       return false;
     }
@@ -390,10 +402,10 @@ export class FhirSmartService {
     }
     const clientId = environment.client_id[smartApp];
     let body = new HttpParams()
-        .set(SmartOnFHIR.GRANT_TYPE, 'authorization_code')
-        .set(SmartOnFHIR.CLIENT_ID, clientId)
-        .set(SmartOnFHIR.CODE, code)
-        .set(SmartOnFHIR.STATE, state);
+      .set(SmartOnFHIR.GRANT_TYPE, 'authorization_code')
+      .set(SmartOnFHIR.CLIENT_ID, clientId)
+      .set(SmartOnFHIR.CODE, code)
+      .set(SmartOnFHIR.STATE, state);
 
     const redirectUri = sessionStorage.getItem(SmartOnFHIR.REDIRECT_URI);
     if (redirectUri) {
@@ -410,14 +422,14 @@ export class FhirSmartService {
     }
     const context = sessionStorage.getItem('context');
     if (context !== 'prescription' && context !== 'formulary'
-        && context !== 'dispense' && context !== 'cqleditor') {
+      && context !== 'dispense' && context !== 'cqleditor') {
       console.error('context is not supported', context);
       return false;
     }
     return new HttpParams()
-        .set(SmartOnFHIR.GRANT_TYPE, 'refresh_token')
-        .set(SmartOnFHIR.REFRESH_TOKEN, refreshToken)
-        .set(SmartOnFHIR.SCOPE, environment.scope[context]);
+      .set(SmartOnFHIR.GRANT_TYPE, 'refresh_token')
+      .set(SmartOnFHIR.REFRESH_TOKEN, refreshToken)
+      .set(SmartOnFHIR.SCOPE, environment.scope[context]);
   }
 
   private setSmartContextToSession(context: SmartContext): void {
@@ -493,19 +505,27 @@ export class FhirSmartService {
   }
 
   private getHttpOptions(): Options {
-    return  {
+    return {
       headers: new HttpHeaders()
-          .set('Accept', 'application/fhir+json,application/json')
-          .set('Content-type', 'application/fhir+json')
+        .set('Accept', 'application/fhir+json,application/json')
+        .set('Content-type', 'application/fhir+json')
     } as Options;
   }
 
   private getHttpOptionsWithAccessToken(): Options {
-    return  {
+    return {
       headers: new HttpHeaders()
-          .set('Accept', 'application/fhir+json,application/json')
-          .set('Content-type', 'application/fhir+json')
-          .set('Authorization', `Bearer ${this.getAccessToken()}`)
+        .set('Accept', 'application/fhir+json,application/json')
+        .set('Content-type', 'application/fhir+json')
+        .set('Authorization', `Bearer ${this.getAccessToken()}`)
     } as Options;
+  }
+
+  private getDecodedAccessToken(token: string): any {
+    try {
+      return jwt_decode(token);
+    } catch (Error) {
+      return null;
+    }
   }
 }
