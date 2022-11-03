@@ -130,8 +130,8 @@ export class CqlEditorActionOnSearchLibrary implements IAction {
   readonly type = 'OnSearchLibrary';
 
   constructor(private _viewModel: CqlEditorViewModel,
-              private _value: string, private _pageCount: number, private _LinkPageNumber: number) {
-  }
+    private _value: string) {
+}
 
   public async execute(): Promise<IPartialState> {
     const bundle = await firstValueFrom(
