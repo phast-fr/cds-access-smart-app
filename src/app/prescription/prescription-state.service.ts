@@ -188,7 +188,6 @@ export class PrescriptionStateService {
                             });
                       },
                       error: err => this.onError(err),
-                      complete: () => this.onCDSHelp = false
                     });
               }
               else {
@@ -203,7 +202,6 @@ export class PrescriptionStateService {
               }
             },
             error: err => this.onError(err),
-            complete: () => this.onCDSHelp = false
           });
   }
 
