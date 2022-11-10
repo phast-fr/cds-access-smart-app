@@ -36,6 +36,7 @@ button.mat-stroked-button {
   padding: 15px 0 0 15px;
   font-weight: 400;
   line-height: 1.125;
+  text-decoration: underline;
 }
 
 .form-field-row .mat-radio-button + .mat-radio-button {
@@ -53,3 +54,35 @@ button.mat-stroked-button {
 /deep/ .form-field-row .dose-and-rate-unit .mat-form-field-infix {
   width: 50px;
 }
+
+.dosage-instruction-form-title {
+  margin: 0 0 2em 2.2em;
+}
+
+.dosage-instruction-form-field {
+  margin: 1em 9em;
+}
+
+.dosage-validity-limits-fields,
+.dose-rate-field {
+  margin: 0 4em;
+}
+
+.duration-field,
+.quantity-field {
+  margin: 0 4em 0 10em;
+}
+
+.dose-rate-field-container,
+.day-time-moment-container {
+  display: flex;
+}
+
+.day-time-moment-container {
+  justify-content: space-around;
+}
+
+.days-card{
+  padding: 1em 3em 3em 3em;
+}
+
