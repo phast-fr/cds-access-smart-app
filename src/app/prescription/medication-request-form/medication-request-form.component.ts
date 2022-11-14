@@ -22,10 +22,10 @@
  * SOFTWARE.
  */
 
-import {AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup} from '@angular/forms';
-import {BehaviorSubject, Observable, Subject, Subscription} from 'rxjs';
-import {debounceTime, distinctUntilChanged, filter, map, switchMap, takeUntil, tap} from 'rxjs/operators';
+import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 
 import * as lodash from 'lodash';
 
@@ -34,20 +34,20 @@ import {
   MedicationFormIntentAddMedicationRequest,
   MedicationFormIntentCdsHelp
 } from './medication-request-form.intent';
-import {MedicationRequestFormViewModel} from './medication-request-form.view-model';
-import {MedicationRequestFormState} from './medication-request-form.state';
-import {FhirTypeGuard} from '../../common/fhir/utils/fhir.type.guard';
-import {Bundle, MedicationKnowledge, Patient, Practitioner} from 'phast-fhir-ts';
-import {MatIconRegistry} from '@angular/material/icon';
-import {DomSanitizer} from '@angular/platform-browser';
-import {FhirLabelProviderFactory} from '../../common/fhir/providers/fhir.label.provider.factory';
-import {PrescriptionStateService} from '../prescription-state.service';
-import {IRender} from '../../common/cds-access/models/state.model';
-import {StateService} from '../../common/cds-access/services/state.service';
-import {StateModel} from '../../common/cds-access/models/core.model';
-import {DosageInstructionFormComponent} from './dosage-instruction-form/dosage-instruction-form.component';
-import {MedicationFormComponent} from './medication-form/medication-form.component';
-import {DispenseRequestFormComponent} from './dispense-request-form/dispense-request-form.component';
+import { MedicationRequestFormViewModel } from './medication-request-form.view-model';
+import { MedicationRequestFormState } from './medication-request-form.state';
+import { FhirTypeGuard } from '../../common/fhir/utils/fhir.type.guard';
+import { Bundle, MedicationKnowledge, Patient, Practitioner } from 'phast-fhir-ts';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
+import { FhirLabelProviderFactory } from '../../common/fhir/providers/fhir.label.provider.factory';
+import { PrescriptionStateService } from '../prescription-state.service';
+import { IRender } from '../../common/cds-access/models/state.model';
+import { StateService } from '../../common/cds-access/services/state.service';
+import { StateModel } from '../../common/cds-access/models/core.model';
+import { DosageInstructionFormComponent } from './dosage-instruction-form/dosage-instruction-form.component';
+import { MedicationFormComponent } from './medication-form/medication-form.component';
+import { DispenseRequestFormComponent } from './dispense-request-form/dispense-request-form.component';
 
 const MEDICINES_ICON = '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">' +
   '<path fill-rule="evenodd" clip-rule="evenodd" d="M14.8106 10.013C14.8091 10.0148 14.8061 10.0186 14.8021 10.0252L8.01 21.1404C8.01052 21.1408 8.01104 21.1411 8.01156 21.1415C8.01351 21.1428 8.01659 21.1445 8.02192 21.1463C8.02695 21.1481 8.03827 21.1513 8.05824 21.1527L19.9246 21.9994C19.9446 22.0009 19.9568 21.9993 19.963 21.9981C19.9696 21.9969 19.9742 21.9952 19.9779 21.9934C19.9827 21.9912 19.9875 21.988 19.9918 21.9841L14.9361 10.0239C14.9342 10.0194 14.9326 10.0164 14.9316 10.0145C14.9257 10.0111 14.9077 10.0026 14.8779 10.0004C14.8449 9.99809 14.8228 10.0054 14.8156 10.0089L14.8132 10.0103C14.8131 10.0103 14.8121 10.0112 14.8106 10.013ZM16.7782 9.24516C16.1307 7.71335 13.9653 7.55884 13.0955 8.98238L6.29281 20.1148C5.50809 21.399 6.38547 23.0385 7.9159 23.1477L19.7823 23.9944C21.3127 24.1036 22.4261 22.6062 21.842 21.2243L16.7782 9.24516Z" fill="#333333"/>' +
@@ -93,13 +93,13 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   private _dispenseRequestForm?: DispenseRequestFormComponent;
 
   constructor(
-      private _iconRegistry: MatIconRegistry,
-      private _sanitizer: DomSanitizer,
-      private _fb: FormBuilder,
-      private _labelProviderFactory: FhirLabelProviderFactory,
-      private _stateService: StateService,
-      private _prescriptionState: PrescriptionStateService,
-      private _viewModel: MedicationRequestFormViewModel
+    private _iconRegistry: MatIconRegistry,
+    private _sanitizer: DomSanitizer,
+    private _fb: FormBuilder,
+    private _labelProviderFactory: FhirLabelProviderFactory,
+    private _stateService: StateService,
+    private _prescriptionState: PrescriptionStateService,
+    private _viewModel: MedicationRequestFormViewModel
   ) {
     this._iconRegistry.addSvgIconLiteral('medicines', this._sanitizer.bypassSecurityTrustHtml(MEDICINES_ICON));
     this._unsubscribeTrigger$ = new Subject<void>();
@@ -168,64 +168,64 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
     if (this._medicationForm) {
       this._medicationForm.medicationGroup$
         .pipe(
-            takeUntil(this._unsubscribeTrigger$),
-            filter(medication => medication instanceof FormGroup),
-            map(medication => medication as FormGroup)
+          takeUntil(this._unsubscribeTrigger$),
+          filter(medication => medication instanceof FormGroup),
+          map(medication => medication as FormGroup)
         )
         .subscribe({
           next: (medication) => this.addFormGroupStatusListener('medication', medication),
           error: err => console.error('error', err)
         });
       this._medicationForm.medicationGroup$
-          .pipe(
-              takeUntil(this._unsubscribeTrigger$),
-              filter(medication => medication === false)
-          )
-          .subscribe({
-            next: () => this.removeFormGroupStatusListener('medication'),
-            error: err => console.error('error', err)
-          });
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          filter(medication => medication === false)
+        )
+        .subscribe({
+          next: () => this.removeFormGroupStatusListener('medication'),
+          error: err => console.error('error', err)
+        });
     }
     if (this._dosageInstructionForm) {
       this._dosageInstructionForm.dosageInstruction$
         .pipe(
-            takeUntil(this._unsubscribeTrigger$),
-            filter(dosageInstruction => dosageInstruction instanceof FormArray),
-            map(dosageInstruction => dosageInstruction as FormArray)
+          takeUntil(this._unsubscribeTrigger$),
+          filter(dosageInstruction => dosageInstruction instanceof FormArray),
+          map(dosageInstruction => dosageInstruction as FormArray)
         )
         .subscribe({
           next: (dosageInstruction) => this.addFormGroupStatusListener('dosageInstruction', dosageInstruction),
           error: err => console.error('error', err)
         });
       this._dosageInstructionForm.dosageInstruction$
-          .pipe(
-              takeUntil(this._unsubscribeTrigger$)
-          )
-          .subscribe({
-            next: () => this.removeFormGroupStatusListener('dosageInstruction'),
-            error: err => console.error('error', err)
-          });
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$)
+        )
+        .subscribe({
+          next: () => this.removeFormGroupStatusListener('dosageInstruction'),
+          error: err => console.error('error', err)
+        });
     }
     if (this._dispenseRequestForm) {
       this._dispenseRequestForm.dispenseRequestGroup$
-          .pipe(
-              takeUntil(this._unsubscribeTrigger$),
-              filter(dispenseRequest => dispenseRequest instanceof FormGroup),
-              map(dispenseRequest => dispenseRequest as FormGroup)
-          )
-          .subscribe({
-            next: (dispenseRequest) => this.addFormGroupStatusListener('dispenseRequest', dispenseRequest),
-            error: err => console.error('error', err)
-          });
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          filter(dispenseRequest => dispenseRequest instanceof FormGroup),
+          map(dispenseRequest => dispenseRequest as FormGroup)
+        )
+        .subscribe({
+          next: (dispenseRequest) => this.addFormGroupStatusListener('dispenseRequest', dispenseRequest),
+          error: err => console.error('error', err)
+        });
       this._dispenseRequestForm.dispenseRequestGroup$
-          .pipe(
-              takeUntil(this._unsubscribeTrigger$),
-              filter(dispenseRequest => dispenseRequest === false)
-          )
-          .subscribe({
-            next: () => this.removeFormGroupStatusListener('dispenseRequest'),
-            error: err => console.error('error', err)
-          });
+        .pipe(
+          takeUntil(this._unsubscribeTrigger$),
+          filter(dispenseRequest => dispenseRequest === false)
+        )
+        .subscribe({
+          next: () => this.removeFormGroupStatusListener('dispenseRequest'),
+          error: err => console.error('error', err)
+        });
     }
   }
 
@@ -347,7 +347,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
               this._loading$.next(true);
             }),
           switchMap(value => this._viewModel.searchMedicationKnowledge(
-              value, this.medicationRequestGroup.get('requestMode')?.value
+            value, this.medicationRequestGroup.get('requestMode')?.value
           )
             .pipe(
               tap(() => this._loading$.next(false))
@@ -394,10 +394,10 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
 
   private addFormGroupStatusListener(controlType: ControlType, control: AbstractControl): void {
     const subscription = control.statusChanges
-        .subscribe({
-          next: status => this.onChangeFormStatus(control, status),
-          error: err => console.error('error', err)
-        });
+      .subscribe({
+        next: status => this.onChangeFormStatus(control, status),
+        error: err => console.error('error', err)
+      });
     this._formStatusListener$.add(subscription);
     if (this._subscriptionMap.has(controlType)) {
       const subscriptions = this._subscriptionMap.get(controlType);
@@ -422,7 +422,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
 
   private updateIsMedicationRequestAddable(): void {
     const medicationGroupValid = (this._medicationForm?.medicationGroup) ?
-        this._medicationForm.medicationGroup.valid : false;
+      this._medicationForm.medicationGroup.valid : false;
     const dosageInstructionValid = (this._dosageInstructionForm?.dosageInstruction) ?
       this._dosageInstructionForm.dosageInstruction.valid : false;
     /*const dispenseRequestGroupValid = (this._dispenseRequestForm?.dispenseRequestGroup) ?
