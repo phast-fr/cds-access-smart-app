@@ -24,3 +24,14 @@ button.mat-stroked-button {
   font-weight: 400;
   line-height: 1.125;
 }
+
+.inline-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-right: 500px;
+}
+
+.small-field {
+  width: 30%;
+}
