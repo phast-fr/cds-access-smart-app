@@ -25,7 +25,7 @@ button.mat-stroked-button {
   line-height: 1.125;
 }
 
-.container-ingredient-amount-form {
+.inline-container {
   display: flex;
   align-items: center;
   justify-content: space-between;

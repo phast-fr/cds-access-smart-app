@@ -9,8 +9,8 @@
       {{ medicationGroup.get('medication').value | medication }}
     </div>
   </div>
-  <div class="form-group-body container-ingredient-amount-form">
-    <div fxLayout="row" class="form-field-row form-field-medication-ingredient ingredient-field"
+  <div class="form-group-body inline-container">
+    <div fxLayout="row" class="form-field-row form-field-medication-ingredient small-field"
          *ngFor="let ingredientGroup of toFormArray(medicationGroup.get('ingredient')).controls; index as nIngredient;
        trackBy: trackByControl">
       <ng-container *ngIf="ingredientGroup.get('itemCodeableConcept')">
@@ -74,7 +74,7 @@
         </mat-autocomplete>
       </ng-container>-->
     </div>
-    <div fxLayout="row" class="form-field-row form-field-medication-amount amount-field">
+    <div fxLayout="row" class="form-field-row form-field-medication-amount -field">
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-label>
           {{ medicationGroup.get('medication').value.code | codeableConcept }}
@@ -87,7 +87,7 @@
                [matAutocomplete]="autoAmount"/>
       </mat-form-field>
     </div>
-    <div fxLayout="row" class="form-field-row form-field-medication-form form-field">
+    <div fxLayout="row" class="form-field-row form-field-medication-form small-field">
       <mat-form-field fxFlex="100%" appearance="fill">
         <mat-label>
           {{ medicationGroup.get('medication').value.code | codeableConcept }}
