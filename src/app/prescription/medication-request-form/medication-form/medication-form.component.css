@@ -32,8 +32,6 @@ button.mat-stroked-button {
   margin-right: 500px;
 }
 
-.ingredient-field,
-.amount-field,
-.form-field {
+.small-field {
   width: 30%;
 }
