@@ -1,8 +1,8 @@
-.form-field-row .mat-form-field + .mat-form-field {
+.form-field-row .mat-form-field+.mat-form-field {
   margin-left: 8px;
 }
 
-.form-group-footer .mat-error + .mat-error {
+.form-group-footer .mat-error+.mat-error {
   margin-left: 8px;
 }
 
@@ -39,11 +39,11 @@ button.mat-stroked-button {
   text-decoration: underline;
 }
 
-.form-field-row .mat-radio-button + .mat-radio-button {
+.form-field-row .mat-radio-button+.mat-radio-button {
   margin-left: 8px;
 }
 
-.form-field-row .mat-checkbox + .mat-checkbox {
+.form-field-row .mat-checkbox+.mat-checkbox {
   margin-left: 8px;
 }
 
@@ -60,7 +60,7 @@ button.mat-stroked-button {
 }
 
 .dosage-instruction-form-field {
-  margin: 1em 9em;
+  margin: 0 9em;
 }
 
 .margin-field {
@@ -96,7 +96,7 @@ button.mat-stroked-button {
 }
 
 .margin-right-card {
- margin-right: 39em;
+  margin-right: 39em;
 }
 
 .margin-left-card {
@@ -115,9 +115,10 @@ button.mat-stroked-button {
   height: 40%;
 }
 
-.small-width-field {
+.medium-width-field {
   width: 30%;
 }
 
-
-
+.small-width-field {
+  width: 6em;
+}

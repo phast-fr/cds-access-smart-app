@@ -302,13 +302,13 @@
                   </mat-card-footer>
                   <mat-form-field appearance="fill" class="margin-field"
                     *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'qt'">
-                    <mat-label class="small-width-field"> Unité </mat-label>
+                    <mat-label class="medium-width-field"> Unité </mat-label>
                     <input type="text" aria-label="unité" matInput
                       [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'doseQuantity', 'unit']))"
                       [matAutocomplete]="autoUnit" />
                   </mat-form-field>
                   <mat-form-field appearance="fill" *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'time'">
-                    <mat-label class="small-width-field"> Dose </mat-label>
+                    <mat-label class="medium-width-field"> Dose </mat-label>
                     <input type="text" aria-label="dose" matInput
                       [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'rateRatio', 'numerator', 'value']))" />
                   </mat-form-field>
