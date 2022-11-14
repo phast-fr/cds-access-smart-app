@@ -63,31 +63,61 @@ button.mat-stroked-button {
   margin: 1em 9em;
 }
 
-.dosage-validity-limits-fields,
-.dose-rate-field {
+.margin-field {
   margin: 0 4em;
 }
 
-.duration-field,
-.quantity-field {
+.margin-start-inline-fields {
   margin: 0 4em 0 10em;
 }
 
-.dose-rate-field-container,
-.day-time-moment-container {
+.flex-container {
   display: flex;
 }
 
-.day-time-moment-container {
+.space-around-container {
   justify-content: space-around;
 }
 
-.days-card{
+.padding-card {
   padding: 1em 3em 3em 3em;
 }
 
-.unit-field,
-.dose-field {
-  width: 40%;
+.margin-bottom-card {
+  margin-bottom: 2em;
 }
+
+.margin-top-card {
+  margin-top: 2em;
+}
+
+.inline-title {
+  display: inline;
+}
+
+.margin-right-card {
+ margin-right: 39em;
+}
+
+.margin-left-card {
+  margin-left: 5em;
+}
+
+.margin-title-field {
+  margin: 0 0 2em -3em;
+}
+
+.margin-title-moment-field {
+  margin: 0 0 1em -3em;
+}
+
+.height-card {
+  height: 40%;
+}
+
+.small-width-field {
+  width: 30%;
+}
+
+
 
