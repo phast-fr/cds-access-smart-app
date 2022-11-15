@@ -3,7 +3,8 @@
 }
 
 button.mat-stroked-button {
-  height: 51px;
+  height: 32px;
+  width: 45px;
 }
 
 .form-group-header {
