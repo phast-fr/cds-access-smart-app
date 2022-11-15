@@ -1,8 +1,8 @@
-.form-field-row .mat-form-field + .mat-form-field {
+.form-field-row .mat-form-field+.mat-form-field {
   margin-left: 8px;
 }
 
-.form-group-footer .mat-error + .mat-error {
+.form-group-footer .mat-error+.mat-error {
   margin-left: 8px;
 }
 
@@ -36,13 +36,14 @@ button.mat-stroked-button {
   padding: 15px 0 0 15px;
   font-weight: 400;
   line-height: 1.125;
+  text-decoration: underline;
 }
 
-.form-field-row .mat-radio-button + .mat-radio-button {
+.form-field-row .mat-radio-button+.mat-radio-button {
   margin-left: 8px;
 }
 
-.form-field-row .mat-checkbox + .mat-checkbox {
+.form-field-row .mat-checkbox+.mat-checkbox {
   margin-left: 8px;
 }
 
@@ -52,4 +53,72 @@ button.mat-stroked-button {
 
 /deep/ .form-field-row .dose-and-rate-unit .mat-form-field-infix {
   width: 50px;
+}
+
+.dosage-instruction-form-title {
+  margin: 0 0 2em 2.2em;
+}
+
+.dosage-instruction-form-field {
+  margin: 0 9em;
+}
+
+.margin-field {
+  margin: 0 4em;
+}
+
+.margin-start-inline-fields {
+  margin: 0 4em 0 10em;
+}
+
+.flex-container {
+  display: flex;
+}
+
+.space-around-container {
+  justify-content: space-around;
+}
+
+.padding-card {
+  padding: 1em 3em 3em 3em;
+}
+
+.margin-bottom-card {
+  margin-bottom: 2em;
+}
+
+.margin-top-card {
+  margin-top: 2em;
+}
+
+.inline-title {
+  display: inline;
+}
+
+.margin-right-card {
+  margin-right: 39em;
+}
+
+.margin-left-card {
+  margin-left: 5em;
+}
+
+.margin-title-field {
+  margin: 0 0 2em -3em;
+}
+
+.margin-title-moment-field {
+  margin: 0 0 1em -3em;
+}
+
+.height-card {
+  height: 40%;
+}
+
+.medium-width-field {
+  width: 30%;
+}
+
+.small-width-field {
+  width: 6em;
 }
