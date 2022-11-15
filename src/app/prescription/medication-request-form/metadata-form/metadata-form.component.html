@@ -1,23 +1,28 @@
 <div class="form-group-row form-field-metadata" *ngIf="metadataGroup$ | async">
-  <div fxLayout="row" class="form-group-header">
-    <div class="form-group-title">
-      <span>Contexte clinique</span>
+  <mat-expansion-panel>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <div class="form-group-title">
+          <span>Contexte clinique</span>
+        </div>
+      </mat-panel-title>
+      <mat-panel-description>
+        <!-- add description icon ? -->
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+    <div class="form-group-body">
+      <div fxLayout="row" class="form-field-row form-field-metadata-treatment-intent">
+        <mat-form-field fxFlex="100%" appearance="fill">
+          <mat-label>
+            Intention de traitement
+          </mat-label>
+          <input type="text" aria-label="intention de traitement" matInput
+            [formControl]="toFormControl(metadataGroup.get('treatmentIntent'))"
+            [matAutocomplete]="autoTreatmentIntent" />
+        </mat-form-field>
+      </div>
     </div>
-  </div>
-  <div class="form-group-body">
-    <div fxLayout="row" class="form-field-row form-field-metadata-treatment-intent">
-      <mat-form-field fxFlex="100%" appearance="fill">
-        <mat-label>
-          Intention de traitement
-        </mat-label>
-        <input type="text"
-               aria-label="intention de traitement"
-               matInput
-               [formControl]="toFormControl(metadataGroup.get('treatmentIntent'))"
-               [matAutocomplete]="autoTreatmentIntent"/>
-      </mat-form-field>
-    </div>
-  </div>
+  </mat-expansion-panel>
   <mat-autocomplete #autoTreatmentIntent="matAutocomplete" [displayWith]="displayFnValueSetContains.bind(this)">
     <mat-option *ngFor="let code of treatmentIntentList; trackBy: trackByValueSetContains" [value]="code">
       {{ code | valueSetContains }}

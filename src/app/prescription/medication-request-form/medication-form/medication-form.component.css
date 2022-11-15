@@ -1,3 +1,7 @@
+.form-field-metadata {
+  height: 80%;
+}
+
 button.mat-stroked-button {
   height: 51px;
 }
@@ -34,4 +38,17 @@ button.mat-stroked-button {
 
 .small-field {
   width: 30%;
+}
+
+.example-action-buttons {
+  padding-bottom: 20px;
+}
+
+.example-headers-align .mat-form-field + .mat-form-field {
+  margin-left: 8px;
+}
+
+.mat-expansion-panel-header-description {
+  justify-content: space-between;
+  align-items: center;
 }

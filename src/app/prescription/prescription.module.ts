@@ -31,6 +31,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
@@ -83,6 +84,7 @@ import {MetadataFormComponent} from './medication-request-form/metadata-form/met
       MatTooltipModule,
       MatFormFieldModule,
       MatCardModule,
+      MatExpansionModule,
       MatListModule,
       MatButtonModule,
       MatTableModule,
