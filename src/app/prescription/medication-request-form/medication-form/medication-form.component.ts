@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {AbstractControl, FormArray, FormBuilder, FormControl, FormGroup} from '@angular/forms';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, filter, takeUntil, tap} from 'rxjs/operators';
@@ -58,7 +58,6 @@ import {FhirTypeGuard} from '../../../common/fhir/utils/fhir.type.guard';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MedicationFormComponent implements OnInit, OnDestroy, IRender<MedicationRequestFormState> {
-
   private readonly _unsubscribeTrigger$: Subject<void>;
 
   private readonly _medicationGroup$: BehaviorSubject<FormGroup | boolean>;
