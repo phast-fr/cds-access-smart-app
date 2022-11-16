@@ -13,6 +13,7 @@
 button.mat-stroked-button {
   height: 32px;
   width: 45px;
+  line-height: 3px;
 }
 
 .form-group-header {
@@ -85,15 +86,11 @@ button.mat-stroked-button {
 }
 
 .padding-card {
-  padding: 1em 3em 3em 3em;
+  padding: 1em 3em 2em 3em;
 }
 
 .margin-bottom-card {
-  margin-bottom: 2em;
-}
-
-.margin-top-card {
-  margin-top: 2em;
+  margin-bottom: 1em;
 }
 
 .inline-title {
@@ -105,11 +102,11 @@ button.mat-stroked-button {
 }
 
 .margin-left-card {
-  margin-left: 5em;
+  margin-left: 6em;
 }
 
 .margin-title-field {
-  margin: 0 0 2em -3em;
+  margin: 0 0 0.5em -3em;
 }
 
 .margin-title-moment-field {
@@ -117,7 +114,7 @@ button.mat-stroked-button {
 }
 
 .height-card {
-  height: 40%;
+  height: 42%;
 }
 
 .medium-width-field {
@@ -126,6 +123,10 @@ button.mat-stroked-button {
 
 .small-width-field {
   width: 6em;
+}
+
+.linked-fields {
+  margin-left: 10em;
 }
 
 .mat-expansion-panel-header-description {

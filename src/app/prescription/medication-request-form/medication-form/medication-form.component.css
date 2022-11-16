@@ -5,6 +5,7 @@
 button.mat-stroked-button {
   height: 32px;
   width: 45px;
+  line-height: 3px;
 }
 
 .form-group-header {

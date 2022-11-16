@@ -99,7 +99,7 @@
                   </mat-form-field>
                   <mat-form-field appearance="fill" *ngIf="toFormControl(
                                dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'"
-                    class="margin-field">
+                    class="small-width-field">
                     <mat-label>
                       Durée
                     </mat-label>
@@ -144,7 +144,8 @@
                     </mat-error>
                   </mat-form-field>
                   <mat-form-field appearance="fill" *ngIf="toFormControl(
-                               dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'">
+                               dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'"
+                               class="small-width-field">
                     <mat-label>
                       Unité de la durée
                     </mat-label>
@@ -163,7 +164,7 @@
                   </mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                  <mat-form-field class="margin-start-inline-fields small-width-field" appearance="fill">
+                  <mat-form-field class="linked-fields small-width-field" appearance="fill">
                     <mat-label> Tous les </mat-label>
                     <input type="text" aria-label="période d'administration" matInput
                       [formControl]="toFormControl(dosageInstructionGroup.get(['timing', 'repeat', 'period']))" />
@@ -179,7 +180,7 @@
                       <mat-divider [vertical]="true" [inset]="true"></mat-divider>
                       <mat-card
                         [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-day-of-week'"
-                        class="padding-card margin-top-card margin-left-card height-card">
+                        class="padding-card margin-left-card height-card">
                         <mat-card-header class="margin-title-field">
                           <mat-card-title class="form-group-title inline-title"> Jour(s) de prise </mat-card-title>
                         </mat-card-header>
@@ -196,9 +197,9 @@
                     <div>
                       <mat-card
                         [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-time-of-day'"
-                        class="padding-card margin-bottom-card margin-top-card">
+                        class="padding-card margin-bottom-card">
                         <mat-card-header class="margin-title-field">
-                          <mat-card-title class="form-group-title margin-top-card inline-title"> Heure(s) de prise
+                          <mat-card-title class="form-group-title inline-title"> Heure(s) de prise
                           </mat-card-title>
                         </mat-card-header>
                         <mat-card-content>
@@ -227,7 +228,7 @@
                     </div>
                     <div fxLayout="row"
                       [class]="'form-field-row form-field-dosage-instruction-' + nDosage + '-timing-repeat-when'">
-                      <mat-card class="padding-card margin-bottom-card margin-right-card margin-top-card">
+                      <mat-card class="padding-card margin-bottom-card margin-right-card">
                         <mat-card-header class="margin-title-moment-field">
                           <mat-card-title class="form-group-title inline-title"> A quel moment ? </mat-card-title>
                         </mat-card-header>
