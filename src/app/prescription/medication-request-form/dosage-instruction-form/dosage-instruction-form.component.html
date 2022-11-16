@@ -147,7 +147,7 @@
                                dosageInstructionGroup.get(['timing', 'repeat', 'boundsMode'])).value === 'duration'"
                                class="small-width-field">
                     <mat-label>
-                      Unité de la durée
+                      Unité
                     </mat-label>
                     <input type="text" aria-label="Unité de la durée de validité de la dose" matInput [formControl]="toFormControl(
                        dosageInstructionGroup.get(['timing', 'repeat', 'boundsDuration', 'unit']))"
@@ -296,7 +296,7 @@
                         </mat-radio-group>
                       </div>
                       <div fxLayout="row" class="form-group-body form-field-row">
-                        <mat-form-field fxFlex="50%" appearance="fill" class="dose-and-rate-value margin-field"
+                        <mat-form-field appearance="fill" class="dose-and-rate-value margin-linked-fields"
                           *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'qt'">
                           <mat-label> Dose </mat-label>
                           <input type="text" aria-label="dose" matInput
@@ -328,15 +328,15 @@
                         </mat-form-field>
                         <mat-card-footer class="dose-error">
                         </mat-card-footer>
-                        <mat-form-field appearance="fill" class="margin-field"
-                          *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'qt'">
-                          <mat-label class="medium-width-field"> Unité </mat-label>
+                        <mat-form-field appearance="fill" 
+                          *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'qt'" class="small-width-field">
+                          <mat-label> Unité </mat-label>
                           <input type="text" aria-label="unité" matInput
                             [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'doseQuantity', 'unit']))"
                             [matAutocomplete]="autoUnit" />
                         </mat-form-field>
                         <mat-form-field appearance="fill" *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'time'">
-                          <mat-label class="medium-width-field"> Dose </mat-label>
+                          <mat-label> Dose </mat-label>
                           <input type="text" aria-label="dose" matInput
                             [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'rateRatio', 'numerator', 'value']))" />
                         </mat-form-field>
@@ -347,6 +347,7 @@
                             [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'rateRatio', 'numerator', 'unit']))"
                             [matAutocomplete]="autoUnit" />
                         </mat-form-field>
+                        <span class="separator" *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'time'">sur</span>
                         <mat-form-field appearance="fill" class="dose-and-rate-value"
                           *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'time'">
                           <mat-label> Durée </mat-label>
@@ -355,7 +356,7 @@
                         </mat-form-field>
                         <mat-form-field appearance="fill" class="dose-and-rate-unit"
                           *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'time'">
-                          <mat-label> Unité </mat-label>
+                          <mat-label class="small-width-field"> Unité </mat-label>
                           <input type="text" aria-label="unité" matInput
                             [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'rateRatio', 'denominator', 'unit']))"
                             [matAutocomplete]="autoDurationUnit" />
@@ -373,7 +374,7 @@
                             [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'rateRatio', 'numerator', 'unit']))"
                             [matAutocomplete]="autoUnit" />
                         </mat-form-field>
-                        <span *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'rate'">/</span>
+                        <span class="separator" *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'rate'">par</span>
                         <mat-form-field appearance="fill" class="dose-and-rate-value"
                           *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'rate'">
                           <mat-label> Débit démoninateur </mat-label>
