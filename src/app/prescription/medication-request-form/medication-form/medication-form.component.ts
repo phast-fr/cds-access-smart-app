@@ -58,7 +58,6 @@ import {FhirTypeGuard} from '../../../common/fhir/utils/fhir.type.guard';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MedicationFormComponent implements OnInit, OnDestroy, IRender<MedicationRequestFormState> {
-  // @ViewChild(MatAccordion) accordion: MatAccordion;
   private readonly _unsubscribeTrigger$: Subject<void>;
 
   private readonly _medicationGroup$: BehaviorSubject<FormGroup | boolean>;
