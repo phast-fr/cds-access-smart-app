@@ -447,6 +447,9 @@ export class FhirSmartService {
     if (context.intent) {
       sessionStorage.setItem('intent', context.intent);
     }
+    if (!context.service_id) {
+      context.service_id = this.getDecodedAccessToken(context.id_token)?.service_id;
+    }
     if (context.service_id) {
       sessionStorage.setItem('service_id', context.service_id);
     }
@@ -500,6 +503,9 @@ export class FhirSmartService {
     state.needPatientBanner = context.need_patient_banner;
     if (context.intent) {
       state.intent = context.intent;
+    }
+    if (!context.service_id) {
+      context.service_id = this.getDecodedAccessToken(context.id_token)?.service_id;
     }
     return state;
   }
