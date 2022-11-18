@@ -306,6 +306,7 @@ export class MedicationRequestFormComponent implements OnInit, AfterViewInit, On
   }
 
   public onCDSHelp(): void {
+    this._prescriptionState.resetCards();
     if (this._viewModel.bundle) {
       this._prescriptionState.onCDSHelp = true;
       this._viewModel.dispatchIntent(

@@ -16,13 +16,13 @@
             <button *ngIf="(cards$ | async) && cards.length === 0 && !drawer.opened" mat-fab disabled>
               <mat-icon>email</mat-icon>
             </button>
-            <button *ngIf="(cards$ | async) && cards.length === 0 && drawer.opened"
-                    mat-fab color="primary" (click)="drawer.toggle()">
+            <button *ngIf="(!(cards$ | async) || cards.length === 0) && drawer.opened" mat-fab disabled>
               <mat-icon>email</mat-icon>
             </button>
-            <button *ngIf="(cards$ | async) && cards.length > 0"
-                    mat-fab color="primary" (click)="drawer.toggle(); onReadCards();">
-              <mat-icon *ngIf="(badges$ | async) > 0" matBadge="{{ badges$ | async }}" matBadgeColor="warn">email</mat-icon>
+            <button *ngIf="(cards$ | async) && cards.length > 0" mat-fab color="primary"
+              (click)="drawer.toggle(); onReadCards();">
+              <mat-icon *ngIf="(badges$ | async) > 0" matBadge="{{ badges$ | async }}" matBadgeColor="warn">email
+              </mat-icon>
               <mat-icon *ngIf="(badges$ | async) === 0">email</mat-icon>
             </button>
           </div>
@@ -50,7 +50,7 @@
           </mat-card>
         </div>
       </mat-drawer-content>
-      <mat-drawer #drawer mode="side" position="end">
+      <mat-drawer #drawer mode="side" position="end" [(opened)]="opened">
         <app-card-list></app-card-list>
       </mat-drawer>
     </mat-drawer-container>

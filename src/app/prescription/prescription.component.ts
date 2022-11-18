@@ -45,6 +45,8 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
 
   private readonly _needBanner$: BehaviorSubject<boolean>;
 
+  opened: boolean = false;
+
   private readonly _badge$: BehaviorSubject<number>;
 
   private readonly _cards: Array<CardReadable>;
@@ -127,6 +129,7 @@ export class PrescriptionComponent extends SmartComponent implements OnInit, OnD
         next: () => {
           this._cards.length = 0;
           this._badge$.next(0);
+          this.opened = false;
         },
         error: err => console.error('error', err)
       });
