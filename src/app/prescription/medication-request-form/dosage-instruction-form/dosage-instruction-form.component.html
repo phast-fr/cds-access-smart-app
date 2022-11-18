@@ -375,12 +375,6 @@
                             [matAutocomplete]="autoUnit" />
                         </mat-form-field>
                         <span class="separator" *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'rate'">par</span>
-                        <mat-form-field appearance="fill" class="dose-and-rate-value"
-                          *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'rate'">
-                          <mat-label> Débit démoninateur </mat-label>
-                          <input type="text" aria-label="débit dénominateur" matInput
-                            [formControl]="toFormControl(dosageInstructionGroup.get(['doseAndRate', 'rateRatio', 'denominator', 'value']))" />
-                        </mat-form-field>
                         <mat-form-field appearance="fill" class="dose-and-rate-unit"
                           *ngIf="((doseModes$ | async) ?? [])[nDosage] === 'rate'">
                           <mat-label> Unité </mat-label>
