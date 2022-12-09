@@ -98,6 +98,10 @@ export class PrescriptionStateService {
     this._bundle$.next(bundle);
   }
 
+  public resetCards() {
+    this._cards$.next(false);
+  }
+
   public callCdsHooks(bundle: Bundle): void {
     this._cdsHooksService.getServices()
           .subscribe({
